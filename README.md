@@ -19,8 +19,21 @@ downloaded from the original corefonts cabinets on SourceForge (needs `curl` and
 redistributable, so they are not in the repository. Then it imports, exports the presets and, for Web,
 unpacks the help pages next to `index.html`.
 
-To regenerate `redace/game_data/` from the original game (workspace tools, not in this repository; needs
-Python 3 + Pillow, ffmpeg for CD music): `python3 tools/build_assets.py extract/game REDACE.CUE godot/redace`.
+To regenerate `redace/game_data/` from the original game (needs Python 3 + Pillow, ffmpeg for CD music):
+`python3 tools/isextract.py <cd>/apps <game>` unpacks the installed game tree from the CD's InstallShield
+cabinets, then `python3 tools/build_assets.py <game> <REDACE.CUE> redace` converts it.
+
+## Tools
+
+| Path | Contents |
+| --- | --- |
+| `tools/isextract.py` | Pure-Python InstallShield 5/6 cabinet extractor |
+| `tools/build_assets.py` | Builds `redace/game_data` from the extracted game (models, maps, art, music, help) |
+| `tools/rw2gltf.py` | RenderWare 3.1 `.dff`/`.bsp` to glTF 2.0 converter |
+| `tools/rwdump.py` | RenderWare chunk tree dump |
+| `tools/blender_tree.py` | Low-poly tree generator for the `overrides/` models (run inside Blender) |
+| `tools/redace-wine.sh` | Runs the original game or the Windows export under Wine for comparison |
+| `tools/ghidra_scripts/` | Ghidra headless scripts: `ExportAll`, `ImproveAnalysis`, `ApplyGuids` for the `RedAce.exe` decompilation |
 
 Run the web build from any static web server, e.g. `python3 -m http.server -d build/web`,
 then open `http://localhost:8000/` (or `?mission=N` to fly a mission directly). The web preset uses

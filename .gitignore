@@ -22,3 +22,6 @@ redace/fonts/Verdana_Bold.ttf
 
 # Blender backups
 *.blend1
+
+# Python bytecode
+__pycache__/

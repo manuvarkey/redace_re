@@ -95,9 +95,15 @@ func _ready() -> void:
 			t.timeout.connect(func() -> void: print(_perf_line()))
 			add_child(t)
 	if OS.has_feature("web"):
-		var q = JavaScriptBridge.eval("new URLSearchParams(window.location.search).get('mission')")
+		# the desktop debug flags as URL parameters: ?mission=N&autopilot&view=N
+		var params := "new URLSearchParams(window.location.search)"
+		var q = JavaScriptBridge.eval(params + ".get('mission')")
 		if q != null and str(q).is_valid_int():
 			mission_id = int(q)
+		autopilot = autopilot or bool(JavaScriptBridge.eval(params + ".has('autopilot')"))
+		var v = JavaScriptBridge.eval(params + ".get('view')")
+		if v != null and str(v).is_valid_int():
+			forced_view = int(v)
 	var cfg := Ini.load_file(Ini.data_path("redace.ini"))
 	if controls == null:
 		controls = Controls.load_saved()

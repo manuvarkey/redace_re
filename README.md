@@ -1,74 +1,151 @@
-# Red Ace remake (Godot 4)
+<div align="center">
 
-Port of abandoned "Master of the Skies - The Red Ace" windows game logic in Godot 4.7. The original engine (Dive5 + RenderWare) is not ported.
+# Red Ace Remake
 
-**[Play online](https://manuvarkey.github.io/redace_re/)** in the browser, desktop or phone (touch controls
-with tilt steering). Windows, Linux, web and Android (APK) builds:
-[Releases](https://github.com/manuvarkey/redace_re/releases).
+**Master of the Skies: The Red Ace** (Small Rockets, 2001) rebuilt in Godot 4 —
+the original WWI flight game's missions, menus and game logic, playable in the browser, on desktop and on Android.
 
-## Build
+<a href="https://manuvarkey.github.io/redace_re/"><img alt="Play online" src="https://img.shields.io/badge/%E2%96%B6%20Play%20online-browser%20%C2%B7%20phone-b3261e?style=for-the-badge"></a>
+&nbsp;
+<a href="https://github.com/manuvarkey/redace_re/releases/latest"><img alt="Download" src="https://img.shields.io/badge/%E2%AC%87%20Download-Windows%20%C2%B7%20Linux%20%C2%B7%20Android-2d6a4f?style=for-the-badge"></a>
 
-The converted game data is already in `redace/game_data/`. Build with Godot 4.7.2 and its export templates:
+<img alt="Godot 4.7" src="https://img.shields.io/badge/Godot-4.7-478cbf?logo=godotengine&logoColor=white">
+<img alt="28 missions" src="https://img.shields.io/badge/missions-28-8a5a2b">
+<img alt="Platforms" src="https://img.shields.io/badge/platforms-Web%20%7C%20Windows%20%7C%20Linux%20%7C%20Android-555">
+
+<br><br>
+
+<img src="docs/screenshots/country.jpg" alt="Flying over the countryside" width="88%">
+
+</div>
+
+## Screenshots
+
+| | |
+| :---: | :---: |
+| <img src="docs/screenshots/menu.jpg" alt="Main menu"> Main menu, drawn from the original HTML pages | <img src="docs/screenshots/briefing.jpg" alt="Mission briefing"> Mission briefing |
+| <img src="docs/screenshots/trenches.jpg" alt="Trenches map"> Trenches at dusk | <img src="docs/screenshots/desert.jpg" alt="Desert map"> Desert campaign |
+| <img src="docs/screenshots/above.jpg" alt="Camera above"> Held camera views | <img src="docs/screenshots/mobile-web.jpg" alt="Phone browser"> Phone browser with touch controls |
+
+## Features
+
+- **The whole game:** all 28 missions on the three original maps (country, desert, trenches), the
+  campaign with pilot roster, ranks and promotions, briefings and debriefings, cheats and replay levels.
+- **Faithful logic:** flight model, AI, weapons, damage, scoring and the HTML menu engine follow the
+  decompiled `RedAce.exe`; the details are in [Technical notes](#technical-notes).
+- **Original assets, refreshed:** models, maps and art converted from the game, art upscaled 4x
+  (Real-ESRGAN), the card trees and palms remodelled in Blender.
+- **Plays anywhere:** web (WebGL 2), Windows, Linux and Android, with touch controls and tilt
+  steering on phones.
+
+## Download and play
+
+| Platform | How |
+| --- | --- |
+| **Browser** (desktop or phone) | [manuvarkey.github.io/redace_re](https://manuvarkey.github.io/redace_re/), nothing to install |
+| **Windows** | [Releases](https://github.com/manuvarkey/redace_re/releases/latest): unzip `redace-*-windows-x86_64.zip`, run `redace.exe` |
+| **Linux** | [Releases](https://github.com/manuvarkey/redace_re/releases/latest): unzip `redace-*-linux-x86_64.zip`, run `redace.x86_64` |
+| **Android** | [Releases](https://github.com/manuvarkey/redace_re/releases/latest): install `redace-*-android.apk` (allow installs from unknown sources) |
+
+## Controls
+
+<table>
+<tr><th>Desktop (mouse, the default)</th><th>Phone (touch)</th></tr>
+<tr><td valign="top">
+
+| Action | Input |
+| --- | --- |
+| Roll / pitch | Mouse (back = nose up) |
+| Throttle | Right Shift / Right Ctrl |
+| Guns / bombs | Left / right mouse button |
+| Turbo boost (cheat) | Space |
+| Camera views (held) | Arrow keys |
+| Pause | Esc |
+| Objectives | Tab |
+
+</td><td valign="top">
+
+| Action | Input |
+| --- | --- |
+| Roll / pitch | Tilt the phone, or STICK: drag on the left |
+| Throttle | THR slider, left edge |
+| Guns / bombs | FIRE / BOMB |
+| Turbo boost (cheat) | BOOST |
+| Camera views (held) | VIEW: hold and swipe |
+| Pause | PAUSE, or Android back |
+| Objectives | OBJ |
+
+</td></tr>
+</table>
+
+Keyboard and joystick layouts and rebinding are on Options > Controls, as in the original.
+
+<p align="center"><img src="docs/screenshots/android.jpg" alt="Android app with touch controls" width="80%"></p>
+
+## Build from source
+
+The converted game data is in `redace/game_data/`, so only Godot 4.7.2 and its export templates are needed:
 
 ```sh
-GODOT=~/tools/godot-4.7.2/Godot_v4.7.2-stable_linux.x86_64 ./build.sh   # all presets
-./build.sh Web                                                          # build/web/index.html
-./build.sh Linux Windows                                                # build/linux, build/windows
-scripts/build_linux.sh                                                  # same per platform: build_windows.sh, build_web.sh
+GODOT=~/tools/godot-4.7.2/Godot_v4.7.2-stable_linux.x86_64 ./build.sh   # Web, Linux and Windows
+./build.sh Web Android                                                  # any presets
+scripts/build_linux.sh                                                  # one preset: build_windows.sh, build_web.sh, build_android.sh
 ```
 
-`build.sh` first puts the Microsoft core fonts (Arial, Courier New, Times New Roman, Verdana, regular and
-bold) into `redace/fonts/`: copied from `/usr/share/fonts/truetype/msttcorefonts` when installed, else
-downloaded from the original corefonts cabinets on SourceForge (needs `curl` and `cabextract`). They are not
-redistributable, so they are not in the repository. Then it imports, exports the presets and, for Web,
-unpacks the help pages next to `index.html`.
-
-To regenerate `redace/game_data/` from the original game (needs Python 3 + Pillow, ffmpeg for CD music):
-`python3 tools/isextract.py <cd>/apps <game>` unpacks the installed game tree from the CD's InstallShield
-cabinets, then `python3 tools/build_assets.py <game> <REDACE.CUE> redace` converts it.
-
-## Tools
-
-| Path | Contents |
+| Output | Path |
 | --- | --- |
-| `tools/isextract.py` | Pure-Python InstallShield 5/6 cabinet extractor |
-| `tools/build_assets.py` | Builds `redace/game_data` from the extracted game (models, maps, art, music, help) |
-| `tools/rw2gltf.py` | RenderWare 3.1 `.dff`/`.bsp` to glTF 2.0 converter |
-| `tools/rwdump.py` | RenderWare chunk tree dump |
-| `tools/blender_tree.py` | Low-poly tree generator for the `overrides/` models (run inside Blender) |
-| `tools/redace-wine.sh` | Runs the original game or the Windows export under Wine for comparison |
-| `tools/ghidra_scripts/` | Ghidra headless scripts: `ExportAll`, `ImproveAnalysis`, `ApplyGuids` for the `RedAce.exe` decompilation |
+| Web | `build/web/index.html` |
+| Linux / Windows | `build/linux/redace.x86_64`, `build/windows/redace.exe` (each with `redace.pck`) |
+| Android | `build/android/redace.apk` (debug-signed, arm64-v8a + x86_64) |
 
-`.github/workflows/pages.yml` builds the Web preset on every push to `main` (Godot and the no-threads web
-template are downloaded and cached) and deploys `build/web` to GitHub Pages. One-time setup: repository Settings > Pages > Source = GitHub Actions.
-`.github/workflows/release.yml` builds all four presets when a `v*` tag is pushed and attaches them to the
-release (`git tag -a v1.1 -m "..." && git push origin v1.1`).
+- **Fonts:** `build.sh` first puts the Microsoft core fonts (Arial, Courier New, Times New Roman, Verdana)
+  into `redace/fonts/`, copied from `/usr/share/fonts/truetype/msttcorefonts` or downloaded from the
+  corefonts cabinets on SourceForge (needs `curl` and `cabextract`). They are not redistributable, so
+  they are not in the repository.
+- **Android:** Godot's editor settings must name the Android SDK and a JDK 17+
+  (`export/android/android_sdk_path`, `java_sdk_path`); the debug keystore is made in `build/` on first use.
+- **Web:** serve `build/web` from any static server, e.g. `python3 -m http.server -d build/web`, then open
+  `http://localhost:8000/` (`?mission=N` flies a mission directly, plus `&autopilot` and `&view=N`). The
+  no-threads template needs no COOP/COEP headers.
+- **Game data:** to regenerate `redace/game_data/` from the original CD (Python 3 + Pillow, ffmpeg):
+  `python3 tools/isextract.py <cd>/apps <game>`, then `python3 tools/build_assets.py <game> <REDACE.CUE> redace`.
 
-## Phones (web and Android)
-
-Touch devices get on-screen controls (`scripts/touch.gd`, not in the original), shown from the first touch:
-tilt steering (accelerometer; neutral = how the phone is held at mission start or on CAL) or, with STICK or
-without a sensor, a virtual stick dragged on the left half; THR slider at the left edge; FIRE, BOMB and
-BOOST (turbo cheat) buttons; VIEW pad (hold and swipe up / down / left / right for the held camera views);
-PAUSE and OBJ. Steering goes through the joystick path, so the Controls page sensitivities apply. Phones
-need landscape. On the web the first tap also goes fullscreen and locks landscape; tilt comes from
-`devicemotion` (head script in the Web preset). The Android back button pauses and resumes a flight and
-steps back through the menus; new pilot names open the on-screen keyboard.
-
-Android APK: `scripts/build_android.sh` (debug-signed, arm64-v8a + x86_64) writes `build/android/redace.apk`;
-tagged releases attach it. Tested on the Android 14 emulator (x86_64, host GPU; SwiftShader
-fails the canvas shader) and in its Chrome for the web build.
-
-Run the web build from any static web server, e.g. `python3 -m http.server -d build/web`,
-then open `http://localhost:8000/` (or `?mission=N` to fly a mission directly). The web preset uses
-the no-threads template, so no COOP/COEP headers are needed.
+<details>
+<summary><b>Embedding in a web page</b></summary>
 
 To embed in a web page (e.g. a Blogger post), upload `build/web` to any https static host and paste
 `build/web/blogger-snippet.html` into the post's HTML view with `GAME_URL` set to the hosted
 `index.html`. The snippet shows `poster.jpg` with a Play button and only then creates the iframe
 (`allow="autoplay; fullscreen; gamepad; pointer-lock"`). Tested cross-origin in headless Chromium.
 
-## Front end and campaign
+</details>
+
+### Continuous integration
+
+- `.github/workflows/pages.yml` builds the web export on every push to `main` and deploys it to GitHub Pages
+  (one-time setup: Settings > Pages > Source = GitHub Actions).
+- `.github/workflows/release.yml` builds all four presets when a `v*` tag is pushed and attaches them to
+  the release: `git tag -a v1.1 -m "..." && git push origin v1.1`.
+
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `redace/` | Godot project: `scripts/` (game logic), `scenes/`, `game_data/` (converted original data) |
+| `overrides/` | Remodelled trees and palms, copied over `game_data/` (Blender sources in `overrides/blend/`) |
+| `tools/isextract.py` | Pure-Python InstallShield 5/6 cabinet extractor |
+| `tools/build_assets.py` | Builds `redace/game_data` from the extracted game (models, maps, art, music, help) |
+| `tools/rw2gltf.py`, `tools/rwdump.py` | RenderWare 3.1 `.dff`/`.bsp` to glTF 2.0 converter; chunk tree dump |
+| `tools/blender_tree.py` | Low-poly tree generator for the `overrides/` models (run inside Blender) |
+| `tools/redace-wine.sh` | Runs the original game or the Windows export under Wine for comparison |
+| `tools/ghidra_scripts/` | Ghidra headless scripts (`ExportAll`, `ImproveAnalysis`, `ApplyGuids`) for the `RedAce.exe` decompilation |
+
+## Technical notes
+
+How each part maps to the original executable (`FUN_...` and `RedAce.c:line` refer to the Ghidra decompilation).
+
+<details>
+<summary><b>Front end and campaign</b></summary>
 
 The original HTML menu pages (`language/english/Menus`, `missions/*/mission.html`) are drawn by
 `scripts/html_view.gd` on the original 640x480 page. Parsing and layout follow the exe's own HTML engine
@@ -104,24 +181,32 @@ with the same HTML snippets the exe generated and handles their links (`command:
 - Cheats as in the original options page: turbo boost on Space, infinite bombs/rockets,
   invulnerability, game speed, enemy endurance.
 
-## Controls
+</details>
+
+<details>
+<summary><b>Controls in detail</b></summary>
 
 Bindings follow the original control files (`redace.ini` = `mousekeys.ini` by default; `keyboard.ini`,
 `joystick.ini`): Options > Controls lists each action with its controller and value. Click an action, then
 press a key, move the mouse (axes) or press a mouse/joystick button to rebind it; "Set to default for"
 loads one of the three files. Sensitivity bars and "Reversed?" boxes as in the original.
 
-| Action | Default (mouse) |
-| --- | --- |
-| Roll / pitch | mouse X / mouse Y (back = nose up) |
-| Throttle | Right Shift / Right Ctrl |
-| Guns / bombs | left / right mouse button |
-| Special (turbo boost cheat) | Space |
-| Views (held) | Up above, Left, Right, Down behind |
-
 Esc (or P) in flight opens the pause page (Continue, Restart Mission, Abort Mission). On the web,
 the browser's own Esc releases the mouse; that also opens the pause page.
 In flight `[` `]` and `-` `=` nudge roll / pitch sensitivity; Tab shows objectives and a debug line.
+
+**Touch controls** (`scripts/touch.gd`, not in the original) appear from the first touch. Tilt steering
+uses the accelerometer, with neutral = how the phone is held at mission start or on CAL; STICK, or a phone
+without a sensor, switches to a virtual stick dragged on the left half. Steering goes through the joystick
+path, so the Controls page sensitivities apply. On the web the first tap goes fullscreen and locks
+landscape, and tilt comes from `devicemotion` (head script in the Web preset). The Android back button
+pauses and resumes a flight and steps back through the menus; new pilot names open the on-screen keyboard.
+Tested on the Android 14 emulator (x86_64, host GPU) and in its Chrome.
+
+</details>
+
+<details>
+<summary><b>Debugging</b></summary>
 
 Mission audit: `godot --headless --path redace -s tools/audit_missions.gd` loads every mission and
 lists unplaced objects, missing models/sounds, bad goal targets, objects off the map or under the terrain.
@@ -129,7 +214,10 @@ lists unplaced objects, missing models/sounds, bad goal targets, objects off the
 Debug flags (desktop, after `--`): `--mission=N` (skip the menus), `--autopilot`, `--view=N` (hold camera
 mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=href,key:esc,...` (follow links).
 
-## What is implemented
+</details>
+
+<details>
+<summary><b>What is implemented</b></summary>
 
 - All 28 missions load from the original `mission.ini`: map, ground objects, vehicles, aircraft, music track.
 - 3 maps (RenderWare `.bsp` worlds), 159 models (`.dff`), sky boxes, fog colour, briefings from `mission.html`.
@@ -287,9 +375,12 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   `user://help` on first use, the web build opens `help/...` next to `index.html` (see Build).
 - Briefing control words are built like the exe (`RedAce.c:47380`): `'right Shift'`, `'Mouse Left'`,
   `'left mouse button'`, `Joystick 'POV Up'`.
-- Exports: Web (WebAssembly/WebGL 2), Linux, Windows.
+- Exports: Web (WebAssembly/WebGL 2), Linux, Windows, Android.
 
-## Not done yet
+</details>
+
+<details>
+<summary><b>Not done yet</b></summary>
 
 - AI deviations from the exe: gun attacks and visible waits also use the general low-altitude pull-up
   (this flight model needs more room than the exe's 4 s look-ahead; without it AI planes flew into hills);
@@ -298,3 +389,5 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   enemies leaving the map by 150 are not removed; goals 0x110/0x150 (unused by the missions) are ignored.
 - `splat.bmp` is loaded by the original but never drawn, so it is not used here either.
 - Mission 17 names a non-existent object `aagu_light`; it is skipped (as the original could not load it).
+
+</details>

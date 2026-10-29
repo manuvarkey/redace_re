@@ -1,0 +1,207 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "deserthouse1_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "deserthouse1_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "deserthouse1_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 4,
+     "material": 1
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "Africaroofs",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  },
+  {
+   "name": "Villasettemplate",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 1
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  },
+  {
+   "source": 1,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/africaroofs.png"
+  },
+  {
+   "uri": "../textures/villasettemplate.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 34,
+   "type": "VEC3",
+   "min": [
+    -12.5181884765625,
+    -0.19935862720012665,
+    -6.83487606048584
+   ],
+   "max": [
+    12.518189430236816,
+    11.893118858337402,
+    6.83488130569458
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 34,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 34,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 12,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5125,
+   "count": 48,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 408,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 408,
+   "byteLength": 408,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 816,
+   "byteLength": 272,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1088,
+   "byteLength": 48,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1136,
+   "byteLength": 192,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "deserthouse1.bin",
+   "byteLength": 1328
+  }
+ ]
+}

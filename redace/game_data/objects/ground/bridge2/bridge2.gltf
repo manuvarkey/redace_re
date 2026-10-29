@@ -1,0 +1,197 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "bridge2_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "bridge2_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "bridge2_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 4,
+     "material": 1
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "B10cpclr",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.5019607843137255,
+     0.5019607843137255,
+     0.5019607843137255,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  },
+  {
+   "name": "untextured",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.5019607843137255,
+     0.5019607843137255,
+     0.5019607843137255,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/b10cpclr.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 524,
+   "type": "VEC3",
+   "min": [
+    -23.861026763916016,
+    -14.058528900146484,
+    -346.640869140625
+   ],
+   "max": [
+    23.86060905456543,
+    98.87610626220703,
+    342.0979309082031
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 524,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 524,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 1071,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5125,
+   "count": 240,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 6288,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 6288,
+   "byteLength": 6288,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 12576,
+   "byteLength": 4192,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 16768,
+   "byteLength": 4284,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 21052,
+   "byteLength": 960,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "bridge2.bin",
+   "byteLength": 22012
+  }
+ ]
+}

@@ -1,0 +1,207 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "rowhouses_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "rowhouses_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "rowhouses_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 4,
+     "material": 1
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "Redrooftiles3",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  },
+  {
+   "name": "Longvillatemplate1",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 1
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  },
+  {
+   "source": 1,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/redrooftiles3.png"
+  },
+  {
+   "uri": "../textures/longvillatemplate1.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 24,
+   "type": "VEC3",
+   "min": [
+    -31.343505859375,
+    -0.05391502380371094,
+    -7.7185821533203125
+   ],
+   "max": [
+    31.343505859375,
+    19.854400634765625,
+    7.7185821533203125
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 24,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 24,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 12,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5125,
+   "count": 30,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 288,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 288,
+   "byteLength": 288,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 576,
+   "byteLength": 192,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 768,
+   "byteLength": 48,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 816,
+   "byteLength": 120,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "rowhouses.bin",
+   "byteLength": 936
+  }
+ ]
+}

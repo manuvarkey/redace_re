@@ -1,0 +1,166 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "barb_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "barb_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "barb_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "barb2",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.6313725490196078,
+     0.6313725490196078,
+     0.6313725490196078,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   },
+   "alphaMode": "MASK",
+   "alphaCutoff": 0.5,
+   "doubleSided": true
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/barb2_a.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 36,
+   "type": "VEC3",
+   "min": [
+    -243.1971893310547,
+    -0.3055572807788849,
+    -2.189105272293091
+   ],
+   "max": [
+    243.32908630371094,
+    4.023797512054443,
+    2.1891093254089355
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 36,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 36,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 84,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 432,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 432,
+   "byteLength": 432,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 864,
+   "byteLength": 288,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1152,
+   "byteLength": 336,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "barb.bin",
+   "byteLength": 1488
+  }
+ ]
+}

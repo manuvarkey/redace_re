@@ -1,0 +1,197 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "deserttent_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "deserttent_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "deserttent_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 4,
+     "material": 1
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "Tenttemplate2",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  },
+  {
+   "name": "untextured",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.788235294117647,
+     0.6588235294117647,
+     0.30196078431372547,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/tenttemplate2.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 50,
+   "type": "VEC3",
+   "min": [
+    -19.503341674804688,
+    -1.6620060205459595,
+    -26.958486557006836
+   ],
+   "max": [
+    19.503341674804688,
+    13.968084335327148,
+    26.958478927612305
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 50,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 50,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 78,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5125,
+   "count": 12,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 600,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 600,
+   "byteLength": 600,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1200,
+   "byteLength": 400,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1600,
+   "byteLength": 312,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1912,
+   "byteLength": 48,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "deserttent.bin",
+   "byteLength": 1960
+  }
+ ]
+}

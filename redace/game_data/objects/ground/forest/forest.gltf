@@ -1,0 +1,163 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "forest_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "forest_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "forest_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "bark",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.5058823529411764,
+     0.5058823529411764,
+     0.5058823529411764,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/bark.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 1546,
+   "type": "VEC3",
+   "min": [
+    -245.22528076171875,
+    -22.054136276245117,
+    -99.46337127685547
+   ],
+   "max": [
+    245.2253875732422,
+    22.05415153503418,
+    99.46288299560547
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 1546,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 1546,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 1818,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 18552,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 18552,
+   "byteLength": 18552,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 37104,
+   "byteLength": 12368,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 49472,
+   "byteLength": 7272,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "forest.bin",
+   "byteLength": 56744
+  }
+ ]
+}

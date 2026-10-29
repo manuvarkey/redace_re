@@ -1,0 +1,251 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "bighangerburn2_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "bighangerburn2_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "bighangerburn2_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 4,
+     "material": 1
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 5,
+     "material": 2
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "Bighangertemplate",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  },
+  {
+   "name": "burnedouttemplate",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 1
+    }
+   }
+  },
+  {
+   "name": "Burnedout",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.8745098039215686,
+     0.19215686274509805,
+     0.19215686274509805,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 2
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  },
+  {
+   "source": 1,
+   "sampler": 0
+  },
+  {
+   "source": 2,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/bighangertemplate.png"
+  },
+  {
+   "uri": "../textures/burnedouttemplate.png"
+  },
+  {
+   "uri": "../textures/burnedout.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 216,
+   "type": "VEC3",
+   "min": [
+    -40.61823272705078,
+    -0.18972529470920563,
+    -25.565031051635742
+   ],
+   "max": [
+    40.61822509765625,
+    40.01313400268555,
+    25.565048217773438
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 216,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 216,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 126,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5125,
+   "count": 30,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 5,
+   "componentType": 5125,
+   "count": 294,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 2592,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 2592,
+   "byteLength": 2592,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 5184,
+   "byteLength": 1728,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 6912,
+   "byteLength": 504,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 7416,
+   "byteLength": 120,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 7536,
+   "byteLength": 1176,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "bighangerburn2.bin",
+   "byteLength": 8712
+  }
+ ]
+}

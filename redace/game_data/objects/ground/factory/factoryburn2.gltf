@@ -1,0 +1,295 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "factoryburn2_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "factoryburn2_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "factoryburn2_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 4,
+     "material": 1
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 5,
+     "material": 2
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 6,
+     "material": 3
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "Hangertemplate",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  },
+  {
+   "name": "burnedouttemplate",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 1
+    }
+   }
+  },
+  {
+   "name": "Burnedout",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 2
+    }
+   }
+  },
+  {
+   "name": "tilebrick",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 3
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  },
+  {
+   "source": 1,
+   "sampler": 0
+  },
+  {
+   "source": 2,
+   "sampler": 0
+  },
+  {
+   "source": 3,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/hangertemplate.png"
+  },
+  {
+   "uri": "../textures/burnedouttemplate.png"
+  },
+  {
+   "uri": "../textures/burnedout.png"
+  },
+  {
+   "uri": "../textures/tilebrick.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 514,
+   "type": "VEC3",
+   "min": [
+    -48.414337158203125,
+    -0.21805183589458466,
+    -62.70591735839844
+   ],
+   "max": [
+    48.41432571411133,
+    54.54775619506836,
+    62.705928802490234
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 514,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 514,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 57,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5125,
+   "count": 327,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 5,
+   "componentType": 5125,
+   "count": 324,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 6,
+   "componentType": 5125,
+   "count": 72,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 6168,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 6168,
+   "byteLength": 6168,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 12336,
+   "byteLength": 4112,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 16448,
+   "byteLength": 228,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 16676,
+   "byteLength": 1308,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 17984,
+   "byteLength": 1296,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 19280,
+   "byteLength": 288,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "factoryburn2.bin",
+   "byteLength": 19568
+  }
+ ]
+}

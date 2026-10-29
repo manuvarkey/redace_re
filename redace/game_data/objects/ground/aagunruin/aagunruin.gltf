@@ -1,0 +1,264 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "aagunruin_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1,
+    3
+   ]
+  },
+  {
+   "name": "aagunruin_frame1",
+   "matrix": [
+    0.9890158772468567,
+    0.1471289098262787,
+    0.014166919514536858,
+    0,
+    -0.14780941605567932,
+    0.9844626188278198,
+    0.09479285031557083,
+    0,
+    -3.259629366425543e-08,
+    -0.09584563970565796,
+    0.9953961968421936,
+    0,
+    -0.13759708404541016,
+    12.71873664855957,
+    0.16024962067604065,
+    1
+   ],
+   "children": [
+    2
+   ]
+  },
+  {
+   "name": "aagunruin_atomic0",
+   "mesh": 0
+  },
+  {
+   "name": "aagunruin_atomic1",
+   "mesh": 1
+  }
+ ],
+ "meshes": [
+  {
+   "name": "aagunruin_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  },
+  {
+   "name": "aagunruin_atomic1",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 4,
+      "NORMAL": 5,
+      "TEXCOORD_0": 6
+     },
+     "indices": 7,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "burnedouttemplate",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/burnedouttemplate.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 175,
+   "type": "VEC3",
+   "min": [
+    -4.400864601135254,
+    -5.112604141235352,
+    -4.360793113708496
+   ],
+   "max": [
+    4.747584819793701,
+    8.300990104675293,
+    9.946683883666992
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 175,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 175,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 294,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5126,
+   "count": 74,
+   "type": "VEC3",
+   "min": [
+    -12.335004806518555,
+    -2.4239819049835205,
+    -11.524250984191895
+   ],
+   "max": [
+    12.335003852844238,
+    10.000336647033691,
+    11.524249076843262
+   ]
+  },
+  {
+   "bufferView": 5,
+   "componentType": 5126,
+   "count": 74,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 6,
+   "componentType": 5126,
+   "count": 74,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 7,
+   "componentType": 5125,
+   "count": 108,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 2100,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 2100,
+   "byteLength": 2100,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 4200,
+   "byteLength": 1400,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 5600,
+   "byteLength": 1176,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 6776,
+   "byteLength": 888,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 7664,
+   "byteLength": 888,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 8552,
+   "byteLength": 592,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 9144,
+   "byteLength": 432,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "aagunruin.bin",
+   "byteLength": 9576
+  }
+ ]
+}

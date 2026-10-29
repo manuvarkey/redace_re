@@ -1,0 +1,329 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "station_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "station_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "station_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 4,
+     "material": 1
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 5,
+     "material": 2
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 6,
+     "material": 3
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 7,
+     "material": 4
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "B10cpclr",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.6235294117647059,
+     0.6235294117647059,
+     0.6235294117647059,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  },
+  {
+   "name": "woodtrack",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.5450980392156862,
+     0.5450980392156862,
+     0.5450980392156862,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 1
+    }
+   }
+  },
+  {
+   "name": "westinghouse_meter(1)",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.4980392156862745,
+     0.4980392156862745,
+     0.4980392156862745,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 2
+    }
+   }
+  },
+  {
+   "name": "untextured",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.5019607843137255,
+     0.5019607843137255,
+     0.5019607843137255,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0
+   }
+  },
+  {
+   "name": "Wooddirty",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.5019607843137255,
+     0.5019607843137255,
+     0.5019607843137255,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 3
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  },
+  {
+   "source": 1,
+   "sampler": 0
+  },
+  {
+   "source": 2,
+   "sampler": 0
+  },
+  {
+   "source": 3,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/b10cpclr.png"
+  },
+  {
+   "uri": "../textures/woodtrack.png"
+  },
+  {
+   "uri": "../textures/westinghouse_meter(1).png"
+  },
+  {
+   "uri": "../textures/wooddirty.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 569,
+   "type": "VEC3",
+   "min": [
+    -45.566917419433594,
+    -1.3694311380386353,
+    -23.6478328704834
+   ],
+   "max": [
+    45.5863151550293,
+    48.89915084838867,
+    25.87107276916504
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 569,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 569,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 1206,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5125,
+   "count": 30,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 5,
+   "componentType": 5125,
+   "count": 6,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 6,
+   "componentType": 5125,
+   "count": 72,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 7,
+   "componentType": 5125,
+   "count": 30,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 6828,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 6828,
+   "byteLength": 6828,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 13656,
+   "byteLength": 4552,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 18208,
+   "byteLength": 4824,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 23032,
+   "byteLength": 120,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 23152,
+   "byteLength": 24,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 23176,
+   "byteLength": 288,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 23464,
+   "byteLength": 120,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "station.bin",
+   "byteLength": 23584
+  }
+ ]
+}

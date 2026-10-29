@@ -1,0 +1,264 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "cruisergun1burn_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1,
+    3
+   ]
+  },
+  {
+   "name": "cruisergun1burn_frame1",
+   "matrix": [
+    1.0,
+    1.3144266119979875e-08,
+    2.0230972452850438e-09,
+    0,
+    -1.3144267896336714e-08,
+    0.9537169337272644,
+    0.30070582032203674,
+    0,
+    2.0230956909728093e-09,
+    -0.30070582032203674,
+    0.9537169337272644,
+    0,
+    0.0,
+    3.8617630004882812,
+    2.0363047497085063e-06,
+    1
+   ],
+   "children": [
+    2
+   ]
+  },
+  {
+   "name": "cruisergun1burn_atomic0",
+   "mesh": 0
+  },
+  {
+   "name": "cruisergun1burn_atomic1",
+   "mesh": 1
+  }
+ ],
+ "meshes": [
+  {
+   "name": "cruisergun1burn_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  },
+  {
+   "name": "cruisergun1burn_atomic1",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 4,
+      "NORMAL": 5,
+      "TEXCOORD_0": 6
+     },
+     "indices": 7,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "aagunbt",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.5019607843137255,
+     0.5019607843137255,
+     0.5019607843137255,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/aagunbt.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 32,
+   "type": "VEC3",
+   "min": [
+    -7.264770030975342,
+    -1.3620511293411255,
+    -6.172168254852295
+   ],
+   "max": [
+    5.837532043457031,
+    8.753515243530273,
+    8.461552619934082
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 32,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 32,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 60,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5126,
+   "count": 24,
+   "type": "VEC3",
+   "min": [
+    -6.90771484375,
+    -1.0697107200030587e-06,
+    -5.982255458831787
+   ],
+   "max": [
+    6.90771484375,
+    4.424960136413574,
+    5.982255935668945
+   ]
+  },
+  {
+   "bufferView": 5,
+   "componentType": 5126,
+   "count": 24,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 6,
+   "componentType": 5126,
+   "count": 24,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 7,
+   "componentType": 5125,
+   "count": 36,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 384,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 384,
+   "byteLength": 384,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 768,
+   "byteLength": 256,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1024,
+   "byteLength": 240,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1264,
+   "byteLength": 288,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1552,
+   "byteLength": 288,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1840,
+   "byteLength": 192,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 2032,
+   "byteLength": 144,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "cruisergun1burn.bin",
+   "byteLength": 2176
+  }
+ ]
+}

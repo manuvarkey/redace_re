@@ -1,0 +1,163 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "church2_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "church2_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "church2_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "B10CPCLR",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.48627450980392156,
+     0.48627450980392156,
+     0.48627450980392156,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/b10cpclr.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 905,
+   "type": "VEC3",
+   "min": [
+    -31.314529418945312,
+    -0.3633870780467987,
+    -125.98117065429688
+   ],
+   "max": [
+    158.73992919921875,
+    153.4730682373047,
+    63.56649398803711
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 905,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 905,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 2268,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 10860,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 10860,
+   "byteLength": 10860,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 21720,
+   "byteLength": 7240,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 28960,
+   "byteLength": 9072,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "church2.bin",
+   "byteLength": 38032
+  }
+ ]
+}

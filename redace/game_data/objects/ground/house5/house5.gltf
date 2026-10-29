@@ -1,0 +1,163 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "house5_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "house5_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "house5_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "B10CPCLR",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.48627450980392156,
+     0.48627450980392156,
+     0.48627450980392156,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/b10cpclr.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 395,
+   "type": "VEC3",
+   "min": [
+    -29.179611206054688,
+    -1.2676304578781128,
+    -23.451982498168945
+   ],
+   "max": [
+    29.175395965576172,
+    82.3945083618164,
+    23.452634811401367
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 395,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 395,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 1128,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 4740,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 4740,
+   "byteLength": 4740,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 9480,
+   "byteLength": 3160,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 12640,
+   "byteLength": 4512,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "house5.bin",
+   "byteLength": 17152
+  }
+ ]
+}

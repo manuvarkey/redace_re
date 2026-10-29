@@ -1,0 +1,163 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "oildrum_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "oildrum_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "oildrum_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "britshcruiserside1",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/britshcruiserside1.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 37,
+   "type": "VEC3",
+   "min": [
+    -1.997201919555664,
+    -3.0928151772968704e-07,
+    -1.7296273708343506
+   ],
+   "max": [
+    1.997201919555664,
+    6.727034091949463,
+    1.7296286821365356
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 37,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 37,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 54,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 444,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 444,
+   "byteLength": 444,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 888,
+   "byteLength": 296,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1184,
+   "byteLength": 216,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "oildrum.bin",
+   "byteLength": 1400
+  }
+ ]
+}

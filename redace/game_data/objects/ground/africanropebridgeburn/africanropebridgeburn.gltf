@@ -1,0 +1,163 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "africanropebridgeburn_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "africanropebridgeburn_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "africanropebridgeburn_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "Palmbrk1",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   }
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/palmbrk1.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 750,
+   "type": "VEC3",
+   "min": [
+    -8.117996215820312,
+    -46.66168212890625,
+    -166.65953063964844
+   ],
+   "max": [
+    8.117982864379883,
+    88.72952270507812,
+    166.80902099609375
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 750,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 750,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 1008,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 9000,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 9000,
+   "byteLength": 9000,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 18000,
+   "byteLength": 6000,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 24000,
+   "byteLength": 4032,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "africanropebridgeburn.bin",
+   "byteLength": 28032
+  }
+ ]
+}

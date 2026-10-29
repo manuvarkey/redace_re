@@ -1,0 +1,295 @@
+<HTML> <HEAD>
+<META NAME="description" CONTENT="Master of the Skies: The Red Ace is a WWI flight action game for the PC.">
+<style> a{text-decoration:none; color="#ffffff"; text-decoration:underline;} </style>
+<style fprolloverstyle> A:hover {color: #C0C0C0; } </style>
+<TITLE>Master of the Skies: The Red Ace | Buy the game now!</TITLE>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketAddItem(value)
+{
+ var il=GetCookie('basket');
+ if (il.length)
+ {
+ il+='|'+value;
+ }
+ else
+ {
+ il=value;
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketSetItem(item,value)
+{
+ var il=GetCookie('basket');
+ var is=il.split('|');
+ if (value=='')
+ {
+ var ois=new Array();
+ var j=0;
+ for (var i=0;i<is.length;i++)
+ {
+ if (i!=item)
+ {
+ ois[j]=is[i];
+ j++;
+ }
+ }
+ il=ois.join('|');
+ }
+ else
+ {
+ is[item]=value;
+ il=is.join('|');
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketFind(skuid)
+{
+ var ni=BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ if (skuid==e[0])
+ {
+ return i;
+ }
+ }
+ return -1;
+}
+function BasketAdd(skuid,name,platform,price,location)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ BasketAddItem(skuid+'^'+name+'^'+platform+'^'+price+'^'+location+'^1');
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ e[5]++;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+}
+function BasketRemove(skuid)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ return;
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ if (e[5]<=1)
+ {
+ BasketSetItem(ino,'');
+ }
+ else
+ {
+ e[5]--;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+ }
+}
+function BasketEmpty()
+{
+ SetCookie('basket','','/');
+}
+function BasketAddRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation',document.location.href,'/');
+ document.location.href = './general/basket.htm' ;
+}
+function BasketAddNoRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation','','/');
+}
+function BasketGetLocation()
+{
+ return GetCookie('ecomlocation');
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetCookie(name)
+{
+ var ac=this.document.cookie;
+ if (ac=="")
+ {
+ return "";
+ }
+ var s=ac.indexOf(name + '=');
+ if (s==-1) return "";
+ s+=name.length + 1;
+ var e = ac.indexOf(';',s);
+ if (e == -1) e=ac.length;
+ return unescape(ac.substring(s,e));
+}
+function SetCookieWithDomain(name,value,path,domain)
+{
+ var c=name+'='+escape(value);
+ var ny=new Date();
+ ny.setYear(ny.getYear()+1);
+ if (path) c+='; path='+path;
+ if(domain) c+='; domain='+domain;
+ c+='; expires='+ny.toGMTString();
+ document.cookie=c;
+}
+function SetCookie(name,value,path)
+{
+ SetCookieWithDomain(name,value,path,'www.smallrockets.com');
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketGetItem(item)
+{
+ var il=GetCookie('basket');
+ var i=il.split('|');
+ return i[item];
+}
+function BasketGetNumItems()
+{
+ var il=GetCookie('basket');
+ if (il=='')
+ {
+ return 0;
+ }
+ var is=il.split('|');
+ return is.length;
+}
+function BasketGetValue()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[3]*e[5];
+ }
+ return tot;
+}
+function BasketGetTotalItems()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[5]*1.0;
+ }
+ return tot;
+}
+function BasketGotoCheckout()
+{
+ var buy=escape(GetCookie("basket"));
+ if (buy.length>0)
+ {
+ location = 'https://www.smallrockets.com/cgi-bin/checkout.cgi?buy='+buy;
+ BasketEmpty();
+ }
+}
+function Currency(a)
+{
+ var i = Math.round(a*100.0);
+ i = i.toString();
+ while (i.length<3)
+ {
+ i = "0" + i;
+ }
+ return i.substring(0,i.length-2) + '.' + i.substring(i.length-2);
+}
+function Update()
+{
+ location=document.location; 
+}
+</SCRIPT>
+</HEAD>
+<!-- How to buy -->
+<BODY BGCOLOR="#0099ff" TEXT="#ffffff" LINK="#C0C0C0" ALINK="#ffffff" VLINK="#C0C0C0">
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetSearchParam(param)
+{
+ var search = document.location.search;
+ if (search.length>0)
+ {
+ search = search.substring(1);
+ var params = search.split('&');
+ for (var i=0;i<params.length;i++)
+ {
+ var value = params[i];
+ var pos=value.indexOf(param + '=');
+ if (pos!=-1)
+ {
+ value = value.substring(param.length + 1);
+ return value;
+ }
+ }
+ }
+ return "";
+}
+function BuyProduct()
+{
+ var skuName;
+ var search = document.location.search;
+ if (search.length>0)
+ {
+ skuName = GetSearchParam('key');
+ }
+ BasketEmpty();
+ BasketAdd(skuName,'The Red Ace','PC',14.99,'./pc/baron');
+ BasketGotoCheckout();
+ return false;
+}
+</SCRIPT>
+<CENTER>
+<img src="./shared/hd_shop.gif" width="360" height="72" alt="Small Rockets Shop" border="0">
+<P>
+<TABLE BORDER=0 CELLPADDING=0 CELLSPACING=0 WIDTH=500>
+<TR>
+<TD VALIGN="top" COLSPAN=3 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="3" HEIGHT="3" alt="" border="0"></TD>
+</TR>
+<TR>
+<TD VALIGN="top" BGCOLOR="#000000" WIDTH=3><IMG SRC="./shared/spacer.gif" WIDTH="3" HEIGHT="3" alt="" border="0"></TD>
+<TD VALIGN="top" WIDTH=594>
+<TABLE BORDER=0 CELLPADDING=10 CELLSPACING=0 WIDTH=100%>
+<TR>
+<TD VALIGN="top" COLSPAN=2 BGCOLOR="#006699" ALIGN="center"><img src="./pc/baron/images/pi_game_logo.gif"></TD>
+</TR>
+<TR>
+<TD VALIGN="top" BGCOLOR="#006699"><img src="./pc/baron/images/pi_shop_screen.gif"></TD>
+<TD VALIGN="top" BGCOLOR="#006699"><FONT FACE="Verdana, Helvetica, Arial" SIZE=4><B>Buy Master of the Skies: The Red Ace</B>
+<P><FONT SIZE=2>Get a license key now for only $14.99!
+<P>
+<B>Features in the full version:</B>
+<UL>
+<LI>25 Missions in 3 campaigns</LI>
+<LI>Fly over France, Belgium and Africa</LI>
+<LI>Use rockets and bombs to defeat your enemies</LI>
+<LI>Fly four aircraft, each with unique handling</LI>
+<LI>Four wartime music tracks</LI>
+<LI>Face the dastardly Red Baron himself!</LI>
+</UL>
+</TD>
+</TR>
+<TR>
+<TD COLSPAN=2 BGCOLOR="#006699"><P>
+<CENTER><FONT FACE="Verdana, Helvetica, Arial" SIZE=4><img HEIGHT="11" WIDTH="11" src="./shared/arrow.gif" border=0>&nbsp;<A HREF="" onClick="BuyProduct();return false">Continue</A></CENTER>
+</TD>
+</TABLE>
+</TD>
+<TD VALIGN="top" BGCOLOR="#000000" WIDTH=3><IMG SRC="./shared/spacer.gif" WIDTH="3" HEIGHT="3" alt="" border="0"></TD>
+<TR>
+<TD VALIGN="top" COLSPAN=3 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="3" HEIGHT="3" alt="" border="0"></TD>
+</TR>
+</TABLE>
+<BR>
+<BR>
+</BODY>
+</HTML>

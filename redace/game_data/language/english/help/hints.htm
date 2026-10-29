@@ -1,0 +1,345 @@
+<!-- DICONTENT_START -->
+<HTML> <HEAD> <meta NAME="DESCRIPTION" content="Master of the Skies: The Red Ace : How to play Red Ace, including game controls and hints and tips. Master of the Skies: The Red Ace is a WWI flight action game for the PC."><meta NAME="KEYWORDS" content="action; dog fighting; flying; war; combat; world war; sopwith; red baron; games; PC; Downloadable; download; Master of the Skies: The Red Ace; Red Ace; How to play; Instructions;">
+<style> a{text-decoration:none; color="#ffffff"; text-decoration:underline;} a.fixedcolor{text-decoration:none; color="#FFFFFF"; text-decoration:underline;} </style> 
+ <style fprolloverstyle> A:hover {color: #C0C0C0; } A.fixedcolor:hover {color="#cccccc"; } </style> 
+ <TITLE> Master of the Skies: The Red Ace : How to play. </TITLE> <META HTTP-EQUIV="expires" CONTENT="now"> <META HTTP-EQUIV="pragma" CONTENT="no-cache"></HEAD>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetCookie(name)
+{
+ var ac=this.document.cookie;
+ if (ac=="")
+ {
+ return "";
+ }
+ var s=ac.indexOf(name + '=');
+ if (s==-1) return "";
+ s+=name.length + 1;
+ var e = ac.indexOf(';',s);
+ if (e == -1) e=ac.length;
+ return unescape(ac.substring(s,e));
+}
+function SetCookieWithDomain(name,value,path,domain)
+{
+ var c=name+'='+escape(value);
+ var ny=new Date();
+ ny.setYear(ny.getYear()+1);
+ if (path) c+='; path='+path;
+ if(domain) c+='; domain='+domain;
+ c+='; expires='+ny.toGMTString();
+ document.cookie=c;
+}
+function SetCookie(name,value,path)
+{
+ SetCookieWithDomain(name,value,path,'www.smallrockets.com');
+}
+</SCRIPT>
+<BODY BGCOLOR="#333399" TEXT="#ffffff" LINK="#C0C0C0" ALINK="#ffffff" VLINK="#C0C0C0"> 
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetCookie(name)
+{
+ var ac=this.document.cookie;
+ if (ac=="")
+ {
+ return "";
+ }
+ var s=ac.indexOf(name + '=');
+ if (s==-1) return "";
+ s+=name.length + 1;
+ var e = ac.indexOf(';',s);
+ if (e == -1) e=ac.length;
+ return unescape(ac.substring(s,e));
+}
+function SetCookieWithDomain(name,value,path,domain)
+{
+ var c=name+'='+escape(value);
+ var ny=new Date();
+ ny.setYear(ny.getYear()+1);
+ if (path) c+='; path='+path;
+ if(domain) c+='; domain='+domain;
+ c+='; expires='+ny.toGMTString();
+ document.cookie=c;
+}
+function SetCookie(name,value,path)
+{
+ SetCookieWithDomain(name,value,path,'www.smallrockets.com');
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketGetItem(item)
+{
+ var il=GetCookie('basket');
+ var i=il.split('|');
+ return i[item];
+}
+function BasketGetNumItems()
+{
+ var il=GetCookie('basket');
+ if (il=='')
+ {
+ return 0;
+ }
+ var is=il.split('|');
+ return is.length;
+}
+function BasketGetValue()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[3]*e[5];
+ }
+ return tot;
+}
+function BasketGetTotalItems()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[5]*1.0;
+ }
+ return tot;
+}
+function BasketGotoCheckout()
+{
+ var buy=escape(GetCookie("basket"));
+ if (buy.length>0)
+ {
+ location = 'https://www.smallrockets.com/cgi-bin/checkout.cgi?buy='+buy;
+ BasketEmpty();
+ }
+}
+function Currency(a)
+{
+ var i = Math.round(a*100.0);
+ i = i.toString();
+ while (i.length<3)
+ {
+ i = "0" + i;
+ }
+ return i.substring(0,i.length-2) + '.' + i.substring(i.length-2);
+}
+function Update()
+{
+ location=document.location; 
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketAddItem(value)
+{
+ var il=GetCookie('basket');
+ if (il.length)
+ {
+ il+='|'+value;
+ }
+ else
+ {
+ il=value;
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketSetItem(item,value)
+{
+ var il=GetCookie('basket');
+ var is=il.split('|');
+ if (value=='')
+ {
+ var ois=new Array();
+ var j=0;
+ for (var i=0;i<is.length;i++)
+ {
+ if (i!=item)
+ {
+ ois[j]=is[i];
+ j++;
+ }
+ }
+ il=ois.join('|');
+ }
+ else
+ {
+ is[item]=value;
+ il=is.join('|');
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketFind(skuid)
+{
+ var ni=BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ if (skuid==e[0])
+ {
+ return i;
+ }
+ }
+ return -1;
+}
+function BasketAdd(skuid,name,platform,price,location)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ BasketAddItem(skuid+'^'+name+'^'+platform+'^'+price+'^'+location+'^1');
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ e[5]++;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+}
+function BasketRemove(skuid)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ return;
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ if (e[5]<=1)
+ {
+ BasketSetItem(ino,'');
+ }
+ else
+ {
+ e[5]--;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+ }
+}
+function BasketEmpty()
+{
+ SetCookie('basket','','/');
+}
+function BasketAddRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation',document.location.href,'/');
+ document.location.href = './general/basket.htm' ;
+}
+function BasketAddNoRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation','','/');
+}
+function BasketGetLocation()
+{
+ return GetCookie('ecomlocation');
+}
+</SCRIPT>
+<!-- DIMAINMENU -->
+<SCRIPT LANGUAGE="JavaScript">
+function changeImage(imageName, imageSrc)
+{
+ if (document.images)
+ {
+ eval("document." + imageName + ".src =" + "\"" + imageSrc + "\";");
+ }
+ return true;
+}
+</SCRIPT>
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr>
+<td width="47" valign="bottom"><a href="http://www.smallrockets.com"
+TARGET="_blank"
+>
+<img HEIGHT="45" WIDTH="67" src="./shared/ic_bar_start.gif" border="0" alt="Home"></a></td>
+<td width="100%" align="right">
+<!-- Tab menu -->
+<!-- Tab menu -->
+<!-- Tab menu end -->
+<!-- <IMG HEIGHT="35" WIDTH="183" SRC="./shared/navsection.gif"> -->
+<!-- <IMG HEIGHT="35" WIDTH="25" SRC="./shared/ic_bar_section.gif"> -->
+<IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="5" alt="" border="0">
+<table border="0" cellpadding="0" cellspacing="0">
+<TD width="100%" bgcolor="FFCC00" background="./shared/ic_bar_section.gif"><div align="center"><IMG SRC="images/hd_minisiteheader.gif" WIDTH="350" HEIGHT="35" alt="Game Minisite" border="0"></div></td>
+<TD width="100%" bgcolor="FFCC00" align="right" background="./shared/ic_bar_section.gif"><IMG SRC="./shared/ic_bar_gamemanual.gif" WIDTH="175" HEIGHT="35" alt="Game Manual" border="0"></td>
+<td width="15" align="right" background="./shared/ic_bar_section.gif"><img src="./shared/ic_bar_end.gif" width="15" height="35" alt="www.smallrockets.com" border="0"></td></tr>
+<tr><td width="100%" colspan="2" bgcolor="#333399"><IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="5" alt="" border="0"></td></tr>
+</table>
+</td>
+</tr>
+</table>
+<!--side column navigation tables-->
+<!-- DISIDEMENU_START -->
+<SCRIPT LANGUAGE="JavaScript">
+function changeImage(imageName, imageSrc)
+{
+ if (document.images)
+ {
+ eval("document." + imageName + ".src =" + "\"" + imageSrc + "\";");
+ }
+ return true;
+}
+</SCRIPT>
+<TABLE WIDTH=100% BORDER=0 CELLPADDING=0 CELLSPACING=0>
+<TR>
+<TD VALIGN="top">
+<IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="8" alt="" border="0"><BR>
+<table border=0 cellspacing="0" cellpadding="0" WIDTH="114"> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topleft.gif"></td><td bgcolor="#000000" WIDTH=110 HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td 114=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topright.gif"></td></tr> <TR><TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD> <TD bgcolor="#570916">
+<FONT FACE="Arial, Helvetica" SIZE="2">
+<CENTER><IMG HEIGHT="16" WIDTH="85" SRC="images/ic_logo.gif" vspace="5"></CENTER>
+<CENTER><A onMouseOver='changeImage("redacehome","images/bt_baron.gif")' onMouseOut='changeImage("redacehome","images/bt_baron_off.gif")' HREF="index.htm"><IMG HEIGHT="21" WIDTH="101" Name="redacehome" SRC="images/bt_baron_off.gif" ALT="redacehome" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_baron_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_baron.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><IMG HEIGHT="21" WIDTH="101" src="images/bt_howtoplay.gif"></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="howtoplay.htm">how to play</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="hints.htm">hints &amp; tips</A><BR>
+<IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><A onMouseOver='changeImage("feedback","images/bt_feedback.gif")' onMouseOut='changeImage("feedback","images/bt_feedback_off.gif")' HREF="feedback.htm"><IMG HEIGHT="21" WIDTH="101" Name="feedback" SRC="images/bt_feedback_off.gif" ALT="feedback" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_feedback_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_feedback.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><A onMouseOver='changeImage("support","images/bt_support.gif")' onMouseOut='changeImage("support","images/bt_support_off.gif")' HREF="support.htm"><IMG HEIGHT="21" WIDTH="101" Name="support" SRC="images/bt_support_off.gif" ALT="support" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_support_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_support.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+</FONT>
+</TD> <TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD></TR> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td width=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomright.gif"></td></tr> </TABLE>
+<!-- DICONTENT_START2 -->
+<CENTER> <A HREF="http://www.globalstarsoftware.com" TARGET="_blank"><IMG HEIGHT="72" WIDTH="71" SRC="./shared/logos/ic_globalstar_logo.gif" BORDER=0 VSPACE=5></A> </CENTER>
+</FORM>
+</TD>
+<td width="5">
+<IMG SRC="./shared/spacer.gif" WIDTH="5" HEIGHT="5" alt="" border="0">
+</td>
+<TD VALIGN="top" align="left" WIDTH=100%>
+<table border=0 cellspacing="0" cellpadding="0" WIDTH="100%"> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td 100%=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topright.gif"></td></tr> <TR><TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD> <TD bgcolor="#570916">
+<TABLE BORDER=0 CELLSPACING=4 CELLPADDING=6 WIDTH=100%>
+<TR><TD><FONT FACE="Arial, Helvetica" SIZE=2>
+<font face="arial, verdana, helvetica" size="2" color="#C0C0C0">
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>Hints and Tips for Master of the Skies: The Red Ace</H3></FONT>
+ <P> If you're under attack from an AA gun, or from enemy aircraft, take
+ evasive action by banking left or right - if you keep going in a straight
+ line you'll make yourself an easy target.
+ <P> When bombing, drop your payload before you reach the target, as inertia
+ will affect the way the bombs fall.
+ <P>
+Below is information on specific levels which we are frequently asked about.
+<p><b>SPOILERS!</b> - Don't look if you want to work them out for yourselves!
+<p><b>Mission 7 </b><br>
+Avoid AA gunfire either by flying very high or flying very low. Some guns can only fire through an 180 degree radius, so in theory it's possible to sneak up behind them. Learn to bomb accurately. The general rule is - the higher you are, the earlier you have to release the bomb. Use the UP arrow key to view your plane from above and see how your bombs are falling.
+<p><b>Mission 15</b><br>
+A difficult one, this! A tip - gun turrets can't shoot you if you stay below their angle of elevation (ie. about 10 feet above the sea!). Also, you don't actually have to knock out all the guns to save your comrades, only the ones closest to them (though you'll have to come back for the others to complete the mission). Once you've destroyed the guns, you'll still have to escort the friendly planes off the map - there's usually at least one enemy waiting for them before they escape. Phew!
+<p><b>Mission 19</b><br>
+You can't actually kill the Baron on this level - he's just there to taunt you. You may need to hit the oil wells several times before they register as 'destroyed' and you can complete the level.
+<p><b>Mission 24</b><br>
+This is basically a test of all the dogfighting skills you've learnt in the course of the game, so there's no one strategy to adopt - just shoot them all down before they get you. Don't worry about losing your wingman - unfortunately there's nothing you can do to save him.
+<p><b>Mission 25</b><br>
+You're on your own with this one!
+<CENTER><img src="images/pi_fokker.gif" width="128" height="95" alt="The Red Ace"></CENTER>
+</FONT>
+</TD></TR></TABLE>
+</TD> <TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD></TR> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td width=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomright.gif"></td></tr> </TABLE>
+<!--main info table-->
+</td></tr></table>
+<!--body table end-->
+</TD></TR></TABLE>
+<!--main table-->
+</BODY>

@@ -1,0 +1,402 @@
+<!-- DICONTENT_START -->
+<HTML> <HEAD> <meta NAME="DESCRIPTION" content="Master of the Skies: The Red Ace : Help and support information for Red Ace. Required Machine specifications. Video and sound card driver compatibility. Master of the Skies: The Red Ace is a WWI flight action game for the PC."><meta NAME="KEYWORDS" content="action; dog fighting; flying; war; combat; world war; sopwith; red baron; games; PC; Downloadable; download; Master of the Skies: The Red Ace; Red Ace; Support;">
+<style> a{text-decoration:none; color="#ffffff"; text-decoration:underline;} a.fixedcolor{text-decoration:none; color="#FFFFFF"; text-decoration:underline;} </style> 
+ <style fprolloverstyle> A:hover {color: #C0C0C0; } A.fixedcolor:hover {color="#cccccc"; } </style> 
+ <TITLE> Master of the Skies: The Red Ace : Help and support. </TITLE> <META HTTP-EQUIV="expires" CONTENT="now"> <META HTTP-EQUIV="pragma" CONTENT="no-cache"></HEAD>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetCookie(name)
+{
+ var ac=this.document.cookie;
+ if (ac=="")
+ {
+ return "";
+ }
+ var s=ac.indexOf(name + '=');
+ if (s==-1) return "";
+ s+=name.length + 1;
+ var e = ac.indexOf(';',s);
+ if (e == -1) e=ac.length;
+ return unescape(ac.substring(s,e));
+}
+function SetCookieWithDomain(name,value,path,domain)
+{
+ var c=name+'='+escape(value);
+ var ny=new Date();
+ ny.setYear(ny.getYear()+1);
+ if (path) c+='; path='+path;
+ if(domain) c+='; domain='+domain;
+ c+='; expires='+ny.toGMTString();
+ document.cookie=c;
+}
+function SetCookie(name,value,path)
+{
+ SetCookieWithDomain(name,value,path,'www.smallrockets.com');
+}
+</SCRIPT>
+<BODY BGCOLOR="#333399" TEXT="#ffffff" LINK="#C0C0C0" ALINK="#ffffff" VLINK="#C0C0C0"> 
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetCookie(name)
+{
+ var ac=this.document.cookie;
+ if (ac=="")
+ {
+ return "";
+ }
+ var s=ac.indexOf(name + '=');
+ if (s==-1) return "";
+ s+=name.length + 1;
+ var e = ac.indexOf(';',s);
+ if (e == -1) e=ac.length;
+ return unescape(ac.substring(s,e));
+}
+function SetCookieWithDomain(name,value,path,domain)
+{
+ var c=name+'='+escape(value);
+ var ny=new Date();
+ ny.setYear(ny.getYear()+1);
+ if (path) c+='; path='+path;
+ if(domain) c+='; domain='+domain;
+ c+='; expires='+ny.toGMTString();
+ document.cookie=c;
+}
+function SetCookie(name,value,path)
+{
+ SetCookieWithDomain(name,value,path,'www.smallrockets.com');
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketGetItem(item)
+{
+ var il=GetCookie('basket');
+ var i=il.split('|');
+ return i[item];
+}
+function BasketGetNumItems()
+{
+ var il=GetCookie('basket');
+ if (il=='')
+ {
+ return 0;
+ }
+ var is=il.split('|');
+ return is.length;
+}
+function BasketGetValue()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[3]*e[5];
+ }
+ return tot;
+}
+function BasketGetTotalItems()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[5]*1.0;
+ }
+ return tot;
+}
+function BasketGotoCheckout()
+{
+ var buy=escape(GetCookie("basket"));
+ if (buy.length>0)
+ {
+ location = 'https://www.smallrockets.com/cgi-bin/checkout.cgi?buy='+buy;
+ BasketEmpty();
+ }
+}
+function Currency(a)
+{
+ var i = Math.round(a*100.0);
+ i = i.toString();
+ while (i.length<3)
+ {
+ i = "0" + i;
+ }
+ return i.substring(0,i.length-2) + '.' + i.substring(i.length-2);
+}
+function Update()
+{
+ location=document.location; 
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketAddItem(value)
+{
+ var il=GetCookie('basket');
+ if (il.length)
+ {
+ il+='|'+value;
+ }
+ else
+ {
+ il=value;
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketSetItem(item,value)
+{
+ var il=GetCookie('basket');
+ var is=il.split('|');
+ if (value=='')
+ {
+ var ois=new Array();
+ var j=0;
+ for (var i=0;i<is.length;i++)
+ {
+ if (i!=item)
+ {
+ ois[j]=is[i];
+ j++;
+ }
+ }
+ il=ois.join('|');
+ }
+ else
+ {
+ is[item]=value;
+ il=is.join('|');
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketFind(skuid)
+{
+ var ni=BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ if (skuid==e[0])
+ {
+ return i;
+ }
+ }
+ return -1;
+}
+function BasketAdd(skuid,name,platform,price,location)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ BasketAddItem(skuid+'^'+name+'^'+platform+'^'+price+'^'+location+'^1');
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ e[5]++;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+}
+function BasketRemove(skuid)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ return;
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ if (e[5]<=1)
+ {
+ BasketSetItem(ino,'');
+ }
+ else
+ {
+ e[5]--;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+ }
+}
+function BasketEmpty()
+{
+ SetCookie('basket','','/');
+}
+function BasketAddRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation',document.location.href,'/');
+ document.location.href = './general/basket.htm' ;
+}
+function BasketAddNoRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation','','/');
+}
+function BasketGetLocation()
+{
+ return GetCookie('ecomlocation');
+}
+</SCRIPT>
+<!-- DIMAINMENU -->
+<SCRIPT LANGUAGE="JavaScript">
+function changeImage(imageName, imageSrc)
+{
+ if (document.images)
+ {
+ eval("document." + imageName + ".src =" + "\"" + imageSrc + "\";");
+ }
+ return true;
+}
+</SCRIPT>
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr>
+<td width="47" valign="bottom"><a href="http://www.smallrockets.com"
+TARGET="_blank"
+>
+<img HEIGHT="45" WIDTH="67" src="./shared/ic_bar_start.gif" border="0" alt="Home"></a></td>
+<td width="100%" align="right">
+<!-- Tab menu -->
+<!-- Tab menu -->
+<!-- Tab menu end -->
+<!-- <IMG HEIGHT="35" WIDTH="183" SRC="./shared/navsection.gif"> -->
+<!-- <IMG HEIGHT="35" WIDTH="25" SRC="./shared/ic_bar_section.gif"> -->
+<IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="5" alt="" border="0">
+<table border="0" cellpadding="0" cellspacing="0">
+<TD width="100%" bgcolor="FFCC00" background="./shared/ic_bar_section.gif"><div align="center"><IMG SRC="images/hd_minisiteheader.gif" WIDTH="350" HEIGHT="35" alt="Game Minisite" border="0"></div></td>
+<TD width="100%" bgcolor="FFCC00" align="right" background="./shared/ic_bar_section.gif"><IMG SRC="./shared/ic_bar_gamemanual.gif" WIDTH="175" HEIGHT="35" alt="Game Manual" border="0"></td>
+<td width="15" align="right" background="./shared/ic_bar_section.gif"><img src="./shared/ic_bar_end.gif" width="15" height="35" alt="www.smallrockets.com" border="0"></td></tr>
+<tr><td width="100%" colspan="2" bgcolor="#333399"><IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="5" alt="" border="0"></td></tr>
+</table>
+</td>
+</tr>
+</table>
+<!--side column navigation tables-->
+<!-- DISIDEMENU_START -->
+<SCRIPT LANGUAGE="JavaScript">
+function changeImage(imageName, imageSrc)
+{
+ if (document.images)
+ {
+ eval("document." + imageName + ".src =" + "\"" + imageSrc + "\";");
+ }
+ return true;
+}
+</SCRIPT>
+<TABLE WIDTH=100% BORDER=0 CELLPADDING=0 CELLSPACING=0>
+<TR>
+<TD VALIGN="top">
+<IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="8" alt="" border="0"><BR>
+<table border=0 cellspacing="0" cellpadding="0" WIDTH="114"> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topleft.gif"></td><td bgcolor="#000000" WIDTH=110 HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td 114=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topright.gif"></td></tr> <TR><TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD> <TD bgcolor="#570916">
+<FONT FACE="Arial, Helvetica" SIZE="2">
+<CENTER><IMG HEIGHT="16" WIDTH="85" SRC="images/ic_logo.gif" vspace="5"></CENTER>
+<CENTER><A onMouseOver='changeImage("redacehome","images/bt_baron.gif")' onMouseOut='changeImage("redacehome","images/bt_baron_off.gif")' HREF="index.htm"><IMG HEIGHT="21" WIDTH="101" Name="redacehome" SRC="images/bt_baron_off.gif" ALT="redacehome" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_baron_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_baron.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><A onMouseOver='changeImage("howtoplay","images/bt_howtoplay.gif")' onMouseOut='changeImage("howtoplay","images/bt_howtoplay_off.gif")' HREF="howtoplay.htm"><IMG HEIGHT="21" WIDTH="101" Name="howtoplay" SRC="images/bt_howtoplay_off.gif" ALT="howtoplay" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_howtoplay_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_howtoplay.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><A onMouseOver='changeImage("feedback","images/bt_feedback.gif")' onMouseOut='changeImage("feedback","images/bt_feedback_off.gif")' HREF="feedback.htm"><IMG HEIGHT="21" WIDTH="101" Name="feedback" SRC="images/bt_feedback_off.gif" ALT="feedback" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_feedback_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_feedback.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><IMG HEIGHT="21" WIDTH="101" src="images/bt_support.gif"></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="support.htm">support</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="technical.htm">technical</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="system.htm">system</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="directx.htm">directx</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="3daccelerator.htm">3d accelerator</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm">license</A><BR>
+<IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+</FONT>
+</TD> <TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD></TR> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td width=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomright.gif"></td></tr> </TABLE>
+<!-- DICONTENT_START2 -->
+<CENTER> <A HREF="http://www.globalstarsoftware.com" TARGET="_blank"><IMG HEIGHT="72" WIDTH="71" SRC="./shared/logos/ic_globalstar_logo.gif" BORDER=0 VSPACE=5></A> </CENTER>
+</FORM>
+</TD>
+<td width="5">
+<IMG SRC="./shared/spacer.gif" WIDTH="5" HEIGHT="5" alt="" border="0">
+</td>
+<TD VALIGN="top" align="left" WIDTH=100%>
+<table border=0 cellspacing="0" cellpadding="0" WIDTH="100%"> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td 100%=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topright.gif"></td></tr> <TR><TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD> <TD bgcolor="#570916">
+<TABLE BORDER=0 CELLSPACING=4 CELLPADDING=6 WIDTH=100%>
+<TR><TD><FONT FACE="Arial, Helvetica" SIZE=2>
+<font face="arial, verdana, helvetica" size="2" color="#C0C0C0">
+<justify><FONT FACE="arial, verdana, helvetica" size="4" color="#FFFFFF"><H2>License agreement</H2></FONT></JUSTIFY>
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>Contents</H3></FONT>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm#grant">GRANT OF LICENSE</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm#restrictions">LICENSE RESTRICTIONS</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm#enhancements">UPDATES AND ENHANCEMENTS</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm#title">TITLE</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm#disclaimer">DISCLAIMER OF WARRANTY</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm#termination">TERMINATION</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm#miscellaneous">MISCELLANEOUS</A><BR>
+<P>
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>END USER LICENSE AGREEMENT</H3></FONT>
+<P><FONT color="#FFFFFF">Master of the Skies: The Red Ace</FONT><P>
+<P>
+REDISTRIBUTION NOT PERMITTED
+<P>
+Software License for Master of the Skies: The Red Ace
+<P>
+IMPORTANT -- READ CAREFULLY: This License Agreement for Master of the Skies: The Red Ace ("Game") is a legal agreement between you
+(either an individual or an entity) and Small Rockets ("SR").
+<P>
+<A NAME="grant"></A><P><FONT color="#FFFFFF">1. GRANT OF LICENSE.</FONT><P>
+SR hereby grant to you a non-exclusive license to use the Game and Documentation, provided you
+may: (i) use the Game on any single computer; (ii) use the Game on a second computer
+so long as the first and second computers are not used simultaneously; (iii) copy the Game for
+back-up, archival purposes provided any copy must contain all of the original Game's proprietary notices.
+<A NAME="restrictions"></A><P><FONT color="#FFFFFF">2. LICENSE RESTRICTIONS.</FONT><P>
+a) You may not: (i) permit other individuals to use the Game except under the terms listed above;
+(ii) modify, translate, reverse engineer, decompile, disassemble (except to the extent that
+this restriction is expressly prohibited by law) or create derivative works based upon the Game
+or Documentation; (iii) copy the Game or Documentation (except for back-up or archival purposes);
+(iv) distribute, rent, lease, transfer, or otherwise transfer rights to the Game or Documentation;
+or (v) remove any proprietary notices or labels on the Game or Documentation.
+<P>
+b) You agree that you shall only use the Game and Documentation in a manner that complies with
+all applicable laws in the jurisdiction in which you use the Game and Documentation, including,
+but not limited to, applicable restrictions concerning copyright and other intellectual property rights.
+<P>
+c) The Game is for private use only. You may not use or display this Game for any commercial purpose.
+You may not distribute this Game to third parties in any manner.
+<A NAME="enhancements"></A><P><FONT color="#FFFFFF">3. UPDATES AND ENHANCEMENTS.</FONT><P>
+This license does not grant you any right to any enhancement or update.
+<A NAME="title"></A><P><FONT color="#FFFFFF">4. TITLE.</FONT><P>
+Title, ownership, rights, and intellectual property rights in and to the Game and Documentation
+shall remain in SR and/or its suppliers. The Game is protected by the copyright laws of the United
+Kingdom and international copyright treaties. Title, ownership rights and intellectual property rights
+in and to the content accessed through the Game including any content contained in the Game media
+demonstration files shall be retained by the applicable content owner and may be protected by applicable
+copyright or other law. This license gives you no rights to such content.
+<A NAME="disclaimer"></A><P><FONT color="#FFFFFF">5. DISCLAIMER OF WARRANTY:</FONT><P>
+THIS SOFTWARE AND THE ACCOMPANYING FILES ARE SOLD 'AS IS' AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS OFFERED.
+<P>
+The user must assume the entire risk of using the program. ANY LIABILITY OF THE SELLER WILL BE LIMITED
+EXCLUSIVELY TO PRODUCT REPLACEMENT OR REFUND OF PURCHASE PRICE.
+<A NAME="termination"></A><P><FONT color="#FFFFFF">6. TERMINATION:</FONT><P>
+This License Agreement shall terminate automatically if you fail to comply with the limitations described
+in this license. No notice shall be required from SR to effectuate such termination. Upon termination, you
+must destroy all copies of the Game and Documentation.
+<A NAME="miscellaneous"></A><P><FONT color="#FFFFFF">7. MISCELLANEOUS.</FONT><P>
+This License Agreement shall constitute the complete and exclusive agreement between us. The terms and
+conditions contained in this License Agreement may not be modified except in a writing duly signed by you and
+an authorized representative of SR. If any provision of this License Agreement is held to be unenforceable
+for any reason, such provision shall be reformed only to the extent necessary to make it enforceable, and such
+decision shall not affect the enforceability of such provision under other circumstances, or of the remaining
+provisions hereof under all circumstances. This License Agreement shall be governed by the laws of the United Kingdom,
+without regard to conflicts of law provisions.
+<CENTER><img src="images/pi_fokker.gif" width="128" height="95" alt="The Red Ace"></CENTER>
+<P>
+<CENTER>
+Copyright 2000 Small Rockets. The Old Magistrates Court, 71 North Street, Guildford, Surrey GU1 4BJ. All rights reserved.
+<P>
+<BR>Small Rockets is a trademark of Small Software Ltd.
+</CENTER>
+</FONT>
+</TD></TR></TABLE>
+</TD> <TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD></TR> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td width=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomright.gif"></td></tr> </TABLE>
+<!--main info table-->
+</td></tr></table>
+<!--body table end-->
+</TD></TR></TABLE>
+<!--main table-->
+</BODY>

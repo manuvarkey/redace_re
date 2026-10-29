@@ -1,0 +1,455 @@
+<!-- DICONTENT_START -->
+<HTML> <HEAD> <meta NAME="DESCRIPTION" content="Master of the Skies: The Red Ace : Help and support information for Red Ace. Required Machine specifications. Video and sound card driver compatibility. Master of the Skies: The Red Ace is a WWI flight action game for the PC."><meta NAME="KEYWORDS" content="action; dog fighting; flying; war; combat; world war; sopwith; red baron; games; PC; Downloadable; download; Master of the Skies: The Red Ace; Red Ace; Support;">
+<style> a{text-decoration:none; color="#ffffff"; text-decoration:underline;} a.fixedcolor{text-decoration:none; color="#FFFFFF"; text-decoration:underline;} </style> 
+ <style fprolloverstyle> A:hover {color: #C0C0C0; } A.fixedcolor:hover {color="#cccccc"; } </style> 
+ <TITLE> Master of the Skies: The Red Ace : Help and support. </TITLE> <META HTTP-EQUIV="expires" CONTENT="now"> <META HTTP-EQUIV="pragma" CONTENT="no-cache"></HEAD>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetCookie(name)
+{
+ var ac=this.document.cookie;
+ if (ac=="")
+ {
+ return "";
+ }
+ var s=ac.indexOf(name + '=');
+ if (s==-1) return "";
+ s+=name.length + 1;
+ var e = ac.indexOf(';',s);
+ if (e == -1) e=ac.length;
+ return unescape(ac.substring(s,e));
+}
+function SetCookieWithDomain(name,value,path,domain)
+{
+ var c=name+'='+escape(value);
+ var ny=new Date();
+ ny.setYear(ny.getYear()+1);
+ if (path) c+='; path='+path;
+ if(domain) c+='; domain='+domain;
+ c+='; expires='+ny.toGMTString();
+ document.cookie=c;
+}
+function SetCookie(name,value,path)
+{
+ SetCookieWithDomain(name,value,path,'www.smallrockets.com');
+}
+</SCRIPT>
+<BODY BGCOLOR="#333399" TEXT="#ffffff" LINK="#C0C0C0" ALINK="#ffffff" VLINK="#C0C0C0"> 
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetCookie(name)
+{
+ var ac=this.document.cookie;
+ if (ac=="")
+ {
+ return "";
+ }
+ var s=ac.indexOf(name + '=');
+ if (s==-1) return "";
+ s+=name.length + 1;
+ var e = ac.indexOf(';',s);
+ if (e == -1) e=ac.length;
+ return unescape(ac.substring(s,e));
+}
+function SetCookieWithDomain(name,value,path,domain)
+{
+ var c=name+'='+escape(value);
+ var ny=new Date();
+ ny.setYear(ny.getYear()+1);
+ if (path) c+='; path='+path;
+ if(domain) c+='; domain='+domain;
+ c+='; expires='+ny.toGMTString();
+ document.cookie=c;
+}
+function SetCookie(name,value,path)
+{
+ SetCookieWithDomain(name,value,path,'www.smallrockets.com');
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketGetItem(item)
+{
+ var il=GetCookie('basket');
+ var i=il.split('|');
+ return i[item];
+}
+function BasketGetNumItems()
+{
+ var il=GetCookie('basket');
+ if (il=='')
+ {
+ return 0;
+ }
+ var is=il.split('|');
+ return is.length;
+}
+function BasketGetValue()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[3]*e[5];
+ }
+ return tot;
+}
+function BasketGetTotalItems()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[5]*1.0;
+ }
+ return tot;
+}
+function BasketGotoCheckout()
+{
+ var buy=escape(GetCookie("basket"));
+ if (buy.length>0)
+ {
+ location = 'https://www.smallrockets.com/cgi-bin/checkout.cgi?buy='+buy;
+ BasketEmpty();
+ }
+}
+function Currency(a)
+{
+ var i = Math.round(a*100.0);
+ i = i.toString();
+ while (i.length<3)
+ {
+ i = "0" + i;
+ }
+ return i.substring(0,i.length-2) + '.' + i.substring(i.length-2);
+}
+function Update()
+{
+ location=document.location; 
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketAddItem(value)
+{
+ var il=GetCookie('basket');
+ if (il.length)
+ {
+ il+='|'+value;
+ }
+ else
+ {
+ il=value;
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketSetItem(item,value)
+{
+ var il=GetCookie('basket');
+ var is=il.split('|');
+ if (value=='')
+ {
+ var ois=new Array();
+ var j=0;
+ for (var i=0;i<is.length;i++)
+ {
+ if (i!=item)
+ {
+ ois[j]=is[i];
+ j++;
+ }
+ }
+ il=ois.join('|');
+ }
+ else
+ {
+ is[item]=value;
+ il=is.join('|');
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketFind(skuid)
+{
+ var ni=BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ if (skuid==e[0])
+ {
+ return i;
+ }
+ }
+ return -1;
+}
+function BasketAdd(skuid,name,platform,price,location)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ BasketAddItem(skuid+'^'+name+'^'+platform+'^'+price+'^'+location+'^1');
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ e[5]++;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+}
+function BasketRemove(skuid)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ return;
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ if (e[5]<=1)
+ {
+ BasketSetItem(ino,'');
+ }
+ else
+ {
+ e[5]--;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+ }
+}
+function BasketEmpty()
+{
+ SetCookie('basket','','/');
+}
+function BasketAddRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation',document.location.href,'/');
+ document.location.href = './general/basket.htm' ;
+}
+function BasketAddNoRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation','','/');
+}
+function BasketGetLocation()
+{
+ return GetCookie('ecomlocation');
+}
+</SCRIPT>
+<!-- DIMAINMENU -->
+<SCRIPT LANGUAGE="JavaScript">
+function changeImage(imageName, imageSrc)
+{
+ if (document.images)
+ {
+ eval("document." + imageName + ".src =" + "\"" + imageSrc + "\";");
+ }
+ return true;
+}
+</SCRIPT>
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr>
+<td width="47" valign="bottom"><a href="http://www.smallrockets.com"
+TARGET="_blank"
+>
+<img HEIGHT="45" WIDTH="67" src="./shared/ic_bar_start.gif" border="0" alt="Home"></a></td>
+<td width="100%" align="right">
+<!-- Tab menu -->
+<!-- Tab menu -->
+<!-- Tab menu end -->
+<!-- <IMG HEIGHT="35" WIDTH="183" SRC="./shared/navsection.gif"> -->
+<!-- <IMG HEIGHT="35" WIDTH="25" SRC="./shared/ic_bar_section.gif"> -->
+<IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="5" alt="" border="0">
+<table border="0" cellpadding="0" cellspacing="0">
+<TD width="100%" bgcolor="FFCC00" background="./shared/ic_bar_section.gif"><div align="center"><IMG SRC="images/hd_minisiteheader.gif" WIDTH="350" HEIGHT="35" alt="Game Minisite" border="0"></div></td>
+<TD width="100%" bgcolor="FFCC00" align="right" background="./shared/ic_bar_section.gif"><IMG SRC="./shared/ic_bar_gamemanual.gif" WIDTH="175" HEIGHT="35" alt="Game Manual" border="0"></td>
+<td width="15" align="right" background="./shared/ic_bar_section.gif"><img src="./shared/ic_bar_end.gif" width="15" height="35" alt="www.smallrockets.com" border="0"></td></tr>
+<tr><td width="100%" colspan="2" bgcolor="#333399"><IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="5" alt="" border="0"></td></tr>
+</table>
+</td>
+</tr>
+</table>
+<!--side column navigation tables-->
+<!-- DISIDEMENU_START -->
+<SCRIPT LANGUAGE="JavaScript">
+function changeImage(imageName, imageSrc)
+{
+ if (document.images)
+ {
+ eval("document." + imageName + ".src =" + "\"" + imageSrc + "\";");
+ }
+ return true;
+}
+</SCRIPT>
+<TABLE WIDTH=100% BORDER=0 CELLPADDING=0 CELLSPACING=0>
+<TR>
+<TD VALIGN="top">
+<IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="8" alt="" border="0"><BR>
+<table border=0 cellspacing="0" cellpadding="0" WIDTH="114"> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topleft.gif"></td><td bgcolor="#000000" WIDTH=110 HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td 114=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topright.gif"></td></tr> <TR><TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD> <TD bgcolor="#570916">
+<FONT FACE="Arial, Helvetica" SIZE="2">
+<CENTER><IMG HEIGHT="16" WIDTH="85" SRC="images/ic_logo.gif" vspace="5"></CENTER>
+<CENTER><A onMouseOver='changeImage("redacehome","images/bt_baron.gif")' onMouseOut='changeImage("redacehome","images/bt_baron_off.gif")' HREF="index.htm"><IMG HEIGHT="21" WIDTH="101" Name="redacehome" SRC="images/bt_baron_off.gif" ALT="redacehome" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_baron_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_baron.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><A onMouseOver='changeImage("howtoplay","images/bt_howtoplay.gif")' onMouseOut='changeImage("howtoplay","images/bt_howtoplay_off.gif")' HREF="howtoplay.htm"><IMG HEIGHT="21" WIDTH="101" Name="howtoplay" SRC="images/bt_howtoplay_off.gif" ALT="howtoplay" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_howtoplay_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_howtoplay.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><A onMouseOver='changeImage("feedback","images/bt_feedback.gif")' onMouseOut='changeImage("feedback","images/bt_feedback_off.gif")' HREF="feedback.htm"><IMG HEIGHT="21" WIDTH="101" Name="feedback" SRC="images/bt_feedback_off.gif" ALT="feedback" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_feedback_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_feedback.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><IMG HEIGHT="21" WIDTH="101" src="images/bt_support.gif"></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="support.htm">support</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="technical.htm">technical</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="system.htm">system</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="directx.htm">directx</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="3daccelerator.htm">3d accelerator</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm">license</A><BR>
+<IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+</FONT>
+</TD> <TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD></TR> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td width=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomright.gif"></td></tr> </TABLE>
+<!-- DICONTENT_START2 -->
+<CENTER> <A HREF="http://www.globalstarsoftware.com" TARGET="_blank"><IMG HEIGHT="72" WIDTH="71" SRC="./shared/logos/ic_globalstar_logo.gif" BORDER=0 VSPACE=5></A> </CENTER>
+</FORM>
+</TD>
+<td width="5">
+<IMG SRC="./shared/spacer.gif" WIDTH="5" HEIGHT="5" alt="" border="0">
+</td>
+<TD VALIGN="top" align="left" WIDTH=100%>
+<table border=0 cellspacing="0" cellpadding="0" WIDTH="100%"> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td 100%=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topright.gif"></td></tr> <TR><TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD> <TD bgcolor="#570916">
+<TABLE BORDER=0 CELLSPACING=4 CELLPADDING=6 WIDTH=100%>
+<TR><TD><FONT FACE="Arial, Helvetica" SIZE=2>
+<font face="arial, verdana, helvetica" size="2" color="#C0C0C0">
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>Technical Support</H3></FONT>
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>Contents</H3></FONT>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="#1">I can't install the game</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="#2">I can't get the game to run</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="#3">The graphics appear corrupted</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="#4">There's no sound</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="#6">The game is slow/hard to control?</A><BR>
+<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="#7">What do I do if all else fails?</A><BR>
+<BR>
+<CENTER><img src="images/pi_fokker.gif" width="128" height="95" alt="The Red Ace"></CENTER>
+<A NAME="2"></A>
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>I can't get the game to run.</H3></FONT>
+Are you sure you have a version of <A HREF="directx.htm" >DirectX</A> on your machine?
+If not this <A HREF="directx.htm" >link</A> will explain where to download the latest version from.<BR><BR>
+Are you sure you have a suitable
+<A HREF="3daccelerator.htm">3D accelerator</A> in your machine?<BR><BR>
+Do you have the latest drivers for your video card/3D accelerator? Check on the
+<A HREF="system.htm">machine spec</A> page
+for cards the game has been tested on and which drivers were used.
+</p>
+<A NAME="3"></A>
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>The graphics appear corrupted.</H3></FONT>
+Please check the
+<A HREF="system.htm">machine spec</A> page
+for details of problems on specific cards.<BR><BR>
+If your card is listed as not having problems, check the video driver you are using is the one that
+was used in the test. Typically if the driver is newer than the one listed the
+game should also be fine. If you have an older driver, you might want to update
+your machine's video drivers - do this by going to the web pages of the maker of
+your video card.
+</P>
+<CENTER><img src="images/pi_sopwith.gif" width="128" height="85" alt="The Red Ace"></CENTER>
+<A NAME="4"></A>
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>There's no sound</H3></FONT>
+Are you sure you have <BR><BR>
+1) A suitable sound card (it must be DirectSound or SoundBlaster compatible).<BR>
+2) Speakers/head-phones connected to your machine/sound card.<BR>
+3) Turned the volume up on your speakers/headphones.<BR>
+4) Turned up the main volume of your sound card, using the taskbar speaker icon.
+<BR><BR>
+On the final point - within Windows you can set the volume of sound. To do this
+<UL>
+ <LI>On the bottom right corner of the screen double click on the yellow 'speaker' icon.
+ <LI>This icon can sometimes appear with a red circle over the top of it - this happens when
+ sound on your system has been muted (disabled).
+ <LI>Make sure each of the sliders is at their highest positions.
+ <LI>Make sure that all of the 'Mute' and 'Mute All' tick boxes are off (without tick).
+ </UL>
+</P>
+<CENTER><img src="images/pi_albatross.gif" width="128" height="85" alt="The Red Ace"></CENTER>
+<A NAME="6"></A>
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>The game is slow/hard to control</H3></FONT>
+<P align="justify">
+This is probably because of how the game is configured and/or how your machine is set up.
+Therefore you need to reconfigure your machine and/or the game in order to increase performance.
+Please try the following ideas...<BR><BR>
+1) Make sure you close down everything on your machine except for the game. The other programs
+ will eat up some of your machine's resources. It is especially a good idea to close down mail/internet
+ programs as they can interrupt the game, making gameplay 'jumpy' (stops and starts)<BR><BR>
+2) If after trying the above you still find the game runs too slowly you might want to upgrade your machine. Here
+are some of the ways that will improve the performance of the game
+<UL>
+ <LI>Memory - More than 128Mb of memory (RAM) will likely make little difference though
+ <LI>Processor - Get a faster processor. Check the recommended <A HREF="system.htm">machine specs</A> for details.
+ <LI>Video card - Buy a new <A HREF="3daccelerator.htm" >3D accelerator</A>.
+ If you have one of the cards listed in the
+<A HREF="system.htm">machine spec</A>
+page it is probably fast enough.
+</UL>
+These are the main features of your machine which will affect the performance of the game.
+<P>
+<p>
+You can also improve the performance of the game by changing the resolution and detail settings. Choose 'video' from the main menu, and lower the resolution setting, or choose Graphics, and adjust the effects and view distance settings to achieve this.
+<p>
+<CENTER><img src="images/pi_sopwith.gif" width="128" height="85" alt="The Red Ace"></CENTER>
+</P>
+<A NAME="7"></A>
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>What do I do if all else fails?</H3></FONT>
+You can contact our online help staff. Please make sure you have completely read through
+this page before contacting our staff. <BR><BR>
+Note that anybody who has purchased a product from us gets a priority service.
+To get this service please include within your message the name and email
+address you used to purchase the products. <BR><BR>
+To help us quickly work out what the problem is you <B>must</B> include the
+configuration of your machine. You can get this automatically via the output of the
+'dxdiag' program.
+<P><FONT color="#FFFFFF">How to use dxdiag</FONT><P>
+Here's how to get the output of the Windows application dxdiag...
+<UL>
+ <LI>Click on the 'Start' button
+ <LI>Select the 'Run...' option from the menu
+ <LI>Type 'dxdiag' and press return or click 'ok'
+ <LI>This should open the DirectX configuration program, if not go to the list below
+ <LI>Click on the 'Save All Information' button at the bottom of the screen
+ <LI>Choose a place on your hard disk to save the file (eg c:\)
+ <LI>Click 'Save' to save the file
+ <LI>In your mail include this complete file
+ <LI>You can do this by cutting and pasting the file into your mail
+ <LI>Alternatively drag the file into your mail message
+</UL>
+If this doesn't work fill in as much of the following as you can in your mail. The
+more detail you can give us the more easily and quickly we'll be able to find the
+root of the problem.
+<UL>
+ <LI>Name and make of machine
+ <LI>What operating system you are using (eg Win95, Win98, NT etc)
+ <LI>How much memory (RAM) you have in your machine (eg 32Mb)
+ <LI>What sort of processor you have in your machine (eg Intel PentiumII 233Mhz)
+ <LI>How much free hard disk space you have in your machine (eg 4Gb)
+ <LI>What version of <A HREF="directx.htm">DirectX</A> do you have (eg 3,5,6.1,7 or 8)
+ <LI>What <A HREF="3daccelerator.htm" >video card/3D accelerator</A> you have in your machine (eg 3dfx Voodoo, ATi Rage Pro)
+ <LI>What sort of sound card you have in your machine (eg Sound Blaster, AWE64)
+</UL>
+<P><FONT color="#FFFFFF">What to send</FONT><P>
+Within the mail please provide<BR><BR>
+1) The name of the program you used to install the game <BR>
+2) Where you got the file from <BR>
+3) Where the problem takes place <BR>
+4) How often (if applicable) the problem takes place<BR>
+5) How the problem manifests itself<BR><BR>
+Thank you for taking the time to provide this information, this will greatly
+ease the process of finding out what the problem is. <BR><BR>
+Send your email to <A HREF="mailto:support@smallrockets.com">support@smallrockets.com</A>, and we
+will try to get back to you as soon as we can. <BR>Thanks, and sorry for the inconvenience.
+</P>
+<CENTER><img src="images/pi_fokker.gif" width="128" height="95" alt="The Red Ace"></CENTER>
+</FONT>
+</TD></TR></TABLE>
+</TD> <TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD></TR> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td width=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomright.gif"></td></tr> </TABLE>
+<!--main info table-->
+</td></tr></table>
+<!--body table end-->
+</TD></TR></TABLE>
+<!--main table-->
+</BODY>

@@ -1,0 +1,676 @@
+<!-- DICONTENT_START -->
+<HTML> <HEAD> <meta NAME="DESCRIPTION" content="Master of the Skies: The Red Ace : Help and support information for Red Ace. Required Machine specifications. Video and sound card driver compatibility. Master of the Skies: The Red Ace is a WWI flight action game for the PC."><meta NAME="KEYWORDS" content="action; dog fighting; flying; war; combat; world war; sopwith; red baron; games; PC; Downloadable; download; Master of the Skies: The Red Ace; Red Ace; Support;">
+<style> a{text-decoration:none; color="#ffffff"; text-decoration:underline;} a.fixedcolor{text-decoration:none; color="#FFFFFF"; text-decoration:underline;} </style> 
+ <style fprolloverstyle> A:hover {color: #C0C0C0; } A.fixedcolor:hover {color="#cccccc"; } </style> 
+ <TITLE> Master of the Skies: The Red Ace : Help and support. </TITLE> <META HTTP-EQUIV="expires" CONTENT="now"> <META HTTP-EQUIV="pragma" CONTENT="no-cache"></HEAD>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetCookie(name)
+{
+ var ac=this.document.cookie;
+ if (ac=="")
+ {
+ return "";
+ }
+ var s=ac.indexOf(name + '=');
+ if (s==-1) return "";
+ s+=name.length + 1;
+ var e = ac.indexOf(';',s);
+ if (e == -1) e=ac.length;
+ return unescape(ac.substring(s,e));
+}
+function SetCookieWithDomain(name,value,path,domain)
+{
+ var c=name+'='+escape(value);
+ var ny=new Date();
+ ny.setYear(ny.getYear()+1);
+ if (path) c+='; path='+path;
+ if(domain) c+='; domain='+domain;
+ c+='; expires='+ny.toGMTString();
+ document.cookie=c;
+}
+function SetCookie(name,value,path)
+{
+ SetCookieWithDomain(name,value,path,'www.smallrockets.com');
+}
+</SCRIPT>
+<BODY BGCOLOR="#333399" TEXT="#ffffff" LINK="#C0C0C0" ALINK="#ffffff" VLINK="#C0C0C0"> 
+<SCRIPT LANGUAGE="JavaScript1.1">
+function GetCookie(name)
+{
+ var ac=this.document.cookie;
+ if (ac=="")
+ {
+ return "";
+ }
+ var s=ac.indexOf(name + '=');
+ if (s==-1) return "";
+ s+=name.length + 1;
+ var e = ac.indexOf(';',s);
+ if (e == -1) e=ac.length;
+ return unescape(ac.substring(s,e));
+}
+function SetCookieWithDomain(name,value,path,domain)
+{
+ var c=name+'='+escape(value);
+ var ny=new Date();
+ ny.setYear(ny.getYear()+1);
+ if (path) c+='; path='+path;
+ if(domain) c+='; domain='+domain;
+ c+='; expires='+ny.toGMTString();
+ document.cookie=c;
+}
+function SetCookie(name,value,path)
+{
+ SetCookieWithDomain(name,value,path,'www.smallrockets.com');
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketGetItem(item)
+{
+ var il=GetCookie('basket');
+ var i=il.split('|');
+ return i[item];
+}
+function BasketGetNumItems()
+{
+ var il=GetCookie('basket');
+ if (il=='')
+ {
+ return 0;
+ }
+ var is=il.split('|');
+ return is.length;
+}
+function BasketGetValue()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[3]*e[5];
+ }
+ return tot;
+}
+function BasketGetTotalItems()
+{
+ var tot = 0;
+ var ni = BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ tot+=e[5]*1.0;
+ }
+ return tot;
+}
+function BasketGotoCheckout()
+{
+ var buy=escape(GetCookie("basket"));
+ if (buy.length>0)
+ {
+ location = 'https://www.smallrockets.com/cgi-bin/checkout.cgi?buy='+buy;
+ BasketEmpty();
+ }
+}
+function Currency(a)
+{
+ var i = Math.round(a*100.0);
+ i = i.toString();
+ while (i.length<3)
+ {
+ i = "0" + i;
+ }
+ return i.substring(0,i.length-2) + '.' + i.substring(i.length-2);
+}
+function Update()
+{
+ location=document.location; 
+}
+</SCRIPT>
+<SCRIPT LANGUAGE="JavaScript1.1">
+function BasketAddItem(value)
+{
+ var il=GetCookie('basket');
+ if (il.length)
+ {
+ il+='|'+value;
+ }
+ else
+ {
+ il=value;
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketSetItem(item,value)
+{
+ var il=GetCookie('basket');
+ var is=il.split('|');
+ if (value=='')
+ {
+ var ois=new Array();
+ var j=0;
+ for (var i=0;i<is.length;i++)
+ {
+ if (i!=item)
+ {
+ ois[j]=is[i];
+ j++;
+ }
+ }
+ il=ois.join('|');
+ }
+ else
+ {
+ is[item]=value;
+ il=is.join('|');
+ }
+ SetCookie('basket',il,'/');
+}
+function BasketFind(skuid)
+{
+ var ni=BasketGetNumItems();
+ for (var i=0;i<ni;i++)
+ {
+ var it=BasketGetItem(i);
+ var e=it.split('^');
+ if (skuid==e[0])
+ {
+ return i;
+ }
+ }
+ return -1;
+}
+function BasketAdd(skuid,name,platform,price,location)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ BasketAddItem(skuid+'^'+name+'^'+platform+'^'+price+'^'+location+'^1');
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ e[5]++;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+}
+function BasketRemove(skuid)
+{
+ var ino=BasketFind(skuid);
+ if (ino<0)
+ {
+ return;
+ }
+ else
+ {
+ var it=BasketGetItem(ino);
+ var e=it.split('^');
+ if (e[5]<=1)
+ {
+ BasketSetItem(ino,'');
+ }
+ else
+ {
+ e[5]--;
+ it=e.join('^');
+ BasketSetItem(ino,it);
+ }
+ }
+}
+function BasketEmpty()
+{
+ SetCookie('basket','','/');
+}
+function BasketAddRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation',document.location.href,'/');
+ document.location.href = './general/basket.htm' ;
+}
+function BasketAddNoRedirect(skuid,name,platform,price,location)
+{
+ BasketAdd(skuid,name,platform,price,location);
+ SetCookie('ecomlocation','','/');
+}
+function BasketGetLocation()
+{
+ return GetCookie('ecomlocation');
+}
+</SCRIPT>
+<!-- DIMAINMENU -->
+<SCRIPT LANGUAGE="JavaScript">
+function changeImage(imageName, imageSrc)
+{
+ if (document.images)
+ {
+ eval("document." + imageName + ".src =" + "\"" + imageSrc + "\";");
+ }
+ return true;
+}
+</SCRIPT>
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr>
+<td width="47" valign="bottom"><a href="http://www.smallrockets.com"
+TARGET="_blank"
+>
+<img HEIGHT="45" WIDTH="67" src="./shared/ic_bar_start.gif" border="0" alt="Home"></a></td>
+<td width="100%" align="right">
+<!-- Tab menu -->
+<!-- Tab menu -->
+<!-- Tab menu end -->
+<!-- <IMG HEIGHT="35" WIDTH="183" SRC="./shared/navsection.gif"> -->
+<!-- <IMG HEIGHT="35" WIDTH="25" SRC="./shared/ic_bar_section.gif"> -->
+<IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="5" alt="" border="0">
+<table border="0" cellpadding="0" cellspacing="0">
+<TD width="100%" bgcolor="FFCC00" background="./shared/ic_bar_section.gif"><div align="center"><IMG SRC="images/hd_minisiteheader.gif" WIDTH="350" HEIGHT="35" alt="Game Minisite" border="0"></div></td>
+<TD width="100%" bgcolor="FFCC00" align="right" background="./shared/ic_bar_section.gif"><IMG SRC="./shared/ic_bar_gamemanual.gif" WIDTH="175" HEIGHT="35" alt="Game Manual" border="0"></td>
+<td width="15" align="right" background="./shared/ic_bar_section.gif"><img src="./shared/ic_bar_end.gif" width="15" height="35" alt="www.smallrockets.com" border="0"></td></tr>
+<tr><td width="100%" colspan="2" bgcolor="#333399"><IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="5" alt="" border="0"></td></tr>
+</table>
+</td>
+</tr>
+</table>
+<!--side column navigation tables-->
+<!-- DISIDEMENU_START -->
+<SCRIPT LANGUAGE="JavaScript">
+function changeImage(imageName, imageSrc)
+{
+ if (document.images)
+ {
+ eval("document." + imageName + ".src =" + "\"" + imageSrc + "\";");
+ }
+ return true;
+}
+</SCRIPT>
+<TABLE WIDTH=100% BORDER=0 CELLPADDING=0 CELLSPACING=0>
+<TR>
+<TD VALIGN="top">
+<IMG SRC="./shared/spacer.gif" WIDTH="100" HEIGHT="8" alt="" border="0"><BR>
+<table border=0 cellspacing="0" cellpadding="0" WIDTH="114"> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topleft.gif"></td><td bgcolor="#000000" WIDTH=110 HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td 114=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topright.gif"></td></tr> <TR><TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD> <TD bgcolor="#570916">
+<FONT FACE="Arial, Helvetica" SIZE="2">
+<CENTER><IMG HEIGHT="16" WIDTH="85" SRC="images/ic_logo.gif" vspace="5"></CENTER>
+<CENTER><A onMouseOver='changeImage("redacehome","images/bt_baron.gif")' onMouseOut='changeImage("redacehome","images/bt_baron_off.gif")' HREF="index.htm"><IMG HEIGHT="21" WIDTH="101" Name="redacehome" SRC="images/bt_baron_off.gif" ALT="redacehome" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_baron_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_baron.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><A onMouseOver='changeImage("howtoplay","images/bt_howtoplay.gif")' onMouseOut='changeImage("howtoplay","images/bt_howtoplay_off.gif")' HREF="howtoplay.htm"><IMG HEIGHT="21" WIDTH="101" Name="howtoplay" SRC="images/bt_howtoplay_off.gif" ALT="howtoplay" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_howtoplay_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_howtoplay.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><A onMouseOver='changeImage("feedback","images/bt_feedback.gif")' onMouseOut='changeImage("feedback","images/bt_feedback_off.gif")' HREF="feedback.htm"><IMG HEIGHT="21" WIDTH="101" Name="feedback" SRC="images/bt_feedback_off.gif" ALT="feedback" border="0"></A><!-- <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_feedback_off.gif"> <IMG HEIGHT="21" WIDTH="101" SRC="images/bt_feedback.gif"> --></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+<CENTER><IMG HEIGHT="21" WIDTH="101" src="images/bt_support.gif"></CENTER><IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="support.htm">support</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="technical.htm">technical</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="system.htm">system</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="directx.htm">directx</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="3daccelerator.htm">3d accelerator</A><BR>
+&nbsp;<IMG HEIGHT="11" WIDTH="11" SRC="./shared/arrow.gif" BORDER=0>&nbsp;<A HREF="license.htm">license</A><BR>
+<IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="4" alt="" border="0"><BR>
+</FONT>
+</TD> <TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD></TR> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td width=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomright.gif"></td></tr> </TABLE>
+<!-- DICONTENT_START2 -->
+<CENTER> <A HREF="http://www.globalstarsoftware.com" TARGET="_blank"><IMG HEIGHT="72" WIDTH="71" SRC="./shared/logos/ic_globalstar_logo.gif" BORDER=0 VSPACE=5></A> </CENTER>
+</FORM>
+</TD>
+<td width="5">
+<IMG SRC="./shared/spacer.gif" WIDTH="5" HEIGHT="5" alt="" border="0">
+</td>
+<TD VALIGN="top" align="left" WIDTH=100%>
+<table border=0 cellspacing="0" cellpadding="0" WIDTH="100%"> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td 100%=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_topright.gif"></td></tr> <TR><TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD> <TD bgcolor="#570916">
+<TABLE BORDER=0 CELLSPACING=4 CELLPADDING=6 WIDTH=100%>
+<TR><TD><FONT FACE="Arial, Helvetica" SIZE=2>
+<font face="arial, verdana, helvetica" size="2" color="#C0C0C0">
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>System Specification</H3></FONT>
+<p>The following are the system specifications (requirements) for Master of the Skies: The Red Ace:
+<ul>
+<li>Windows 95 / Windows 98 / Windows ME
+ <li>Intel Pentium II 233 or equivalent
+ <li>32Mb RAM
+ <li>Supported 3D Accelerator Card (4Mb minimum)
+ <li>60MB Free hard disk space
+ <li>SoundBlaster or DirectSound compatible sound card
+ <li>Microsoft compatible Mouse
+ <li>Master of the Skies: The Red Ace supports Direct3D compatible cards with the following chipsets:
+<IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="5" alt="" border="0">
+ <ul>
+<li>3Dfx Voodoo 1, 2, 3, 5, Rush, Banshee, Velocity
+ <li>3D Labs Permedia 2, Permedia 3
+ <li>ATI Rage Pro Turbo AGP, Rage Pro Turbo PCI, Rage LT Pro, Rage 128, Rage 128 Pro, Rage Maxx
+ <li>Intel i740, i810
+ <li>Matrox G200, G400
+ <li>Nvidia Riva TNT, TNT2, Vanta, GeForce, Quadro, GeForce 2
+ <li>Rendition Verite V2x00
+ <li>S3 Savage 3D, Savage S4, Savage2000
+ <li>Videologic PowerVR Neon 250
+ </ul>
+<P> <B>Comments</B>
+ <UL>
+ <LI>The following video cards unfortunately do not meet the minimum requirements
+ to play the game - Power VR PCX2, Matrox G100, Rendition Verite v1x00,
+ SiS 6326, Nvidia Riva 128, S3 Virge.</LI>
+ <LI>Users are advised to refrain from minimising the game using ALT/TAB
+ or any other key combination. If access to the Windows desktop is needed
+ we recommend that the game be quit first</LI>
+ <LI>If any sound or video problems are encountered, we recommend updating
+ to the latest sound or video drivers (see below for our list of recommended
+ video drivers). To check which video drivers are currently being used,
+ run DXDIAG (this can be done by selecting the ‘Run’ option on the START
+ menu and typing 'DXDIAG') and select the ‘Display’ tab. This will list
+ the device name and driver version. </LI>
+ <LI>If stability problems are encountered when running the game, users are advised
+ to close down all other programs that may be running. Doing this will
+ ensure that Master of the Skies: The Red Ace is able to use the maximum system
+ resources available. To check which other programs are open, press the
+ CONTROL, ALT and DELETE keys at the same time. This will bring up a
+ menu titled ‘Close Program’. This menu lists all the programs currently
+ running, a completely clean system should only have Explorer and Systray
+ listed on this screen. N.B. If you are unsure what the programs currently
+ running are, do not close them unless you are having problems running
+ the game (with either game stability or speed). </LI>
+ <LI>Laptop Systems - Unfortunately we cannot offer support to users with
+ laptop systems. Due to the wide variety of hardware configurations found
+ in laptops, it is not possible to guarantee compatibility. As each laptop
+ machine can have greatly varying configurations of memory, video, sound,
+ keyboard and most importantly internal architecture it is currently
+ not possible to configure a game that is guaranteed to work on all of
+ them. </LI>
+ <LI>If any problems are encountered when using the 'Visit the Website'
+ or 'Purchase the Game' options from the games pause menu, we recommend
+ that you use the shortcuts from the START menu to access the Fiendish
+ Games website or get the full version of the game</LI>
+ <LI>4/8Mb video cards - Users with video cards that have 8Mb of memory
+ or below may find that their list of selected resolutions in the game
+ is limited or that the game fails to start, displaying the message "Could
+ not open video mode. Ensure DirectX is installed properly.". This problem
+ is caused by the Windows desktop being set at too high a resolution
+ and colour mode, and can be solved by reducing these settings. A Windows
+ desktop setting of 640*480*16-bit colour was found to be the most effective.</LI>
+ <LI>ATI Rage Fury MAXX - The drivers supplied with this video card (Rage
+ Fury MAXX (1-5-2000) (4.11.01.7925)) will not run Red Ace. Attempting
+ to start the game with them will result in the user being returned to
+ the Windows desktop when they attempt to fly a mission. The problem
+ can be solved by obtaining the latest Special Purpose drivers from ATI
+ (see below for the driver we recommend). This driver can be obtained
+ from <a href="http://www.atitech.ca/na/pages/spdrivers/drivers.html" target="_blank"><u>ATI's
+ Special Purpose Drivers Page</u></a>.</LI>
+ <LI>Nvidia Riva TNT - If any problems are encountered when running the
+ game with the screen flickering, it can be solved by setting the 'Wait
+ for vsync' option in the Video Options menu. If further flickering problems
+ are encountered after this is done, they can be solved by pausing and
+ unpausing the game.</LI>
+ <LI>Nvidia Riva TNT - If any problems are encountered with a flickering
+ border being present on menu or loading screens, it can be solved by
+ either setting the Windows colour mode to 16-bit colour or by running
+ the game in a resolution of 640*480.</LI>
+ <LI>Nvidia Riva TNT/TNT2 - Problems were encountered with these cards
+ and some drivers if the game was run in the same resolution as the Windows
+ desktop using a 16-bit Windows colour setting. When the user attempted
+ to exit the game, the screen would remain of the Red Ace menu screen.
+ This problem is caused by driver issues and unfortunately the only solution
+ we can currently offer is to ensure that Windows is either using a different
+ resolution or colour mode to the game.</LI>
+ <LI>Neon 250 - Minor palette problems may be encountered when running
+ the game with this video card. Unfortunately there is no known solution
+ to this problem at present.</LI>
+ <LI>S3 Savage 4 - Users are advised not to run the game above 800*600
+ with this video card as control problems were encountered when doing
+ so. </LI>
+ </UL>
+ <IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="5" alt="" border="0">
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>Video Drivers</H3></FONT>
+<TABLE BORDER=0 CELLPADDING=5 CELLSPACING=0>
+<TR><TD VALIGN="top"><B><FONT FACE="Verdana, Helvetica, Arial" SIZE=3><A HREF="http://www.3dfx.com" TARGET="_blank">3DFX</A><TD><TD VALIGN="top"><FONT FACE="Verdana, Helvetica, Arial" SIZE=2>
+<BR><B>
+3DFX Voodoo 1
+</B><BR>
+Voodoo Graphics 3D Accelerator (5-7-1999) (4.10.01.0017)
+<BR><B>
+3DFX Voodoo Rush
+</B><BR>
+AT25 + Voodoo Rush (Single Board) (5-7-1999) (4.10.01.2073)
+<BR><B>
+Voodoo Banshee
+</B><BR>
+3DFX Voodoo Banshee (2-9-2000) (4.12.01.1222)
+<BR><B>
+Voodoo 2
+</B><BR>
+Voodoo 2 3D Accelerator (1-27-2000) (4.11.01.1151)
+<BR><B>
+Voodoo 3
+</B><BR>
+3DFX Voodoo 3 (6-8-2000) (4.12.01.1225)
+<BR><B>
+Velocity 100
+</B><BR>
+3DFX Velocity 100 (7-12-1999) (4.11.01.1146)
+<BR><B>
+Voodoo 5
+</B><BR>
+3DFX Voodoo Series (7-9-2000) (4.12.01.0584)
+</TD></TR>
+<TR><TD VALIGN="top"><B><FONT FACE="Verdana, Helvetica, Arial" SIZE=3><A HREF="http://www.3dlabs.com" TARGET="_blank">3D Labs</A><TD><TD VALIGN="top"><FONT FACE="Verdana, Helvetica, Arial" SIZE=2>
+<BR><B>
+Permedia 2
+</B><BR>
+Generic Permedia 2 3D accelerator (5-4-1999) (4.10.01.2105)
+<BR><B>
+Permedia 3
+</B><BR>
+3Dlabs Permedia 3 Create! (7-5-2000) (4.12.01.2107)
+</TD></TR>
+<TR><TD VALIGN="top"><B><FONT FACE="Verdana, Helvetica, Arial" SIZE=3><A HREF="http://www.atitech.com" TARGET="_blank">ATI</A><TD><TD VALIGN="top"><FONT FACE="Verdana, Helvetica, Arial" SIZE=2>
+<BR><B>
+ATI Rage Pro Turbo AGP
+</B><BR>
+Rage Pro Turbo AGP 2X (5-21-1999) (4.11.2560)
+<BR><B>
+ATI Rage Pro Turbo PCI
+</B><BR>
+Rage Pro Turbo PCI (5-21-1999) (4.11.01.2560)
+<BR><B>
+ATI Rage LT Pro
+</B><BR>
+ATI Rage Pro LT AGP 2X (4.10.01.2456)
+<BR><B>
+ATI Rage 128
+</B><BR>
+ATI Rage 128 GL SD AGP (3-9-2000) (4.12.01.6269)
+<BR><B>
+ATI Rage 128 Pro
+</B><BR>
+Rage 128 Pro (3-9-2000) (4.12.01.6269)
+<BR><B>
+ATI Rage Fury Maxx
+</B><BR>
+Rage Fury MAXX (4-8-2000) (4.12.01.7942)
+</TD></TR>
+<TR><TD VALIGN="top"><B><FONT FACE="Verdana, Helvetica, Arial" SIZE=3><A HREF="http://www.intel.com" TARGET="_blank">Intel</A><TD><TD VALIGN="top"><FONT FACE="Verdana, Helvetica, Arial" SIZE=2>
+<BR><B>
+i740
+</B><BR>
+Intel740 Win9X PV4.0 (6-15-1999) (4.11.01.2719)
+<BR><B>
+i810
+</B><BR>
+Intel 82810E Graphics Controller (5-2-2000) (4.12.01.2586) 
+</TD></TR>
+<TR><TD VALIGN="top"><B><FONT FACE="Verdana, Helvetica, Arial" SIZE=3><A HREF="http://www.matrox.com" TARGET="_blank">Matrox</A><TD><TD VALIGN="top"><FONT FACE="Verdana, Helvetica, Arial" SIZE=2>
+<BR><B>
+G200
+</B><BR>
+Matrox Millennium G200 AGP (2-22-2000) (4.11.01.2520)
+<BR><B>
+G400
+</B><BR>
+Matrox Millennium G400 (2-21-2000) (4.12.01.1520)
+</TD></TR>
+<TR><TD VALIGN="top"><B><FONT FACE="Verdana, Helvetica, Arial" SIZE=3><A HREF="http://www.nvidia.com" TARGET="_blank">Nvidia</A><TD><TD VALIGN="top"><FONT FACE="Verdana, Helvetica, Arial" SIZE=2>
+<BR><B>
+Riva TNT
+</B><BR>
+Nvidia Riva TNT (8-11-2000) (4.12.01.0618) 
+<BR><B>
+Riva TNT 2
+</B><BR>
+Nvidia Riva TNT2 (8-11-2000) (4.12.01.0618) 
+<BR><B>
+GeForce
+</B><BR>
+Nvidia GeForce 256 (8-11-2000) (4.12.01.0618) 
+<BR><B>
+Quadro
+</B><BR>
+Nvidia Quadro (8-11-2000) (4.11.01.0618)
+<BR><B>
+GeForce 2
+</B><BR>
+Nvidia GeForce 2 GTS (8-11-2000) (4.11.01.0618)
+</TD></TR>
+<TR><TD VALIGN="top"><B><FONT FACE="Verdana, Helvetica, Arial" SIZE=3><A HREF="http://www.rendition.com" TARGET="_blank">Rendition</A><TD><TD VALIGN="top"><FONT FACE="Verdana, Helvetica, Arial" SIZE=2>
+<BR><B>
+Verite V2x00
+</B><BR>
+Rendition Verite 2x00 (4-14-1999) (v. 4.11.01.5176)
+</TD></TR>
+<TR><TD VALIGN="top"><B><FONT FACE="Verdana, Helvetica, Arial" SIZE=3><A HREF="http://www.s3.com" TARGET="_blank">S3</A><TD><TD VALIGN="top"><FONT FACE="Verdana, Helvetica, Arial" SIZE=2>
+<BR><B>
+Savage 3D
+</B><BR>
+Hercules Terminator Beast (v 1.02.61319) (4.11.01.4005)
+<BR><B>
+Savage S4
+</B><BR>
+S3 Inc Savage4 (Engineering Bitflip) (4-19-2000) (4.12.01.8215) 
+<BR><B>
+Savage2000
+</B><BR>
+Diamond Viper II Z200 for Windows 9x (6-2-2000) (4.11.01.9007) 
+</TD></TR>
+<TR><TD VALIGN="top"><B><FONT FACE="Verdana, Helvetica, Arial" SIZE=3><A HREF="http://www.videologic.com" TARGET="_blank">Videologic</A><TD><TD VALIGN="top"><FONT FACE="Verdana, Helvetica, Arial" SIZE=2>
+<BR><B>
+Power VR Neon 250
+</B><BR>
+Neon 250 - AGP 32Mb (11-3-1999) (4.11.01.10079)
+</TD></TR>
+</TABLE>
+ <IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="5" alt="" border="0">
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>Sound Cards</H3></FONT>
+<P><font face="Arial, Helvetica, sans-serif">Red Ace should work with
+ all DirectX compatible sound cards. It has been tested and found to work
+ with the following audio chipsets:
+<UL>
+<LI>Aureal Vortex 1</LI>
+<LI>Aureal Vortex 2</LI>
+<LI>Creative Labs Sound Blaster 16</LI>
+<LI>Creative Labs AWE64</LI>
+<LI>Creative Labs AWE64 PCI</LI>
+<LI>Creative Labs Sound Blaster 128</LI>
+<LI>Creative Labs Sound Blaster Live!</LI>
+<LI>Crystal Sound Fusion (Videologic SonicFury)</LI>
+<LI>ESS ES1869</LI>
+<LI>ESS Maestro I (Videologic Sonic Storm)</LI>
+<LI>ESS Maestro II (Videologic Sonic Storm Pro)</LI>
+</UL>
+ <IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="5" alt="" border="0">
+<P><b>Comments</b></p>
+ <p>
+ <ul>
+ <li>If any audio problems are encountered
+ whilst playing Red Ace, try setting the 'Use Hardware Sound' option
+ in the Sound Options menu to off. This was found to solve audio problems
+ encountered with Creative Labs Sound Blaster Live!, Aureal Vortex 2, Videologic SonicStorm Pro and Videologic SonicFury sound cards.</li>
+ <li>Yamaha 192XG - If any sound
+ corruption is encountered with this card, it can be solved by changing
+ the Hardware Sound Acceleration Level from 'Full acceleration' to 'Basic
+ acceleration'. This can be done via DXDIAG, simply run DXDIAG (this
+ can be done by selecting the ‘Run’ option on the START menu and typing
+ 'DXDIAG') and select the ‘Sound’ tab. From this menu the 'Hardware Sound
+ Acceleration Level' can be set.</li>
+ <li> Videologic SonicFury - If any sound corruption is encountered with this card, it can be solved by changing
+ the Hardware Sound Acceleration Level from 'Full acceleration' to 'Basic
+ acceleration'. This can be done via DXDIAG, simply run DXDIAG (this
+ can be done by selecting the ‘Run’ option on the START menu and typing
+ 'DXDIAG') and select the ‘Sound’ tab. From this menu the 'Hardware Sound
+ Acceleration Level' can be set.</li>
+ <li>Aureal Vortex 1 - Users
+ with Aureal Vortex 1 based sound cards are advised to reduce the sound
+ acceleration level within DXDIAG if any problems are encountered whilst
+ running the game. This can be done via DXDIAG, simply run DXDIAG (this
+ can be done by selecting the ‘Run’ option on the START menu and typing
+ 'DXDIAG') and select the ‘Sound’ tab. From this menu the 'Hardware Sound
+ Acceleration Level' can be changed from 'Full acceleration' to 'Basic
+ acceleration'.</li>
+ </ul>
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>Sound Drivers</H3></FONT>
+<UL>
+<LI><A HREF="http://www.aureal.com">Aureal</A>
+<LI><A HREF="http://www.creative.com">Creative Labs</A>
+<LI><A HREF="http://www.videologic.com">Videologic</A>
+<LI><A HREF="http://www.terratec.co.uk">Terratec</A>
+<LI><A HREF="http://www.diamondmm.com">Diamond</A>
+<LI><A HREF="http://www.guillemot.com">Guillemot</A>
+<LI><A HREF="http://www.yamaha.com">Yamaha</A>
+</UL>
+ <IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="5" alt="" border="0">
+<FONT FACE="arial, verdana, helvetica" SIZE="3" color="#FFFFFF"><H3>Joysticks/Gamepads</H3></FONT>
+<p>
+As well as mouse and keyboard
+ control, Master of the Skies: The Red Ace can also be controlled using any DirectInput
+ compatible joysticks, gamepads or throttle control systems.
+ The control functions simply need to be redefined within the game.
+ <p>You can redefine your
+ controls by going to the Options menu, and then to the Controls submenu.
+ You'll be presented with a list of the controls used in the game, these
+ can be redefined by clicking on them. Once
+ you have clicked on a control function, the cursor will change to a picture
+ of a joystick, and you can then define the control you wish to use by
+ :<br>
+ <ul>
+ <li>Keyboard: Press
+ a key on the keyboard</li>
+ <li>Mouse: Press a
+ button on the mouse, or move the mouse in the direction you want to
+ use.</li>
+ <li>Joystick: Press
+ a button on the joystick, or move the stick/throttle control/POV hat
+ in the direction you want to use.</li>
+ </ul>
+ <p>You
+ can also set the sensitivity of the pitch and roll controls using the
+ bars on the right. You may find this useful if you find the plane a bit
+ too twitchy to control.</p>
+ <p>Master of the Skies: The Red Ace
+ should work with any DirectInput compatible controller, it has been tested
+ and found to work with products by the the following manufacturers</p>
+ <ul>
+ <li><font face="Arial, Helvetica, sans-serif">CH Products - Gamestick 3D, F-16 Combat Stick</font></li>
+ <li><font face="Arial, Helvetica, sans-serif">Gravis - Blackhawk Digital, Xterminator Dual Control, Destroyer, Xterminator, Xterminator Digital, Gamepad Pro, Gamepad Pro USB</font></li>
+ <li><font face="Arial, Helvetica, sans-serif">Interact - Cyclone 3D, Magnum 6, Makopad PC</font></li>
+ <li><font face="Arial, Helvetica, sans-serif">Logic 3 - PC Avenger
+ <li><font face="Arial, Helvetica, sans-serif">Logitech - Wingman Extreme Digital, Wingman, Thunderpad Digital</font></li>
+ <li><font face="Arial, Helvetica, sans-serif">Microsoft - Forcefeedback Pro, Precision Pro, Dual Strike, Sidewinder Pro, Freestyle Pro, Sidewinder Gamepad</font></li>
+ <li><font face="Arial, Helvetica, sans-serif">Saitek - P550, Cyborg 3D USB, P2000</font></li>
+ <li><font face="Arial, Helvetica, sans-serif">Thrustmaster - Top Gun USB, Fusion</font></li>
+ </ul>
+ <IMG SRC="./shared/spacer.gif" WIDTH="1" HEIGHT="5" alt="" border="0">
+<P><b>Comments</b></font> 
+ <ul>
+ <li> USB Controllers - When using 
+ USB controllers we recommend that users install DirectX 7.0a or higher 
+ on their machine. This revision of DirectX includes better support for 
+ input devices. The latest version of DirectX can be downloaded from 
+ Microsoft via <a href="http://www.microsoft.com/directx/homeuser/downloads/default.asp" target="_blank"><u>this 
+ link.</u></a> </li>
+ <li>If problems are encountered 
+ with joystick controls being the wrong way round (eg. a throttle wheel 
+ on a joystick operating in reverse), setting the 'reversed?' option 
+ to on will solve this.</li>
+ </ul>
+</FONT>
+</TD></TR></TABLE>
+</TD> <TD WIDTH=2 BGCOLOR="#000000"><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="1" alt="" border="0"></TD></TR> <tr><td WIDTH=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomleft.gif"></td><td bgcolor="#000000" HEIGHT=2><IMG SRC="./shared/spacer.gif" WIDTH="2" HEIGHT="2" alt="" border="0"></td><td width=2 HEIGHT=2><IMG HEIGHT="2" WIDTH="2" SRC="./shared/box_bottomright.gif"></td></tr> </TABLE>
+<!--main info table-->
+</td></tr></table>
+<!--body table end-->
+</TD></TR></TABLE>
+<!--main table-->
+</BODY>

@@ -2,6 +2,10 @@
 
 Port of abandoned "Master of the Skies - The Red Ace" windows game logic in Godot 4.7. The original engine (Dive5 + RenderWare) is not ported.
 
+**[Play online](https://manuvarkey.github.io/redace_re/)** in the browser, desktop or phone (touch controls
+with tilt steering). Android APK: latest `redace-apk` artifact of the
+[Build web and Android](https://github.com/manuvarkey/redace_re/actions/workflows/pages.yml) workflow.
+
 ## Build
 
 The converted game data is already in `redace/game_data/`. Build with Godot 4.7.2 and its export templates:
@@ -35,9 +39,9 @@ cabinets, then `python3 tools/build_assets.py <game> <REDACE.CUE> redace` conver
 | `tools/redace-wine.sh` | Runs the original game or the Windows export under Wine for comparison |
 | `tools/ghidra_scripts/` | Ghidra headless scripts: `ExportAll`, `ImproveAnalysis`, `ApplyGuids` for the `RedAce.exe` decompilation |
 
-Play online: https://manuvarkey.github.io/redace_re/ - `.github/workflows/pages.yml` builds the Web preset on
-every push to `main` (Godot and the no-threads web template are downloaded and cached) and deploys `build/web`
-to GitHub Pages. One-time setup: repository Settings > Pages > Source = GitHub Actions.
+`.github/workflows/pages.yml` builds the Web preset on every push to `main` (Godot and the no-threads web
+template are downloaded and cached) and deploys `build/web` to GitHub Pages; the same run uploads the Android
+APK as the `redace-apk` artifact. One-time setup: repository Settings > Pages > Source = GitHub Actions.
 
 ## Phones (web and Android)
 

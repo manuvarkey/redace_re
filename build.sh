@@ -1,8 +1,11 @@
 #!/bin/sh
 # Build the Red Ace remake: fetch the Microsoft core fonts if missing, import, export.
-# Usage: ./build.sh [Web|Linux|Windows ...]   (default: all three presets)
-# Per-platform shortcuts: scripts/build_linux.sh, scripts/build_windows.sh, scripts/build_web.sh.
+# Usage: ./build.sh [Web|Linux|Windows|Android ...]   (default: Web, Linux, Windows)
+# Per-platform shortcuts: scripts/build_linux.sh, build_windows.sh, build_web.sh, build_android.sh.
 # GODOT: Godot 4.7.2 executable with export templates installed.
+# Android: Godot's editor settings must name the Android SDK and JDK 17+ (export/android/android_sdk_path,
+# java_sdk_path), plus the android_*.apk export templates; the APK is signed with a debug keystore,
+# made in build/ on first use (keytool from JAVA_HOME or PATH).
 set -eu
 
 cd "$(dirname "$0")"
@@ -46,10 +49,22 @@ fetch_fonts() {
 [ $# -gt 0 ] || set -- Web Linux Windows
 for preset in "$@"; do
 	case $preset in
-		Web|Linux|Windows) ;;
-		*) echo "unknown preset '$preset' (use Web, Linux or Windows)" >&2; exit 1 ;;
+		Web|Linux|Windows|Android) ;;
+		*) echo "unknown preset '$preset' (use Web, Linux, Windows or Android)" >&2; exit 1 ;;
 	esac
 done
+
+# Debug signing for the APK (no release keystore): Godot reads it from these variables.
+debug_keystore() {
+	export GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$PWD/build/debug.keystore
+	export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
+	export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
+	[ -f build/debug.keystore ] && return
+	mkdir -p build
+	keytool=${JAVA_HOME:+$JAVA_HOME/bin/}keytool
+	"$keytool" -genkeypair -keystore build/debug.keystore -storepass android -alias androiddebugkey \
+		-keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+}
 
 fetch_fonts
 "$GODOT" --headless --path redace --import
@@ -59,7 +74,12 @@ for preset in "$@"; do
 		Web) mkdir -p build/web ;;
 		Linux) mkdir -p build/linux ;;
 		Windows) mkdir -p build/windows ;;
+		Android) mkdir -p build/android && debug_keystore ;;
 	esac
+	if [ "$preset" = Android ]; then
+		"$GODOT" --headless --path redace --export-debug Android
+		continue
+	fi
 	"$GODOT" --headless --path redace --export-release "$preset"
 	if [ "$preset" = Web ]; then
 		# The help pages are served as files next to index.html.

@@ -39,6 +39,21 @@ Play online: https://manuvarkey.github.io/redace_re/ - `.github/workflows/pages.
 every push to `main` (Godot and the no-threads web template are downloaded and cached) and deploys `build/web`
 to GitHub Pages. One-time setup: repository Settings > Pages > Source = GitHub Actions.
 
+## Phones (web and Android)
+
+Touch devices get on-screen controls (`scripts/touch.gd`, not in the original), shown from the first touch:
+tilt steering (accelerometer; neutral = how the phone is held at mission start or on CAL) or, with STICK or
+without a sensor, a virtual stick dragged on the left half; THR slider at the left edge; FIRE, BOMB and
+BOOST (turbo cheat) buttons; VIEW pad (hold and swipe up / down / left / right for the held camera views);
+PAUSE and OBJ. Steering goes through the joystick path, so the Controls page sensitivities apply. Phones
+need landscape. On the web the first tap also goes fullscreen and locks landscape; tilt comes from
+`devicemotion` (head script in the Web preset). The Android back button pauses and resumes a flight and
+steps back through the menus; new pilot names open the on-screen keyboard.
+
+Android APK: `scripts/build_android.sh` (debug-signed, arm64-v8a + x86_64) writes `build/android/redace.apk`;
+CI uploads it as the `redace-apk` artifact. Tested on the Android 14 emulator (x86_64, host GPU; SwiftShader
+fails the canvas shader) and in its Chrome for the web build.
+
 Run the web build from any static web server, e.g. `python3 -m http.server -d build/web`,
 then open `http://localhost:8000/` (or `?mission=N` to fly a mission directly). The web preset uses
 the no-threads template, so no COOP/COEP headers are needed.

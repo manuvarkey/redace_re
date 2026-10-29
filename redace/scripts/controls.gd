@@ -31,6 +31,7 @@ const KEY_NAMES := {
 }
 
 var bind := {}  # action -> {type, axis, upkey, downkey, key, button, sensitivity, reversed}
+var touch: TouchControls  # on-screen controls (phones); while active they replace the mouse bindings
 
 
 static func from_file(ini_name: String) -> Controls:
@@ -124,11 +125,15 @@ func _joy_buttons(b: Dictionary) -> float:
 ## Button action state.
 func pressed(action: String) -> bool:
 	var b: Dictionary = bind.get(action, {})
+	var touching := touch != null and touch.active
+	if touching and touch.pressed(action):
+		return true
 	match b.get("type", ""):
 		"keyboard":
 			return _pressed_key(b.key) > 0.0
 		"mouse":
-			return Input.is_mouse_button_pressed(int(b.button)) if int(b.button) > 0 else false
+			# taps on the touch buttons arrive as emulated left clicks too
+			return Input.is_mouse_button_pressed(int(b.button)) if int(b.button) > 0 and not touching else false
 		"joystick":
 			return _joy_button(int(b.button))
 	return false
@@ -142,6 +147,9 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 	var t: Dictionary = bind.throttle
 	var rs := -1.0 if r.reversed else 1.0
 	var ps := -1.0 if q.reversed else 1.0
+	if touch != null and touch.active:
+		_drive_touch(p, r.sensitivity * rs, q.sensitivity * ps, dt)
+		return
 	# roll
 	match r.type:
 		"mouse":
@@ -174,6 +182,30 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 			p.throttle = clampf((-_joy_axis(t.axis) * (-1.0 if t.reversed else 1.0) * t.sensitivity + 1.0) * 0.5, 0.0, 1.0)
 		_:
 			p.throttle = clampf(p.throttle + (_pressed_key(t.upkey) - _pressed_key(t.downkey)) * t.sensitivity * dt, 0.0, 1.0)
+	p.fire_input = pressed("fire")
+	p.secondary_input = pressed("secondary")
+
+
+## Touch steering (tilt or virtual stick) as a joystick; keyboard and joystick bindings still work.
+func _drive_touch(p: Aircraft, s_roll: float, s_pitch: float, dt: float) -> void:
+	var r: Dictionary = bind.roll
+	var q: Dictionary = bind.pitch
+	var t: Dictionary = bind.throttle
+	var kr := _pressed_key(r.downkey) - _pressed_key(r.upkey) if r.type == "keyboard" else 0.0
+	var kp := _pressed_key(q.downkey) - _pressed_key(q.upkey) if q.type == "keyboard" else 0.0
+	if kr != 0.0:
+		p.key_roll(kr, r.sensitivity, dt)
+	else:
+		p.joy_roll(touch.roll, s_roll)
+	if kp != 0.0:
+		p.key_pitch(kp, q.sensitivity, dt)
+	else:
+		p.joy_pitch(touch.pitch, s_pitch, dt)
+	if touch.throttle >= 0.0:
+		p.throttle = touch.throttle
+	elif t.type == "keyboard":
+		p.throttle = clampf(p.throttle + (_pressed_key(t.upkey) - _pressed_key(t.downkey)) * t.sensitivity * dt, 0.0, 1.0)
+	touch.player_throttle = p.throttle
 	p.fire_input = pressed("fire")
 	p.secondary_input = pressed("secondary")
 

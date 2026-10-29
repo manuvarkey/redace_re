@@ -177,7 +177,9 @@ func _apply_settings() -> void:
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), _vol_db(settings.music_volume))
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Effects"), _vol_db(settings.effects_volume))
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if settings.vsync else DisplayServer.VSYNC_DISABLED)
-	if not OS.has_feature("web"):
+	if OS.has_feature("android"):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)  # hides the system bars
+	elif not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen
 			else DisplayServer.WINDOW_MODE_WINDOWED)
 	Engine.time_scale = settings.game_speed if settings.game_speed > 0.0 else 1.0
@@ -445,12 +447,19 @@ func _apply_cursor() -> void:
 
 ## The original opened its help pages (file://localhost/language/english/help/...) in the system
 ## browser. Desktop: unpack game_data/help.zip to user://help once and open the page there.
-## Web: the export step puts the same files under help/ next to index.html.
+## Web: the export step puts the same files under help/ next to index.html. Android: the web build's copy.
+const HELP_URL := "https://manuvarkey.github.io/redace_re/help/"
+
+
 func _open_help(href: String) -> void:
 	var rel := href.substr(href.find("localhost/") + 10) if href.find("localhost/") >= 0 else "language/english/help/index.htm"
 	rel = rel.replace("\\", "/")
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.open('help/%s', '_blank')" % rel.uri_encode().replace("%2F", "/"))
+		return
+	if OS.has_feature("android"):
+		# other apps cannot read user:// files: open the copy served with the web build
+		OS.shell_open(HELP_URL + rel.uri_encode().replace("%2F", "/"))
 		return
 	var root := "user://help/"
 	if not FileAccess.file_exists(root + rel):
@@ -491,7 +500,7 @@ func _on_link(href: String) -> void:
 		return
 	if low.begins_with("menus\\"):
 		if low.ends_with("roster.html"):
-			_typing_slot = -1
+			_stop_typing()
 		open_page(h)
 		return
 	if low.begins_with("play:"):
@@ -511,6 +520,7 @@ func _on_link(href: String) -> void:
 		if pilots[i].is_empty():
 			_typing_slot = i
 			_typed = ""
+			_start_typing()
 		else:
 			_delete_slot = i
 			open_page("Menus\\deleteconfirm.html")
@@ -730,13 +740,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _typing_slot >= 0 and event is InputEventKey and event.pressed:
 		var k: Key = event.keycode
 		if k == KEY_ENTER or k == KEY_KP_ENTER:
-			if not _typed.strip_edges().is_empty():
-				pilots[_typing_slot] = {"name": _typed.strip_edges(), "rank": 0, "score": 0, "mission": 1, "flights": 0}
-				current = _typing_slot
-				_save()
-			_typing_slot = -1
+			_commit_typing()
 		elif k == KEY_ESCAPE:
-			_typing_slot = -1
+			_stop_typing()
 		elif k == KEY_BACKSPACE:
 			_typed = _typed.substr(0, maxi(_typed.length() - 1, 0))
 		elif event.unicode >= 32 and _typed.length() < 24:
@@ -748,6 +754,49 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif _page.ends_with("titlescreen.html") and (event is InputEventMouseButton or event is InputEventKey) and event.pressed:
 		open_page("Menus\\main.html")
+
+
+func _commit_typing() -> void:
+	if _typing_slot >= 0 and not _typed.strip_edges().is_empty():
+		pilots[_typing_slot] = {"name": _typed.strip_edges(), "rank": 0, "score": 0, "mission": 1, "flights": 0}
+		current = _typing_slot
+		_save()
+	_stop_typing()
+
+
+var _name_edit: LineEdit
+
+
+## Phones: an invisible LineEdit brings up the on-screen keyboard; the roster page still draws the name.
+func _start_typing() -> void:
+	if not TouchControls.is_mobile():
+		return
+	if _name_edit == null:
+		_name_edit = LineEdit.new()
+		_name_edit.max_length = 24
+		_name_edit.modulate.a = 0.0
+		_name_edit.size = Vector2(240, 40)
+		_name_edit.position = Vector2(-1000, 0)
+		_name_edit.text_changed.connect(func(t: String) -> void:
+			_typed = t
+			_refresh())
+		_name_edit.text_submitted.connect(func(_t: String) -> void:
+			_commit_typing()
+			_refresh())
+		_layer.add_child(_name_edit)
+	_name_edit.text = ""
+	# focus once the tap that started typing is over
+	get_tree().create_timer(0.2).timeout.connect(func() -> void:
+		if _typing_slot >= 0:
+			_name_edit.grab_focus()
+			_name_edit.edit())  # shows the on-screen keyboard (Godot skips it when a hardware keyboard is attached)
+
+
+func _stop_typing() -> void:
+	_typing_slot = -1
+	if _name_edit:
+		_name_edit.release_focus()
+		DisplayServer.virtual_keyboard_hide()
 
 
 func _process(_dt: float) -> void:
@@ -784,7 +833,7 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 		world.load_mission(id)
 	view.visible = false
 	_page = ""
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_capture_mouse()
 	if campaign and not _pilot().is_empty():
 		pilots[current].flights = int(pilots[current].get("flights", 0)) + 1
 		_save()
@@ -796,6 +845,29 @@ func _end_flight() -> void:
 		world.queue_free()
 		world = null
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+## Phones have no mouse to capture (and the browser refuses pointer lock there).
+func _capture_mouse() -> void:
+	if not TouchControls.is_mobile():
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+## Android back button: pause / resume a flight, else back to the main menu, quit from there.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
+		return
+	if world and get_tree().paused:
+		_resume()
+	elif world:
+		world._touch_pause()
+	elif world == null and _typing_slot >= 0:
+		_stop_typing()
+		_refresh()
+	elif world == null and not _page.to_lower().ends_with("main.html"):
+		open_page("Menus\\main.html")
+	elif world == null:
+		get_tree().quit()
 
 
 func _pause() -> void:
@@ -810,7 +882,7 @@ func _resume() -> void:
 	view.visible = false
 	_page = ""
 	get_tree().paused = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_capture_mouse()
 	if world:
 		world._was_captured = false  # capture is re-armed by the first click on the web
 

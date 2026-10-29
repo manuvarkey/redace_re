@@ -1,6 +1,6 @@
-# Builds the Web export and publishes it to GitHub Pages.
-# Repository settings: Pages > Build and deployment > Source = GitHub Actions.
-name: Deploy web build to Pages
+# Builds the Web export and publishes it to GitHub Pages; builds the debug-signed Android APK as a
+# workflow artifact. Repository settings: Pages > Build and deployment > Source = GitHub Actions.
+name: Build web and Android
 
 on:
   push:
@@ -33,18 +33,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-web
+          key: godot-${{ env.GODOT_VERSION }}-web-android
 
-      - name: Download Godot and the web template
+      - name: Download Godot and the web and Android templates
         if: steps.godot-cache.outputs.cache-hit != 'true'
         run: |
           base=https://github.com/godotengine/godot/releases/download/$GODOT_VERSION-stable
           mkdir -p ~/godot/templates && cd ~/godot
           curl -fsSL -o godot.zip "$base/Godot_v$GODOT_VERSION-stable_linux.x86_64.zip"
           unzip -q godot.zip && rm godot.zip
-          # Only the no-threads web template is needed out of the full template archive.
+          # Only the no-threads web template and the Android APK templates are needed from the full archive.
           curl -fsSL -o templates.tpz "$base/Godot_v$GODOT_VERSION-stable_export_templates.tpz"
-          unzip -q -j templates.tpz templates/version.txt templates/web_nothreads_release.zip -d templates
+          unzip -q -j templates.tpz templates/version.txt templates/web_nothreads_release.zip \
+            templates/android_debug.apk templates/android_release.apk -d templates
           rm templates.tpz
 
       - name: Install the export template
@@ -58,6 +59,24 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build Android APK
+        run: |
+          # Godot reads the SDK and JDK paths from its editor settings.
+          mkdir -p ~/.config/godot
+          printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\n' \
+            "$ANDROID_HOME" "$JAVA_HOME" > ~/.config/godot/editor_settings-4.7.tres
+          GODOT=~/godot/Godot_v$GODOT_VERSION-stable_linux.x86_64 ./build.sh Android
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: redace-apk
+          path: build/android/redace.apk
 
   deploy:
     needs: build

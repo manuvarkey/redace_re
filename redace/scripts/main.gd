@@ -50,6 +50,7 @@ var goal_label: Label
 var brief_label: Label
 var message_label: Label
 var hud: Hud
+var touch: TouchControls
 var particles: Particles
 var show_objectives := false  # Tab; the original HUD has no objective text
 var music: AudioStreamPlayer
@@ -171,6 +172,8 @@ func load_mission(id: int) -> void:
 	_dead_time = 0.0
 	_end_time = -1.0
 	_flashes.clear()
+	if touch:
+		touch.reset()
 	if _fade:
 		_fade.visible = false
 		_end_label.visible = false
@@ -1216,7 +1219,21 @@ func _enemies_left() -> int:
 
 # ---------------------------------------------------------------- player, camera, HUD
 
+## Touch PAUSE: as Esc.
+func _touch_pause() -> void:
+	if _end_time >= 0.0:
+		_end_time = END_FADE
+	elif not standalone and not mission_over:
+		pause_requested.emit()
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton or event is InputEventMouseMotion:
+		if touch and touch.active:
+			return  # emulated from touches; the touch layer flies the plane
+	if event is InputEventScreenTouch and event.pressed and _end_time >= 0.0:
+		_end_time = END_FADE  # a tap ends the fade, like any key
+		return
 	if event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -1276,6 +1293,8 @@ func _player_input(dt: float) -> void:
 
 func _camera_keys() -> int:
 	# views are held, snapping back to the chase view on release (manual: "How to play")
+	if touch and touch.active and touch.view != 1:
+		return touch.view
 	if controls.pressed("camabove"):
 		return 8
 	if controls.pressed("camleft"):
@@ -1405,6 +1424,12 @@ func _build_ui() -> void:
 	hud = Hud.new()
 	hud.world = self
 	ui.add_child(hud)
+	touch = TouchControls.new()
+	touch.show_boost = cheat_boost
+	touch.pause_pressed.connect(_touch_pause)
+	touch.objectives_pressed.connect(func() -> void: show_objectives = not show_objectives)
+	ui.add_child(touch)
+	controls.touch = touch
 	hud_label = _label(ui, 16, Color.WHITE)
 	hud_label.position = Vector2(16, 150)
 	goal_label = _label(ui, 16, Color(1.0, 0.85, 0.4))
@@ -1471,8 +1496,9 @@ func _show_briefing(id: int) -> void:
 	for k in words:
 		txt = txt.replace(k, words[k])
 	var ws := RegEx.create_from_string("\\s+")
-	brief_label.text = ws.sub(txt, " ", true).strip_edges() + \
-		"\n\n[Mouse: fly   Right Shift/Ctrl or W/S: throttle   Left/right button: guns/bombs   Space: boost   Arrows: views   F2: keyboard controls   [ ] - =: roll/pitch sensitivity   Tab: objectives   R: retry   N: next]"
+	var keys := "\n\n[Tilt the phone (or STICK: drag on the left) to fly   THR slider: throttle   FIRE / BOMB   VIEW: hold and swipe   OBJ: objectives   CAL: level the tilt]" \
+		if touch and touch.active else "\n\n[Mouse: fly   Right Shift/Ctrl or W/S: throttle   Left/right button: guns/bombs   Space: boost   Arrows: views   F2: keyboard controls   [ ] - =: roll/pitch sensitivity   Tab: objectives   R: retry   N: next]"
+	brief_label.text = ws.sub(txt, " ", true).strip_edges() + keys
 	brief_time = 14.0
 
 

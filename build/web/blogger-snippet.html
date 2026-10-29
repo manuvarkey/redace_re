@@ -1,0 +1,35 @@
+<!--
+  Red Ace - Blogger embed.
+  1. Upload the whole godot/build/web folder to a static host (GitHub Pages, Netlify, Cloudflare Pages, itch.io).
+  2. Replace GAME_URL below with the address of index.html on that host (must be https).
+  3. In Blogger: new post -> switch the editor to "HTML view" -> paste this block.
+  The game (~87 MB) only downloads after the reader clicks Play.
+-->
+<div id="redace-box" style="position:relative;width:100%;max-width:800px;aspect-ratio:4/3;margin:0 auto;background:#000 url('GAME_URL/poster.jpg') center/cover no-repeat;">
+  <button id="redace-play" type="button" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 32px;font:bold 20px sans-serif;color:#fff;background:#8b0000;border:2px solid #fff;border-radius:6px;cursor:pointer;">&#9654; Play Red Ace</button>
+</div>
+<p style="text-align:center;margin:6px 0;">
+  <button id="redace-full" type="button" style="display:none;padding:4px 12px;cursor:pointer;">Fullscreen</button>
+  <small>About 87 MB download. Click the game to capture the mouse; Esc pauses.</small>
+</p>
+<script>
+(function () {
+  var GAME = "GAME_URL";
+  var box = document.getElementById("redace-box");
+  var full = document.getElementById("redace-full");
+  document.getElementById("redace-play").onclick = function () {
+    var f = document.createElement("iframe");
+    f.src = GAME;
+    f.allow = "autoplay; fullscreen; gamepad; pointer-lock";
+    f.setAttribute("allowfullscreen", "");
+    f.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;";
+    box.innerHTML = "";
+    box.appendChild(f);
+    f.focus();
+    full.style.display = "inline-block";
+    full.onclick = function () {
+      (f.requestFullscreen || f.webkitRequestFullscreen).call(f);
+    };
+  };
+})();
+</script>

@@ -1,0 +1,24 @@
+# Godot import cache and logs
+redace/.godot/
+import.log
+
+# Exported builds; build/web keeps only the hand-made embed files
+build/*
+!build/web/
+build/web/*
+!build/web/blogger-snippet.html
+!build/web/poster.jpg
+!build/web/.nojekyll
+
+# Microsoft core fonts are not redistributable; build.sh fetches them
+redace/fonts/Arial.ttf
+redace/fonts/Arial_Bold.ttf
+redace/fonts/Courier_New.ttf
+redace/fonts/Courier_New_Bold.ttf
+redace/fonts/Times_New_Roman.ttf
+redace/fonts/Times_New_Roman_Bold.ttf
+redace/fonts/Verdana.ttf
+redace/fonts/Verdana_Bold.ttf
+
+# Blender backups
+*.blend1

@@ -1,0 +1,223 @@
+{
+ "asset": {
+  "generator": "Khronos glTF Blender I/O v5.2.40",
+  "version": "2.0"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "name": "Scene",
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "mesh": 0,
+   "name": "palmtree_new"
+  }
+ ],
+ "materials": [
+  {
+   "name": "Palmbrk1",
+   "pbrMetallicRoughness": {
+    "baseColorTexture": {
+     "index": 0
+    },
+    "metallicFactor": 0
+   }
+  },
+  {
+   "alphaMode": "MASK",
+   "doubleSided": true,
+   "name": "palmleaf",
+   "pbrMetallicRoughness": {
+    "baseColorTexture": {
+     "index": 1
+    },
+    "metallicFactor": 0
+   },
+   "alphaCutoff": 0.5
+  }
+ ],
+ "meshes": [
+  {
+   "name": "palmtree_new",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    },
+    {
+     "attributes": {
+      "POSITION": 4,
+      "NORMAL": 5,
+      "TEXCOORD_0": 6
+     },
+     "indices": 7,
+     "material": 1
+    }
+   ]
+  }
+ ],
+ "textures": [
+  {
+   "sampler": 0,
+   "source": 0
+  },
+  {
+   "sampler": 0,
+   "source": 1
+  }
+ ],
+ "images": [
+  {
+   "mimeType": "image/png",
+   "name": "palmbrk1",
+   "uri": "../textures/palmbrk1.png"
+  },
+  {
+   "mimeType": "image/png",
+   "name": "palmleaf_a",
+   "uri": "../textures/palmleaf_a.png"
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 352,
+   "max": [
+    2.0959980487823486,
+    31.336044311523438,
+    2.100445508956909
+   ],
+   "min": [
+    -10.397439956665039,
+    -0.48910245299339294,
+    -10.419502258300781
+   ],
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 352,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 352,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5123,
+   "count": 528,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5126,
+   "count": 624,
+   "max": [
+    18.63429832458496,
+    41.610897064208984,
+    17.80024528503418
+   ],
+   "min": [
+    -38.465702056884766,
+    28.967708587646484,
+    -39.29975509643555
+   ],
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 5,
+   "componentType": 5126,
+   "count": 624,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 6,
+   "componentType": 5126,
+   "count": 624,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 7,
+   "componentType": 5123,
+   "count": 936,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteLength": 4224,
+   "byteOffset": 0,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteLength": 4224,
+   "byteOffset": 4224,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteLength": 2816,
+   "byteOffset": 8448,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteLength": 1056,
+   "byteOffset": 11264,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteLength": 7488,
+   "byteOffset": 12320,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteLength": 7488,
+   "byteOffset": 19808,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteLength": 4992,
+   "byteOffset": 27296,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteLength": 1872,
+   "byteOffset": 32288,
+   "target": 34963
+  }
+ ],
+ "samplers": [
+  {
+   "magFilter": 9729,
+   "minFilter": 9987
+  }
+ ],
+ "buffers": [
+  {
+   "byteLength": 34160,
+   "uri": "palmtree.bin"
+  }
+ ]
+}

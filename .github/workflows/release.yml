@@ -1,0 +1,81 @@
+# Builds every preset and attaches them to a GitHub release when a v* tag is pushed
+# (git tag -a v1.0 -m "..." && git push origin v1.0).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cabextract
+        run: sudo apt-get update && sudo apt-get install -y cabextract
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-all
+
+      - name: Download Godot and the export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          base=https://github.com/godotengine/godot/releases/download/$GODOT_VERSION-stable
+          mkdir -p ~/godot/templates && cd ~/godot
+          curl -fsSL -o godot.zip "$base/Godot_v$GODOT_VERSION-stable_linux.x86_64.zip"
+          unzip -q godot.zip && rm godot.zip
+          curl -fsSL -o templates.tpz "$base/Godot_v$GODOT_VERSION-stable_export_templates.tpz"
+          unzip -q -j templates.tpz templates/version.txt templates/web_nothreads_release.zip \
+            templates/linux_release.x86_64 templates/windows_release_x86_64.exe \
+            templates/android_debug.apk templates/android_release.apk -d templates
+          rm templates.tpz
+
+      - name: Install the export templates and editor settings
+        run: |
+          dir=~/.local/share/godot/export_templates/$GODOT_VERSION.stable
+          mkdir -p "$dir" && cp ~/godot/templates/* "$dir/"
+          # Godot reads the Android SDK and JDK paths from its editor settings.
+          mkdir -p ~/.config/godot
+          printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\n' \
+            "$ANDROID_HOME" "$JAVA_HOME" > ~/.config/godot/editor_settings-4.7.tres
+
+      - name: Build
+        run: GODOT=~/godot/Godot_v$GODOT_VERSION-stable_linux.x86_64 ./build.sh Web Linux Windows Android
+
+      - name: Package
+        run: |
+          v=${GITHUB_REF_NAME}
+          mkdir dist
+          (cd build/linux && zip -q -9 ../../dist/redace-$v-linux-x86_64.zip redace.x86_64 redace.pck)
+          (cd build/windows && zip -q -9 ../../dist/redace-$v-windows-x86_64.zip redace.exe redace.pck)
+          (cd build/web && zip -q -9 -r ../../dist/redace-$v-web.zip .)
+          cp build/android/redace.apk dist/redace-$v-android.apk
+          ls -l dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Red Ace remake ${{ github.ref_name }}
+          body: |
+            Builds of the Godot 4 remake at ${{ github.ref_name }}.
+
+            - **Windows** / **Linux** (x86_64): unzip and run `redace.exe` / `redace.x86_64` (keep `redace.pck` next to it).
+            - **Web**: unzip onto any static web server, or play at https://manuvarkey.github.io/redace_re/.
+            - **Android**: install the APK (debug-signed, arm64 and x86_64; allow installs from unknown sources).
+              Tilt to steer, or tap STICK for a drag stick.
+          files: dist/*

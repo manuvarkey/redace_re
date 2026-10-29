@@ -3,8 +3,8 @@
 Port of abandoned "Master of the Skies - The Red Ace" windows game logic in Godot 4.7. The original engine (Dive5 + RenderWare) is not ported.
 
 **[Play online](https://manuvarkey.github.io/redace_re/)** in the browser, desktop or phone (touch controls
-with tilt steering). Android APK: latest `redace-apk` artifact of the
-[Build web and Android](https://github.com/manuvarkey/redace_re/actions/workflows/pages.yml) workflow.
+with tilt steering). Windows, Linux, web and Android (APK) builds:
+[Releases](https://github.com/manuvarkey/redace_re/releases).
 
 ## Build
 
@@ -40,8 +40,9 @@ cabinets, then `python3 tools/build_assets.py <game> <REDACE.CUE> redace` conver
 | `tools/ghidra_scripts/` | Ghidra headless scripts: `ExportAll`, `ImproveAnalysis`, `ApplyGuids` for the `RedAce.exe` decompilation |
 
 `.github/workflows/pages.yml` builds the Web preset on every push to `main` (Godot and the no-threads web
-template are downloaded and cached) and deploys `build/web` to GitHub Pages; the same run uploads the Android
-APK as the `redace-apk` artifact. One-time setup: repository Settings > Pages > Source = GitHub Actions.
+template are downloaded and cached) and deploys `build/web` to GitHub Pages. One-time setup: repository Settings > Pages > Source = GitHub Actions.
+`.github/workflows/release.yml` builds all four presets when a `v*` tag is pushed and attaches them to the
+release (`git tag -a v1.1 -m "..." && git push origin v1.1`).
 
 ## Phones (web and Android)
 
@@ -55,7 +56,7 @@ need landscape. On the web the first tap also goes fullscreen and locks landscap
 steps back through the menus; new pilot names open the on-screen keyboard.
 
 Android APK: `scripts/build_android.sh` (debug-signed, arm64-v8a + x86_64) writes `build/android/redace.apk`;
-CI uploads it as the `redace-apk` artifact. Tested on the Android 14 emulator (x86_64, host GPU; SwiftShader
+tagged releases attach it. Tested on the Android 14 emulator (x86_64, host GPU; SwiftShader
 fails the canvas shader) and in its Chrome for the web build.
 
 Run the web build from any static web server, e.g. `python3 -m http.server -d build/web`,

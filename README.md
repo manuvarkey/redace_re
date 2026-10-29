@@ -140,6 +140,28 @@ To embed in a web page (e.g. a Blogger post), upload `build/web` to any https st
 | `tools/redace-wine.sh` | Runs the original game or the Windows export under Wine for comparison |
 | `tools/ghidra_scripts/` | Ghidra headless scripts (`ExportAll`, `ImproveAnalysis`, `ApplyGuids`) for the `RedAce.exe` decompilation |
 
+## Thanks to the original team
+
+This project exists because *Master of the Skies: The Red Ace* is a wonderful game: a small, witty,
+hand-crafted WWI flight game with a lot of heart. Big thanks to the team at Small Rockets who made it,
+as listed on the game's own Credits pages:
+
+| Role | |
+| --- | --- |
+| Programming | Tim Aidley |
+| Art | Anthony Callaghan |
+| Mission design, sound effects | Adrian Moore (sound with thanks to Mike Ash) |
+| Music | Ian Livingstone |
+| Trenches level | Tomas O'Sullivan |
+| Help file and web site design | Peter Lane |
+| Producer | Shawnee Sequeira |
+| Head of Fiendish Games | Jonathan Small |
+| Quality assurance | Frank Parkinson, Gavin Parker, Neil Martin, Jonathan Biddle, David Burke, Simon Crawford, Mat Cunningham |
+
+They in turn thanked the RenderWare team and BMB Compuscience for *Sopwith*. The menus, missions,
+characters, art and music in this remake are theirs; this project only rebuilds the engine around them.
+Thank you for the game, and for many happy hours in the air.
+
 ## Technical notes
 
 How each part maps to the original executable (`FUN_...` and `RedAce.c:line` refer to the Ghidra decompilation).

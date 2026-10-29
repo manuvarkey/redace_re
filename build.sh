@@ -1,6 +1,7 @@
 #!/bin/sh
 # Build the Red Ace remake: fetch the Microsoft core fonts if missing, import, export.
 # Usage: ./build.sh [Web|Linux|Windows ...]   (default: all three presets)
+# Per-platform shortcuts: scripts/build_linux.sh, scripts/build_windows.sh, scripts/build_web.sh.
 # GODOT: Godot 4.7.2 executable with export templates installed.
 set -eu
 
@@ -42,10 +43,17 @@ fetch_fonts() {
 	done
 }
 
+[ $# -gt 0 ] || set -- Web Linux Windows
+for preset in "$@"; do
+	case $preset in
+		Web|Linux|Windows) ;;
+		*) echo "unknown preset '$preset' (use Web, Linux or Windows)" >&2; exit 1 ;;
+	esac
+done
+
 fetch_fonts
 "$GODOT" --headless --path redace --import
 
-[ $# -gt 0 ] || set -- Web Linux Windows
 for preset in "$@"; do
 	case $preset in
 		Web) mkdir -p build/web ;;

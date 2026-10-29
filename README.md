@@ -10,6 +10,7 @@ The converted game data is already in `redace/game_data/`. Build with Godot 4.7.
 GODOT=~/tools/godot-4.7.2/Godot_v4.7.2-stable_linux.x86_64 ./build.sh   # all presets
 ./build.sh Web                                                          # build/web/index.html
 ./build.sh Linux Windows                                                # build/linux, build/windows
+scripts/build_linux.sh                                                  # same per platform: build_windows.sh, build_web.sh
 ```
 
 `build.sh` first puts the Microsoft core fonts (Arial, Courier New, Times New Roman, Verdana, regular and

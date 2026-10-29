@@ -39,12 +39,13 @@ jobs:
         if: steps.godot-cache.outputs.cache-hit != 'true'
         run: |
           base=https://github.com/godotengine/godot/releases/download/$GODOT_VERSION-stable
-          mkdir -p ~/godot/templates && cd ~/godot
+          # start clean: unzip would otherwise stop and ask before replacing a file
+          rm -rf ~/godot && mkdir -p ~/godot/templates && cd ~/godot
           curl -fsSL -o godot.zip "$base/Godot_v$GODOT_VERSION-stable_linux.x86_64.zip"
-          unzip -q godot.zip && rm godot.zip
+          unzip -o -q godot.zip && rm godot.zip
           # Only the no-threads web template is needed out of the full template archive.
           curl -fsSL -o templates.tpz "$base/Godot_v$GODOT_VERSION-stable_export_templates.tpz"
-          unzip -q -j templates.tpz templates/version.txt templates/web_nothreads_release.zip -d templates
+          unzip -o -q -j templates.tpz templates/version.txt templates/web_nothreads_release.zip -d templates
           rm templates.tpz
 
       - name: Install the export template

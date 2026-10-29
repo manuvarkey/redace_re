@@ -35,6 +35,10 @@ cabinets, then `python3 tools/build_assets.py <game> <REDACE.CUE> redace` conver
 | `tools/redace-wine.sh` | Runs the original game or the Windows export under Wine for comparison |
 | `tools/ghidra_scripts/` | Ghidra headless scripts: `ExportAll`, `ImproveAnalysis`, `ApplyGuids` for the `RedAce.exe` decompilation |
 
+Play online: https://manuvarkey.github.io/redace_re/ - `.github/workflows/pages.yml` builds the Web preset on
+every push to `main` (Godot and the no-threads web template are downloaded and cached) and deploys `build/web`
+to GitHub Pages. One-time setup: repository Settings > Pages > Source = GitHub Actions.
+
 Run the web build from any static web server, e.g. `python3 -m http.server -d build/web`,
 then open `http://localhost:8000/` (or `?mission=N` to fly a mission directly). The web preset uses
 the no-threads template, so no COOP/COEP headers are needed.

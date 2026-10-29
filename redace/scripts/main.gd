@@ -1219,7 +1219,8 @@ func _enemies_left() -> int:
 
 # ---------------------------------------------------------------- player, camera, HUD
 
-## Touch PAUSE: as Esc.
+## Touch PAUSE: as Esc; during the end fade it ends the fade like a key (other touches do not, so
+## FIRE taps after a crash leave the fade alone).
 func _touch_pause() -> void:
 	if _end_time >= 0.0:
 		_end_time = END_FADE
@@ -1231,9 +1232,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton or event is InputEventMouseMotion:
 		if touch and touch.active:
 			return  # emulated from touches; the touch layer flies the plane
-	if event is InputEventScreenTouch and event.pressed and _end_time >= 0.0:
-		_end_time = END_FADE  # a tap ends the fade, like any key
-		return
 	if event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:

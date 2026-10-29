@@ -404,14 +404,15 @@ func _guns(dt: float) -> void:
 	if not fire_input or state == State.GROUND:
 		_trigger_time = 0.0
 		_shots = 0.0
+		_gun_sound_firing(false)
 		return
 	var cycle := fire_on + fire_off
 	var phase := fmod(_trigger_time, cycle) if cycle > 0.0 else 0.0
 	_trigger_time += dt
 	if phase >= fire_on:
+		_gun_sound_firing(false)
 		return
-	if is_zero_approx(phase) and _gun_sound and not _gun_sound.playing:
-		_gun_sound.play()
+	_gun_sound_firing(true)
 	_shots += dt * fire_rate
 	var b := global_transform.basis
 	while _shots >= 1.0:
@@ -419,6 +420,17 @@ func _guns(dt: float) -> void:
 		_gun_side = -_gun_side
 		var muzzle := global_position + b.z * (radius * 0.5 + 2.0) + b.y * 1.0 + b.x * _gun_side
 		world.spawn_ordnance(self, 1, muzzle, velocity, b.z)
+
+
+## Gun sound as the exe drives it each frame (RedAce.c:32021, FUN_0045f51e / FUN_0045f591): while the
+## guns fire the sample is restarted whenever it is not playing, otherwise it is stopped at once.
+func _gun_sound_firing(firing: bool) -> void:
+	if _gun_sound == null:
+		return
+	if firing and not _gun_sound.playing:
+		_gun_sound.play()
+	elif not firing and _gun_sound.playing:
+		_gun_sound.stop()
 
 
 ## Original plane damage (decomp FUN_0042eda0): damage accumulates; every hit adds smoke

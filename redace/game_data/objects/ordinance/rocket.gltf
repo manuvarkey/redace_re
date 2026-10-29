@@ -1,0 +1,163 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "rocket_frame0",
+   "matrix": [
+    1.0,
+    4.371138473402425e-08,
+    4.371139183945161e-08,
+    0,
+    -4.3711395392165286e-08,
+    5.960464477539063e-08,
+    1.0,
+    0,
+    4.371138828673793e-08,
+    -1.0,
+    5.960465188081798e-08,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "rocket_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "rocket_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1
+     },
+     "indices": 2,
+     "material": 0
+    },
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1
+     },
+     "indices": 3,
+     "material": 1
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "untextured",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.23137254901960785,
+     0.16862745098039217,
+     0.058823529411764705,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0
+   }
+  },
+  {
+   "name": "untextured",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.49411764705882355,
+     0.48627450980392156,
+     0.3215686274509804,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0
+   }
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 26,
+   "type": "VEC3",
+   "min": [
+    -0.07221102714538574,
+    -0.14108394086360931,
+    2.5901424884796143
+   ],
+   "max": [
+    0.07221072912216187,
+    0.010770048014819622,
+    4.187931060791016
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 26,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5125,
+   "count": 42,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 54,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 312,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 312,
+   "byteLength": 312,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 624,
+   "byteLength": 168,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 792,
+   "byteLength": 216,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "rocket.bin",
+   "byteLength": 1008
+  }
+ ]
+}

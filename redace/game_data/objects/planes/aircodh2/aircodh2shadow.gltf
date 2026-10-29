@@ -1,0 +1,143 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "aircodh2shadow_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "aircodh2shadow_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "aircodh2shadow_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "untextured",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.5019607843137255,
+     0.5019607843137255,
+     0.5019607843137255,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0
+   }
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 167,
+   "type": "VEC3",
+   "min": [
+    -12.82432746887207,
+    -1.1791871786117554,
+    -14.954254150390625
+   ],
+   "max": [
+    12.824328422546387,
+    3.711529016494751,
+    6.460184574127197
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 167,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 167,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 354,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 2004,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 2004,
+   "byteLength": 2004,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 4008,
+   "byteLength": 1336,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 5344,
+   "byteLength": 1416,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "aircodh2shadow.bin",
+   "byteLength": 6760
+  }
+ ]
+}

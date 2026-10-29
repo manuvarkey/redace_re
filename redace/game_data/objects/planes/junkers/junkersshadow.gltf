@@ -1,0 +1,143 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "junkersshadow_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1
+   ]
+  },
+  {
+   "name": "junkersshadow_atomic0",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "junkersshadow_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "untextured",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.5019607843137255,
+     0.5019607843137255,
+     0.5019607843137255,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0
+   }
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 122,
+   "type": "VEC3",
+   "min": [
+    -11.688077926635742,
+    -1.0613598823547363,
+    -13.346871376037598
+   ],
+   "max": [
+    11.688078880310059,
+    3.59261417388916,
+    4.734487056732178
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 122,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 122,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 306,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 1464,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 1464,
+   "byteLength": 1464,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 2928,
+   "byteLength": 976,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 3904,
+   "byteLength": 1224,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "junkersshadow.bin",
+   "byteLength": 5128
+  }
+ ]
+}

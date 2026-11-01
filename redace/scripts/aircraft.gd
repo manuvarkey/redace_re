@@ -137,6 +137,7 @@ func setup(name_: String, main: World) -> void:
 	var dff: String = app.get("dff", plane_name + ".dff")
 	var model := World.load_model(dir + dff.get_basename() + ".gltf")
 	if model:
+		World.apply_lighting(model, Ini.num(app, "ambient", 0.4), Ini.num(app, "diffuse", 1.0))
 		add_child(model)
 		_model = model
 		_find_propellers(model)
@@ -317,7 +318,14 @@ func _fly(dt: float) -> void:
 		if state == State.STALL:
 			bank -= 150.0 * dt  # the original rolls off and drops the nose in a stall
 			pitch_rate -= m.y.y * 100.0 * 30.0 * dt
-		pitch_rate = clampf(move_toward(pitch_rate, 0.0, 150.0 * dt), -pitch_lerp, pitch_lerp)
+		# Each frame the rate loses 5 toward zero whatever the frame time, and may overshoot it (0x433ce6). An AI
+		# plane sets its command again each frame, so a small command turns the other way, which settles it on
+		# one edge of a +-5 band instead of on the aim line. The player's input integrates, so it keeps a rate.
+		if (is_player and not autopilot) or is_nan(_ai_pitch):
+			pitch_rate = move_toward(pitch_rate, 0.0, 150.0 * dt)
+		else:
+			pitch_rate -= 5.0 if pitch_rate > 0.0 else -5.0
+		pitch_rate = clampf(pitch_rate, -pitch_lerp, pitch_lerp)
 		# bank limits and roll-out from inverted flight
 		if m.y.y > 0.0:
 			bank = clampf(bank, -90.0, 90.0)
@@ -734,7 +742,7 @@ func _goal_object(goal: Dictionary) -> Variant:
 
 
 static func _obj_pos(o) -> Vector3:
-	return o.global_position if o is Aircraft else o.node.global_transform * o.center
+	return o.global_position if o is Aircraft else o.node.global_position
 
 
 static func _airborne(o) -> bool:
@@ -769,9 +777,17 @@ func _attack(goal: Dictionary, dt: float) -> bool:
 	var tp: Vector3 = _obj_pos(o)
 	var to := tp - global_position
 	var dist := to.length()
-	if _airborne(o):
-		to += o.flight_basis.z * (dist * BULLET_LEAD * o.speed)
+	if o is Aircraft:
+		# aims ahead of the target by distance / 275 * its speed, plus 3/4 of that along the horizontal part of its
+		# banked up axis, which points into its turn and vanishes in level flight (0x439f89; y is zeroed at 0x43a058;
+		# properties 2 and 4 read plane + 0x110, the matrix rolled at 0x4343c9)
+		var lead: float = dist * BULLET_LEAD * o.speed
+		var tb: Basis = o.global_transform.basis.orthonormalized()
+		to += tb.z * lead + Vector3(tb.y.x, 0.0, tb.y.z) * (lead * 0.75)
 		throttle = clampf(throttle + (-0.3 if o.speed < speed else 0.5) * dt, 0.65, 1.0)
+	else:
+		# ground targets: the firing range is measured along the ground (0x43a141)
+		dist = Vector2(to.x, to.z).length()
 	var l := _local_dir(to)
 	var side := l.x
 	if l.z >= 0.0:
@@ -980,7 +996,7 @@ func _apply_ai_commands() -> void:
 	if flight_basis.y.y < 0.0:
 		bank = 100.0 * (signf(bank) if bank != 0.0 else 1.0)
 	else:
-		var rate := lerpf(low_roll, high_roll, clampf(speed / high_speed, 0.0, 1.5)) * 3.0 * dt
+		var rate := high_roll * 3.0 * dt  # 0x438e2e
 		bank = move_toward(bank, _ai_bank, rate)
 	if not is_nan(_ai_pitch):
 		pitch_rate = _ai_pitch

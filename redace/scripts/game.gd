@@ -21,7 +21,7 @@ var view: HtmlView
 var world: World
 var music: AudioStreamPlayer
 var strings := {}
-var pilots: Array[Dictionary] = []  # {name, rank, score, mission, flights}; empty dict = free slot
+var pilots: Array[Dictionary] = []  # keys as the exe saves them (0x457aef); empty dict = free slot
 var current := -1
 var settings := {}
 var controls: Controls
@@ -77,7 +77,7 @@ func _ready() -> void:
 		if a.begins_with("--pages="):
 			# debug: show each page for one second (screenshots of the menu renderer)
 			if pilots[0].is_empty():
-				pilots[0] = {"name": "Test Pilot", "rank": 2, "score": 2000, "mission": 7, "flights": 6}
+				pilots[0] = {"name": "Test Pilot", "rank": 2, "score": 2000, "mission": 7, "games": 6}
 				current = 0
 			for pg in a.substr(8).split(","):
 				open_page(pg)
@@ -87,7 +87,7 @@ func _ready() -> void:
 		if a.begins_with("--clicks="):
 			# debug: follow links in order, 1.5 s apart (waits while a flight is running)
 			if pilots[0].is_empty():
-				pilots[0] = {"name": "Test Pilot", "rank": 0, "score": 600, "mission": 1, "flights": 1}
+				pilots[0] = {"name": "Test Pilot", "rank": 0, "score": 600, "mission": 1, "games": 1}
 				current = 0
 			for h in a.substr(9).split(","):
 				await get_tree().create_timer(1.5).timeout
@@ -119,12 +119,31 @@ func _title_done() -> void:
 
 # ---------------------------------------------------------------- persistence
 
+## Older saves used other names; adds the exe's fields a pilot lacks.
+func _upgrade_pilot(p: Dictionary) -> Dictionary:
+	if p.is_empty():
+		return p
+	if p.has("flights"):
+		p.games = p.flights
+		p.erase("flights")
+	if p.has("retry_mission"):
+		p.lastplayed = p.retry_mission
+		p.lastnum = p.get("retries", 0)
+		p.erase("retry_mission")
+		p.erase("retries")
+	var defaults := {"campaign": 1, "kills": 0, "deaths": 0, "games": 0, "lastplayed": 0, "lastnum": 0}
+	for k in defaults:
+		if not p.has(k):
+			p[k] = defaults[k]
+	return p
+
+
 func _load() -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(SAVE_PATH)
 	pilots.clear()
 	for i in SLOTS:
-		pilots.append(cfg.get_value("pilots", str(i), {}))
+		pilots.append(_upgrade_pilot(cfg.get_value("pilots", str(i), {})))
 	current = cfg.get_value("roster", "current", -1)
 	var s := ConfigFile.new()
 	s.load(SETTINGS_PATH)
@@ -132,7 +151,7 @@ func _load() -> void:
 	controls = Controls.load_saved()
 	settings.music_volume = s.get_value("sound", "music_volume", 8)
 	settings.effects_volume = s.get_value("sound", "effects_volume", 10)
-	settings.clip_plane = s.get_value("graphics", "clip_plane", int(Ini.num(cfg_ini.get("graphics", {}), "drawdistance", 600) / 100))
+	settings.clip_plane = int(s.get_value("graphics", "draw_distance", Ini.num(cfg_ini.get("graphics", {}), "drawdistance", 600)))
 	settings.effects_detail = s.get_value("graphics", "effects_detail", int(Ini.num(cfg_ini.get("graphics", {}), "effectsdetail", 700) / 100))
 	settings.vsync = s.get_value("video", "vsync", true)
 	settings.fullscreen = s.get_value("video", "fullscreen", false)
@@ -152,7 +171,7 @@ func _save() -> void:
 	s.load(SETTINGS_PATH)
 	s.set_value("sound", "music_volume", settings.music_volume)
 	s.set_value("sound", "effects_volume", settings.effects_volume)
-	s.set_value("graphics", "clip_plane", settings.clip_plane)
+	s.set_value("graphics", "draw_distance", settings.clip_plane)
 	s.set_value("graphics", "effects_detail", settings.effects_detail)
 	s.set_value("video", "vsync", settings.vsync)
 	s.set_value("video", "fullscreen", settings.fullscreen)
@@ -289,7 +308,7 @@ func _fill(html: String) -> String:
 		"channelvol1": _bar("command:volume:1:%d", settings.effects_volume, 10, 10),
 		"musicvolbar": _bar("command:volume:0:%d", settings.music_volume, 10, 8),
 		"hardwaresound": _check("command:hardwaresound", true, false),
-		"clipplane": _bar("command:clipplane:%d", settings.clip_plane, 10, 6),
+		"clipplane": _value_bar("command:clipplane:%d", DRAW_DISTANCES, settings.clip_plane, 2),
 		"effectsdetail": _bar("command:effectsdetail:%d", settings.effects_detail, 10, 7),
 		"vsync": _check("command:vsync", settings.vsync, false),
 		"renderers": "<b>Godot (OpenGL / WebGL 2)</b><br>",
@@ -330,7 +349,7 @@ func _continue_link(p: Dictionary) -> String:
 		return ""
 	if int(p.get("mission", 1)) > LAST_MISSION:
 		return ""
-	if int(p.get("mission", 1)) <= 1 and int(p.get("flights", 0)) == 0:
+	if int(p.get("mission", 1)) <= 1 and int(p.get("games", 0)) == 0:
 		return _link("Menus\\Intro.html", _s("startcampaign"))
 	return _link("command:continue", _s("continuecampaign"))
 
@@ -365,6 +384,7 @@ func _bar(cmd: String, value: int, steps: int, default: int, small := false) -> 
 	return out
 
 
+const DRAW_DISTANCES: Array[float] = [200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0, 1600.0, 1800.0, 2000.0, 2200.0]
 const GAME_SPEEDS: Array[float] = [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2]
 const ENEMY_ENDURANCES: Array[float] = [0.0625, 0.25, 0.5625, 1.0, 1.5625, 2.25, 3.0625, 4.0, 5.0625, 6.25, 7.5625]
 
@@ -779,7 +799,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _commit_typing() -> void:
 	if _typing_slot >= 0 and not _typed.strip_edges().is_empty():
-		pilots[_typing_slot] = {"name": _typed.strip_edges(), "rank": 0, "score": 0, "mission": 1, "flights": 0}
+		pilots[_typing_slot] = {"name": _typed.strip_edges(), "rank": 0, "score": 0, "mission": 1,
+			"campaign": 1, "kills": 0, "deaths": 0, "games": 0, "lastplayed": 0, "lastnum": 0}
 		current = _typing_slot
 		_save()
 	_stop_typing()
@@ -852,16 +873,13 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	world.finished.connect(_on_finished)
 	world.pause_requested.connect(_pause)
 	add_child(world)
-	world.view_distance = 300.0 + settings.clip_plane * 250.0
+	world.view_distance = float(settings.clip_plane)
 	world.effects_detail = settings.effects_detail / 10.0
 	if not debug:
 		world.load_mission(id)
 	view.visible = false
 	_page = ""
 	_capture_mouse()
-	if campaign and not _pilot().is_empty():
-		pilots[current].flights = int(pilots[current].get("flights", 0)) + 1
-		_save()
 
 
 ## Counts this flight for the current pilot and returns the easing steps it earns.
@@ -869,13 +887,13 @@ func _retry_steps(id: int) -> int:
 	var p := _pilot()
 	if p.is_empty():
 		return 0
-	if int(p.get("retry_mission", -1)) != id:
-		p.retry_mission = id
-		p.retries = 0
+	if int(p.get("lastplayed", 0)) != id:
+		p.lastplayed = id
+		p.lastnum = 0
 	else:
-		p.retries = int(p.get("retries", 0)) + 1
+		p.lastnum = int(p.get("lastnum", 0)) + 1
 	_save()
-	return clampi(int(p.retries) - 2, 0, 5)
+	return clampi(int(p.lastnum) - 2, 0, 5)
 
 
 func _base_time_scale() -> float:
@@ -936,13 +954,18 @@ func _resume() -> void:
 func _on_finished(result: String, score: int) -> void:
 	_result = result
 	_end_flight()
+	# games counts every finished flight; kills and deaths are saved but the exe never adds to them (0x45d796)
+	if not _pilot().is_empty():
+		pilots[current].games = int(pilots[current].get("games", 0)) + 1
+		_save()
 	_play_menu_music()
 	if result != "won":
 		open_page("Menus\\defeat.html")
 		return
 	var p := _pilot()
 	if not p.is_empty():
-		p.retries = 0
+		p.lastnum = 0
+		_save()
 	if not _campaign or p.is_empty() or _mission < 1:
 		open_page("Menus\\victory.html")
 		return

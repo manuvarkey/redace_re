@@ -56,7 +56,7 @@ var show_objectives := false  # Tab; the original HUD has no objective text
 var music: AudioStreamPlayer
 var brief_time := 10.0
 var controls: Controls  # player bindings; Game passes its own, debug runs load the saved ones
-var view_distance := 2600.0  # options "View Distance" (clip plane); fog end
+var view_distance := 600.0  # options "View Distance", drawdistance in redace.ini (0x458ea2): far clip and fog end
 var effects_detail := 0.7  # options "Effects Detail"
 var camera_mode := 1  # original camera modes: 1 chase, 4 behind, 6 left, 7 right, 8 above
 var _mouse_dx := 0.0
@@ -159,10 +159,98 @@ static func load_sound(file_name: String) -> AudioStream:
 	return null
 
 
+# ---------------------------------------------------------------- lighting
+
+## RenderWare's lighting as the exe sets it up (0x44ebc6): a white directional light along (1, -1, 1) and a
+## white ambient light, both for atomics only (flag 1; world flags 0xd drop its lighting, 0x44e93e), so terrain
+## is texture * baked colour. Footage of the original shows fields at full texture brightness while their baked
+## value is about 0.67 and hedges at 0 stay black, so the baked colour counts double, clamped: fitted, not traced.
+## An object's vertex light is ambient + diffuse * N.L from its ini [appearance] (0x42e1e2), clamped to 1. Both
+## multiply the texture in display space, which is why the shader raises them to 2.2.
+const LIGHT_DIR := Vector3(0.57735, -0.57735, 0.57735)
+static var _lit_shaders := {}
+
+
+static func _lit_shader(cull_off: bool, blend: int) -> Shader:
+	var key := "%s%d" % [cull_off, blend]
+	if not _lit_shaders.has(key):
+		var sh := Shader.new()
+		sh.code = """
+shader_type spatial;
+render_mode unshaded%s%s;
+uniform sampler2D tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform vec4 base : source_color = vec4(1.0);
+uniform float ambient = 1.0;
+uniform float diffuse = 0.0;
+uniform bool prelit = false;
+uniform float scissor = 0.5;
+uniform vec3 light_dir;
+varying vec3 lit;
+
+void vertex() {
+	if (prelit) {
+		lit = min(COLOR.rgb * 2.0, vec3(1.0));
+	} else {
+		vec3 n = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+		lit = vec3(clamp(ambient + diffuse * max(dot(n, -light_dir), 0.0), 0.0, 1.0));
+	}
+}
+
+void fragment() {
+	vec4 c = texture(tex, UV) * base;
+	ALBEDO = c.rgb * pow(lit, vec3(2.2));
+	%s
+}
+""" % [", cull_disabled" if cull_off else "", ", depth_draw_opaque" if blend == 2 else "",
+			{0: "", 1: "ALPHA = c.a; ALPHA_SCISSOR_THRESHOLD = scissor;", 2: "ALPHA = c.a;"}[blend]]
+		_lit_shaders[key] = sh
+	return _lit_shaders[key]
+
+
+## Gives every surface of a model the original's lighting. Meshes are shared between instances of a
+## model file, so this runs once per mesh.
+static func apply_lighting(model: Node3D, ambient: float, diffuse: float, prelit := false) -> void:
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (node as MeshInstance3D).mesh
+		if mesh == null or mesh.has_meta("rw_lit"):
+			continue
+		mesh.set_meta("rw_lit", true)
+		for i in mesh.get_surface_count():
+			var src := mesh.surface_get_material(i) as BaseMaterial3D
+			if src == null:
+				continue
+			var blend := 0
+			if src.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR:
+				blend = 1
+			elif src.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+				blend = 2
+			var mat := ShaderMaterial.new()
+			mat.resource_name = src.resource_name
+			mat.shader = _lit_shader(src.cull_mode == BaseMaterial3D.CULL_DISABLED, blend)
+			mat.set_shader_parameter("tex", src.albedo_texture if src.albedo_texture else _white_texture())
+			mat.set_shader_parameter("base", src.albedo_color)
+			mat.set_shader_parameter("ambient", ambient)
+			mat.set_shader_parameter("diffuse", diffuse)
+			mat.set_shader_parameter("prelit", prelit)
+			mat.set_shader_parameter("scissor", src.alpha_scissor_threshold)
+			mat.set_shader_parameter("light_dir", LIGHT_DIR)
+			mesh.surface_set_material(i, mat)
+
+
+static var _white: Texture2D
+static func _white_texture() -> Texture2D:
+	if _white == null:
+		var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+		img.fill(Color.WHITE)
+		_white = ImageTexture.create_from_image(img)
+	return _white
+
+
 # ---------------------------------------------------------------- mission loading
 
 func load_mission(id: int) -> void:
 	mission_id = id
+	_vehicles_snapped = false
 	if _level:
 		_level.queue_free()
 	planes.clear()
@@ -286,6 +374,8 @@ func _load_map(map_name: String) -> void:
 	var app: Dictionary = ini.get("appearance", {})
 	var terrain := load_model(dir + str(app.get("bsp", "thelandscape2")) + ".gltf")
 	if terrain:
+		apply_lighting(terrain, 0.0, 0.0, true)
+	if terrain:
 		_level.add_child(terrain)
 		var box := AABB()
 		var first := true
@@ -377,6 +467,33 @@ func _basis_from(sec: Dictionary) -> Basis:
 	return Basis(x, at.cross(x).normalized(), at)
 
 
+## The mission's matrix as stored, scale included (some objects are placed smaller); planes use _basis_from.
+func _matrix_from(sec: Dictionary) -> Basis:
+	var right := Ini.vec3(sec, "right")
+	var up := Ini.vec3(sec, "up", Vector3.UP)
+	var at := Ini.vec3(sec, "at")
+	if at.length_squared() < 0.0001 or right.length_squared() < 0.0001 or up.length_squared() < 0.0001:
+		return _basis_from(sec)
+	return Basis(right, up, at)
+
+
+## Vehicles stand on the highest terrain under them, turned to its slope and keeping their heading and
+## scale (position setter FUN_0042bd45, ray callback FUN_0042be62). Scenery stays where the mission puts it.
+func _snap_vehicles() -> void:
+	var space := get_world_3d().direct_space_state
+	for t in targets:
+		if not t.turret:
+			continue
+		var node: Node3D = t.node
+		var p := node.global_position
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(p.x, 5000.0, p.z), Vector3(p.x, -5000.0, p.z)))
+		if hit.is_empty():
+			continue
+		var up: Vector3 = hit.normal if hit.normal.y >= 0.0 else -hit.normal
+		var right := up.cross(node.global_transform.basis.z)
+		node.global_transform = Transform3D(Basis(right, up, right.cross(up)), hit.position)
+
+
 func _spawn_ground(sec: Dictionary, vehicle := true) -> void:
 	var obj: String = str(sec.get("name", "")).to_lower()
 	if obj.is_empty():
@@ -401,15 +518,19 @@ func _spawn_ground(sec: Dictionary, vehicle := true) -> void:
 	var model := load_model(models[0])
 	if model == null:
 		return
+	var surface_ambient := Ini.num(app, "ambient", 0.4)
+	var surface_diffuse := Ini.num(app, "diffuse", 1.0)
+	apply_lighting(model, surface_ambient, surface_diffuse)
 	root.add_child(model)
 	_level.add_child(root)
-	root.global_transform = Transform3D(_basis_from(sec), Ini.vec3(sec, "pos"))
+	root.global_transform = Transform3D(_matrix_from(sec), Ini.vec3(sec, "pos"))
 	var aabb := _aabb_of(model)
 	var groups := int(Ini.num(sec, "groups", 0))
 	var arm: Dictionary = ini.get("armaments", {})
 	var t := {"node": root, "health": Ini.num(ini.get("physics", {}), "endurance", 50.0),
 		"radius": maxf(aabb.size.length() * 0.45, 2.0), "center": aabb.get_center(), "models": models,
 		"name": obj, "dead": false, "groups": groups, "id": int(Ini.num(sec, "id", 0)), "model_index": 0,
+		"surface_ambient": surface_ambient, "surface_diffuse": surface_diffuse,
 		"endurance": maxf(Ini.num(ini.get("physics", {}), "endurance", 50.0), 1.0), "hit_time": 0.0,
 		"allied": (groups & ALLIED_GROUP_BIT) != 0,
 		# every [vehicleN] is a turret; the exe never reads [ai] turret (FUN_0043c1c0, keys 0x43f4c4)
@@ -520,16 +641,13 @@ func _perf_line() -> String:
 	return line
 
 
-const BOMB_GRAVITY := 9.81 * 4.0
+const BOMB_GRAVITY := 60.0  # 0x44d5fb
 
 
 ## Where a bomb released now would hit the ground (same integration as _update_shells, 0.05 s steps).
 func bomb_impact(pos: Vector3, vel: Vector3) -> Vector3:
-	var maxspeed := Ini.num(ordnance.get(2, {}), "maxspeed", 200.0)
 	for i in 400:
 		vel += Vector3.DOWN * BOMB_GRAVITY * 0.05
-		if vel.length() > maxspeed:
-			vel = vel.normalized() * maxspeed
 		pos += vel * 0.05
 		if pos.y <= ground_height(pos):
 			return pos
@@ -711,9 +829,15 @@ func play_at(pos: Vector3, stream: AudioStream, volume_db := 0.0) -> void:
 	a.play()
 
 
+var _vehicles_snapped := false
+
+
 func _physics_process(dt: float) -> void:
 	if _level == null:
 		return
+	if not _vehicles_snapped:
+		_vehicles_snapped = true
+		_snap_vehicles()
 	if player and player.state != Aircraft.State.DEAD and not autopilot:
 		_player_input(dt)
 	if not mission_over:
@@ -746,8 +870,7 @@ func _update_shells(dt: float, space: PhysicsDirectSpaceState3D) -> void:
 			vel += vel.normalized() * s.accel * dt
 		else:  # bomb: falls (ordinance.ini accel -1 = gravity)
 			vel += Vector3.DOWN * BOMB_GRAVITY * dt
-		if vel.length() > s.maxspeed:
-			vel = vel.normalized() * s.maxspeed
+		# ordnance has no speed limit in flight (0x44d602): maxspeed only scales the spread at release
 		var from: Vector3 = s.pos
 		var to := from + vel * dt
 		s.vel = vel
@@ -1054,6 +1177,7 @@ func _damage_target(t: Dictionary, amount: float) -> void:
 		var node: Node3D = t.node
 		var m := load_model(models[idx])
 		if m:
+			apply_lighting(m, t.surface_ambient, t.surface_diffuse)
 			_flashes.erase(node)
 			for c in node.get_children():
 				c.queue_free()
@@ -1412,7 +1536,7 @@ func _camera_keys() -> int:
 
 func _setup_camera() -> void:
 	camera = Camera3D.new()
-	camera.far = maxf(view_distance * 1.6, 2000.0)
+	camera.far = view_distance
 	camera.near = 0.5
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
 	camera.fov = 90.0  # original view window 1.333 x 1.0 (FUN_00436c50)

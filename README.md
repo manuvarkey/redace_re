@@ -198,7 +198,9 @@ with the same HTML snippets the exe generated and handles their links (`command:
 - ranks Corporal..Colonel promoted at scores 700, 1800, 2800, 4000, 5400, 7000, 8800, 10800, 12600,
   14400 (exe tables at 0x51af4c / 0x51b1cc); mission score = 500 for a win + 100 - % surviving for each
   destroy group + % surviving for each protect group (`FUN_00446aa1`).
-- Pilots and settings are saved in `user://pilots.cfg` and `user://settings.cfg`.
+- Pilots and settings are saved in `user://pilots.cfg` and `user://settings.cfg`. Pilots keep the exe's fields
+  (0x457aef): score, rank, campaign, mission, kills, deaths, games, lastplayed, lastnum. `games` counts finished
+  flights; kills and deaths stay 0, as the exe never adds to them.
 - Menu music is music.ini entry 2; missions use their `[music] track` entry (CD track N + 1).
 - Cheats as in the original options page: turbo boost on Space, infinite bombs/rockets,
   invulnerability, game speed, enemy endurance.
@@ -252,6 +254,12 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   `releasespeed` plus the firer's velocity plus a per-axis random +-`jitter * maxspeed`, for up to 10 s or until
   they leave the map. The burst clock runs only with the trigger held and is never reset (0x430444).
 - Bombs (`ordinancetype = 1`) and rockets (`2`) with the mission's `numordinance` count.
+- Lighting as the exe sets it up (0x44ebc6): terrain is unlit, texture * min(2 * baked colour, 1) (the factor is
+  fitted to footage of the original, not traced); objects use ambient + diffuse * N.L from their ini with a white
+  light along (1, -1, 1), per vertex, multiplied in display space. View distance is 200..2200 in steps of 200,
+  default 600, used for the far clip and the end of the fog (0x454541, 0x458ea2).
+- Vehicles are placed on the highest terrain under them and turned to its slope (`FUN_0042bd45`); mission 7's
+  `aagun` 2302 is stored 18.5 units underground. Placed objects keep their stored matrix, scale included.
 - Every `[vehicleN]` is a turret (`FUN_0043c1c0`; the exe never reads `[ai] turret`, so tanks fire too): it aims at
   the nearest member of the mission's `targetgroup` (default 8; a ground object there keeps it idle until a plane is
   nearer), kept until dead or over 200 away, with a lead of
@@ -285,7 +293,8 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   `FUN_00439e6f` 0x70, `FUN_0043a825` 0x80, `FUN_0043ad4b` 0x90, `FUN_00439206` 0x30): bank = -90 * target
   direction . right (full bank toward its side when behind), pitch rate = 90 * direction . up, bank change
   limited to 3 * rollrate deg/s, commanded pitch rate decays when no goal sets it (waiting planes circle).
-  Gun attack: leads aircraft by distance / 275 * speed, matches their speed (throttle 0.65..1), fires when
+  Gun attack: leads aircraft by distance / 275 * speed plus 3/4 of that along the horizontal part of their banked up axis (into their turn), measures
+  ground targets' range along the ground, matches their speed (throttle 0.65..1), fires when
   the target is within 37 deg and 300, turns hard to a random side when it is behind, breaks off above 80 %
   damage or after the 0x130 time limit. Dive attack: approaches 350 above, dives inside 300, fires rockets
   lined up within 225, climbs away (+250) when low or overhead. Bombing run: 140..160 above the target,
@@ -299,8 +308,10 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   - input `FUN_004322de`: mouse bank += (s * 0.25 + 0.025) * dt * highroll * mickeys, pitch rate +=
     (s * 2.5 + 0.25) * dt * highpitch * mickeys (dt fixed at the original 30 fps); keyboard bank +=
     (s + 0.1) * 7 * highroll * dt with auto-level at highroll deg/s.
-  - attitude `FUN_00432a5f` (asm 0x4343a6-0x434440): unrolled flight frame, bank about forward for display,
-    turn = sin(bank) * rollrate about world up, pitch rate decay 5 deg/s per frame, bank +-90 and roll-out flip.
+  - attitude `FUN_00432a5f` (asm 0x4343a6-0x434440): unrolled flight frame (plane + 8, read by the AI), bank about
+    forward for display (plane + 0x110), turn = sin(bank) * rollrate about world up, bank +-90 and roll-out flip. Pitch
+    rate loses 5 per frame and may overshoot zero (0x433ce6): AI planes reset it each frame, so they settle about 5.5
+    units either side of their aim line (measured against the original under Wine).
   - camera `FUN_00435c19`/`FUN_0043572b`: chase/behind/left/right/above offsets, level horizon,
     90 deg vertical FOV, 4 * dt easing; views held on keys.
   - HUD `FUN_0042f026`/`FUN_0042f7db`/`FUN_0042fdc0`: status dial (throttle needle, bullet-hole damage,
@@ -314,6 +325,7 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
     gentle ground contact lands instead of crashing.
   - ground objects `FUN_0042c00e`: model steps through `damagedff1..3` by damage fraction; destruction
     makes a burst (endurance * 0.03), a long smoke column (120..247 s) and the breakage sound.
+  - ordnance has no speed limit in flight, `maxspeed` only scales the spread at release; bomb gravity is 60 (0x44d5fb).
   - bombs/rockets `FUN_0044d0df`: burst on a triangle of an object or the terrain, or on the bounding sphere of a
     plane's atomic (then centred on that plane). `FUN_0044cf81`: each atomic whose sphere meets the blast takes
     (blast - d) * damage with d = RenderWare's normalised distance (0..1, `0x4833f0`), 0.05x only for the plane

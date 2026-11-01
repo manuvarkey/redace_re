@@ -27,6 +27,10 @@ var allied := false
 var endurance := 100.0
 var health := 100.0
 var radius := 8.0
+var atoms := []  # bounding sphere of each atomic, plane space (blasts, FUN_0044cf81)
+var hit_radius_sq := 64.0  # rounds hit inside this: back length * starboard length (FUN_0044d311)
+var proximity_groups := 0  # how many of groups 4, 8, 9 the plane is in
+var left_map := false  # flew 150 past the world box (0x439046)
 
 var mass := 0.3
 var accel := 20.0
@@ -70,7 +74,6 @@ var ordnance_left := 0
 var goals: Array[Dictionary] = []
 var goal_index := 0
 
-var ground_target: Dictionary = {}  # ground object the AI is attacking; its fire may damage only this one
 var world: World = null
 
 var hidden := false  # removed from the world by a script goal (original pilot flag 0x420)
@@ -79,7 +82,6 @@ var crashed := false  # true when the plane hit the ground rather than being sho
 var _first_frame := true
 var _trigger_time := 0.0
 var _shots := 0.0
-var _gun_side := 1.0
 var _secondary_cooldown := 0.0
 var _propellers: Array[Node3D] = []
 var _prop_angle := 0.0
@@ -176,6 +178,37 @@ func _lengths_from_model(model: Node3D) -> void:
 	if lo.is_finite():
 		gear_height = -lo.y
 		tail_length = -lo.z
+	_read_atoms(model)
+
+
+## Atomic spheres and the clump box, which replaces plane.ini's [collision] lengths in the exe
+## (0x42e7c8). Computed once per model file.
+static var _geometry_cache := {}
+func _read_atoms(model: Node3D) -> void:
+	if not _geometry_cache.has(plane_name):
+		var list := []
+		var box := AABB()
+		var first := true
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			var xf: Transform3D = (mi as MeshInstance3D).transform
+			var n: Node = (mi as Node).get_parent()
+			while n != model:
+				xf = (n as Node3D).transform * xf
+				n = n.get_parent()
+			xf = model.transform * xf
+			var own := PackedVector3Array()
+			for v in (mi as MeshInstance3D).mesh.get_faces():
+				own.append(xf * v)
+			if own.is_empty():
+				continue
+			list.append(World.sphere_of(own))
+			for v in own:
+				box = AABB(v, Vector3.ZERO) if first else box.expand(v)
+				first = false
+		_geometry_cache[plane_name] = {"atoms": list,
+			"hit": maxf(-box.position.z, 0.0) * maxf(box.end.x, 0.0)}
+	atoms = _geometry_cache[plane_name].atoms
+	hit_radius_sq = _geometry_cache[plane_name].hit
 
 
 ## Propeller = the atomic textured "soppropeller"; its RenderWare frame is spun about forward.
@@ -402,8 +435,7 @@ func _guns(dt: float) -> void:
 		world.play_at(global_position, _bomb_sound if ordnance_type == 1 else _rocket_sound)
 
 	if not fire_input or state == State.GROUND:
-		_trigger_time = 0.0
-		_shots = 0.0
+		# the burst clock only runs with the trigger held and is never reset (0x430444)
 		_gun_sound_firing(false)
 		return
 	var cycle := fire_on + fire_off
@@ -417,9 +449,8 @@ func _guns(dt: float) -> void:
 	var b := global_transform.basis
 	while _shots >= 1.0:
 		_shots -= 1.0
-		_gun_side = -_gun_side
-		var muzzle := global_position + b.z * (radius * 0.5 + 2.0) + b.y * 1.0 + b.x * _gun_side
-		world.spawn_ordnance(self, 1, muzzle, velocity, b.z)
+		# from the plane's centre, along its nose (0x430598)
+		world.spawn_ordnance(self, 1, global_position, velocity, b.z)
 
 
 ## Gun sound as the exe drives it each frame (RedAce.c:32021, FUN_0045f51e / FUN_0045f591): while the
@@ -598,10 +629,11 @@ var _ai_pitch := NAN  # pitch rate commanded this frame, deg/s, + = nose up (pil
 
 
 func _ai(dt: float) -> void:
+	if _left_the_map():
+		return
 	_ai_pitch = NAN
 	fire_input = false
 	secondary_input = false
-	ground_target = {}
 	var goal := current_goal()
 	if _script_goal(goal, dt):
 		goal = current_goal()
@@ -740,8 +772,6 @@ func _attack(goal: Dictionary, dt: float) -> bool:
 	if _airborne(o):
 		to += o.flight_basis.z * (dist * BULLET_LEAD * o.speed)
 		throttle = clampf(throttle + (-0.3 if o.speed < speed else 0.5) * dt, 0.65, 1.0)
-	elif o is Dictionary:
-		ground_target = o
 	var l := _local_dir(to)
 	var side := l.x
 	if l.z >= 0.0:
@@ -786,8 +816,6 @@ func _dive_attack(goal: Dictionary) -> bool:
 	var to := tp - global_position
 	var flat := Vector2(to.x, to.z).length()
 	if not _airborne(o):
-		if o is Dictionary:
-			ground_target = o
 		var dy := to.y
 		if flat > 300.0:
 			to.y = tp.y + 350.0 - global_position.y
@@ -818,7 +846,6 @@ func _bomb_run(goal: Dictionary) -> bool:
 	var o = _goal_object(goal)
 	if o == null:
 		return true
-	ground_target = o if o is Dictionary else {}
 	var tp: Vector3 = _obj_pos(o)
 	var flat_to := Vector3(tp.x - global_position.x, 0.0, tp.z - global_position.z)
 	var flat := flat_to.length()
@@ -1029,6 +1056,15 @@ func _place_shadow() -> void:
 func _set_hidden(h: bool) -> void:
 	hidden = h
 	visible = not h
+	world._count_rule_members()
+
+
+## Mission rules (0x43b70a, 0x434b50): a hidden plane is not alive, and an enemy (group 9) that left
+## the map is gone; any other plane that left the map still counts as alive.
+func counts_as_lost() -> bool:
+	if state == State.DEAD:
+		return true
+	return groups & (1 << 9) != 0 if left_map else hidden
 
 
 ## Collision probes (decomp FUN_00431607): segments from the previous position to the nose, tail,
@@ -1082,5 +1118,17 @@ func box_hit(a: Vector3, b: Vector3) -> bool:
 
 
 ## Alive and in the world: can be seen, targeted and hit.
+## AI planes more than 150 outside the world box are sent away for good (0x438fb2).
+func _left_the_map() -> bool:
+	if left_map or hidden or is_player:
+		return left_map
+	var p := global_position
+	var w := world.map_bounds
+	if p.x < w.position.x - 150.0 or p.z < w.position.y - 150.0 or p.x >= w.end.x + 150.0 or p.z >= w.end.y + 150.0:
+		left_map = true
+		_set_hidden(true)
+	return left_map
+
+
 func present() -> bool:
 	return state != State.DEAD and not hidden

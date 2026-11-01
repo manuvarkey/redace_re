@@ -248,12 +248,19 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   stall, altitude ceiling at 400, runway take-off. Values come from each `plane.ini`.
 - Guns as in the original (`RedAce.c:31605`): `firerate` rounds per second in bursts of `fireon` s
   with `fireoff` s pauses. Projectiles use `objects/ordinance/ordinance.ini`: bullet (damage 1, spread 0.04),
-  bomb (damage 75, blast 30), rocket (damage 50, blast 20), AA fire (damage 2.5).
+  bomb (damage 75, blast 30), rocket (damage 50, blast 20), AA fire (damage 2.5). Rounds fly at
+  `releasespeed` plus the firer's velocity plus a per-axis random +-`jitter * maxspeed`, for up to 10 s or until
+  they leave the map. The burst clock runs only with the trigger held and is never reset (0x430444).
 - Bombs (`ordinancetype = 1`) and rockets (`2`) with the mission's `numordinance` count.
-- AA guns (`[ai] turret = antiaircraft`) fire leading bursts at opposing aircraft within 750.
+- Every `[vehicleN]` is a turret (`FUN_0043c1c0`; the exe never reads `[ai] turret`, so tanks fire too): it aims at
+  the nearest member of the mission's `targetgroup` (default 8; a ground object there keeps it idle until a plane is
+  nearer), kept until dead or over 200 away, with a lead of
+  speed * distance * 0.005, firing within `range` (ground distance, default 300), inside the cone `angle` (default
+  1.57) about its facing, and above 0.2 elevation.
 - Mission rules from the decompiled check (`FUN_00446b7b`, `RedAce.c:40170`): object `groups` bitmask;
   `GroupN = -P` destroy P % of group N to win, `GroupN = +P` fail when fewer than P % survive (groups 0-9),
-  `timelimit` in seconds.
+  `timelimit` in seconds. Hidden planes count as lost (`FUN_0043b70a`), and so do group 9 planes that flew 150
+  past the world box (0x439046), so reinforcements that never appear do not hold up a mission.
 - Starts and aircraft scripts (`[airNgoalK]`) follow the decompiled pilot code (`FUN_00436f41`, goal list
   built by exact type at `RedAce.c:34449`, run one at a time by `FUN_00438937`). Every aircraft, the
   player's too, is created parked (state 4, speed 0) at its mission position; then its goals run:
@@ -286,7 +293,6 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   evade for 0.5 s toward a random point beside, or with 0x130 on attack the attacker. Planes sidestep the
   nearest group-8 aircraft (player side) when about to collide (`FUN_004394df`), and turn back 500 from
   the battle edge when idle.
-- AI fire only damages aircraft and the AI's assigned ground target, so stray fire does not fail "protect" missions.
 - HUD with objectives and time left, minimap (`map.png`) with allied/enemy aircraft, objectives and AA guns.
 - Engine, gun, hit and explosion sounds from each object's INI; CD music tracks.
 - Controls, flight attitude, camera and HUD follow the decompiled code:
@@ -308,7 +314,16 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
     gentle ground contact lands instead of crashing.
   - ground objects `FUN_0042c00e`: model steps through `damagedff1..3` by damage fraction; destruction
     makes a burst (endurance * 0.03), a long smoke column (120..247 s) and the breakage sound.
-  - bombs/rockets `FUN_0044cf81`: blast damage (radius - distance) * damage, 0.05x on own side.
+  - bombs/rockets `FUN_0044d0df`: burst on a triangle of an object or the terrain, or on the bounding sphere of a
+    plane's atomic (then centred on that plane). `FUN_0044cf81`: each atomic whose sphere meets the blast takes
+    (blast - d) * damage with d = RenderWare's normalised distance (0..1, `0x4833f0`), 0.05x only for the plane
+    that fired it, so one bomb in reach destroys any ground object.
+  - rounds: fixed 1/60 s ticks in the exe (0x44a0af), Godot's physics rate here. Against planes in groups 4, 8, 9
+    (`FUN_0044d311`, once per group): 1 hit on every tick within sqrt(back length * starboard length) of the
+    clump box, about 12 units, and the round flies on, so one round can hit several times and any plane but its
+    firer. Against objects and terrain (not AA fire) an exact geometry hit ends the round.
+  - cheats and easing (`0x454a03`, `0x454b28`, `0x45cebb`): speed 0.2..2.2, enemy endurance (group 9) 0.0625..7.5625;
+    from a pilot's third retry of a mission, per step (up to 5) group 8 endurance +6 % and game speed -1.4 %.
   - bullet impacts `FUN_0044cd2a`: maroon puff on terrain, hit spark on objects.
   - particle textures `objects/particles` (smoke, cloth, hit, maroon, clod) as camera-facing sprites.
 - Fonts: `morpheus.ttf` and `annifont.ttf` from the game; the pages' Courier New, Times New Roman, Arial and
@@ -408,7 +423,7 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   (this flight model needs more room than the exe's 4 s look-ahead; without it AI planes flew into hills);
   the bombing run's +-1 deg/s altitude nudge uses the corrective sign (decompiled it reads inverted);
   formation speed matching slows down when faster than the leader (decompiled it reads inverted);
-  enemies leaving the map by 150 are not removed; goals 0x110/0x150 (unused by the missions) are ignored.
+  goals 0x110/0x150 (unused by the missions) are ignored.
 - `splat.bmp` is loaded by the original but never drawn, so it is not used here either.
 - Mission 17 names a non-existent object `aagu_light`; it is skipped (as the original could not load it).
 

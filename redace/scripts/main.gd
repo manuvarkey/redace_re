@@ -9,9 +9,8 @@ extends Node3D
 
 const ALLIED_GROUP_BIT := 0x100
 const PLAYER_GROUP_BIT := 0x2
-const BULLET_LIFE := 1.6
+const BULLET_LIFE := 10.0  # FUN_0044d432: ordnance ends after 10 s or on leaving the world box
 const MAX_BULLETS := 4096
-const AA_RANGE := 750.0
 const MISSIONS := [-3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 const SETTINGS_PATH := "user://settings.cfg"
 
@@ -24,6 +23,7 @@ var cheat_boost := false
 var cheat_infinite := false
 var cheat_invulnerable := false
 var enemy_endurance := 1.0
+var player_side_endurance := 1.0  # retry easing (FUN_0045ce..): group 8 planes
 var strings := {}
 var _edge_warned := false
 var _was_captured := false
@@ -227,9 +227,12 @@ func load_mission(id: int) -> void:
 	message_label.text = ""
 	_edge_warned = false
 	for p in planes:
-		if not p.allied:
+		# plane init (0x42d12d): group 9 x enemy endurance option, group 8 x retry easing
+		if p.groups & (1 << 9):
 			p.endurance *= enemy_endurance
-			p.health = p.endurance
+		if p.groups & (1 << 8):
+			p.endurance *= player_side_endurance
+		p.health = p.endurance
 
 
 ## Bullets as the exe draws them (FUN_0044c4fe): a camera-facing ribbon of the ordinance raster
@@ -409,9 +412,13 @@ func _spawn_ground(sec: Dictionary, vehicle := true) -> void:
 		"name": obj, "dead": false, "groups": groups, "id": int(Ini.num(sec, "id", 0)), "model_index": 0,
 		"endurance": maxf(Ini.num(ini.get("physics", {}), "endurance", 50.0), 1.0), "hit_time": 0.0,
 		"allied": (groups & ALLIED_GROUP_BIT) != 0,
-		"turret": vehicle and str(ini.get("ai", {}).get("turret", "")) == "antiaircraft",
+		# every [vehicleN] is a turret; the exe never reads [ai] turret (FUN_0043c1c0, keys 0x43f4c4)
+		"turret": vehicle, "aa_target": null, "aa_group": int(Ini.num(sec, "targetgroup", 8.0)),
+		"aa_range": Ini.num(sec, "range", 300.0), "aa_cos": cos(Ini.num(sec, "angle", 1.57) / 2.0),
 		"fire_rate": Ini.num(arm, "firerate", 10.0), "fire_on": Ini.num(arm, "fireon", 3.0),
-		"fire_off": Ini.num(arm, "fireoff", 1.0), "fire_time": randf() * 3.0, "shots": 0.0,
+		"fire_off": Ini.num(arm, "fireoff", 1.0), "fire_time": 0.0, "shots": 0.0,
+		"gun_sound": load_sound(str(ini.get("sound", {}).get("gunfire", "MachineGunShot2.wav"))) if vehicle else null,
+		"alt_gun_sound": load_sound(str(ini.get("sound", {}).get("altgunfire", "MachineGunShot1.wav"))) if vehicle else null,
 		# exe defaults when [sound] leaves them out (RedAce.c:29418)
 		"hit_sound": load_sound(str(ini.get("sound", {}).get("hitsound", "bulletbuilding1.wav"))),
 		"explosion_sound": load_sound(str(ini.get("sound", {}).get("explosion", "explosionsmall.wav"))),
@@ -439,6 +446,7 @@ func _spawn_plane(sec_name: String, m: Dictionary) -> void:
 	p.setup(str(sec.get("name", "sopwithcamel")), self)
 	p.object_id = int(Ini.num(sec, "id", 0))
 	p.groups = int(Ini.num(sec, "groups", 0))
+	p.proximity_groups = (p.groups >> 4 & 1) + (p.groups >> 8 & 1) + (p.groups >> 9 & 1)
 	p.is_player = int(Ini.num(sec, "player", 0)) == 1
 	p.allied = (p.groups & (ALLIED_GROUP_BIT | PLAYER_GROUP_BIT)) != 0 or p.is_player
 	var otype := int(Ini.num(sec, "ordinancetype", 0))
@@ -627,14 +635,15 @@ func nearest_enemy(me: Aircraft) -> Aircraft:
 func spawn_ordnance(owner_obj, kind: int, pos: Vector3, base_vel: Vector3, dir := Vector3.ZERO) -> void:
 	var o: Dictionary = ordnance.get(kind, {})
 	var jitter := Ini.num(o, "jitter", 0.0)
-	var allied: bool = owner_obj.allied
 	if kind == 1 or kind == 4:
 		if bullets.size() >= MAX_BULLETS:
 			return
-		var d := (dir + Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * jitter).normalized()
-		var vel := base_vel + d * Ini.num(o, "releasespeed", 250.0)
-		bullets.append({"pos": pos, "vel": vel, "owner": owner_obj, "allied": allied, "life": BULLET_LIFE,
-			"damage": Ini.num(o, "damage", 1.0), "aa": kind == 4, "ground": _ground_filter(owner_obj)})
+		# FUN_0044be..: at * releasespeed + owner velocity + per-axis random +-jitter * maxspeed
+		var spread := jitter * Ini.num(o, "maxspeed", 300.0)
+		var vel := base_vel + dir * Ini.num(o, "releasespeed", 250.0) \
+			+ Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * spread
+		bullets.append({"pos": pos, "vel": vel, "owner": owner_obj, "life": BULLET_LIFE,
+			"damage": Ini.num(o, "damage", 1.0), "aa": kind == 4})
 		return
 	var node := load_model("objects/ordinance/%s.gltf" % str(o.get("clump", "bomb")).to_lower())
 	if node == null:
@@ -642,7 +651,7 @@ func spawn_ordnance(owner_obj, kind: int, pos: Vector3, base_vel: Vector3, dir :
 	_level.add_child(node)
 	node.global_position = pos
 	shells.append({"node": node, "pos": pos, "vel": base_vel + base_vel.normalized() * Ini.num(o, "releasespeed", 0.0),
-		"owner": owner_obj, "allied": allied, "life": 20.0, "kind": kind, "ground": _ground_filter(owner_obj),
+		"owner": owner_obj, "life": BULLET_LIFE, "kind": kind,
 		"accel": Ini.num(o, "accel", 0.0), "maxspeed": Ini.num(o, "maxspeed", 200.0),
 		"damage": Ini.num(o, "damage", 50.0), "blast": Ini.num(o, "blast", 20.0)})
 
@@ -717,7 +726,7 @@ func _physics_process(dt: float) -> void:
 		var from: Vector3 = b.pos
 		var to: Vector3 = from + b.vel * dt
 		b.life -= dt
-		if b.life <= 0.0 or _bullet_hits(b, from, to, space):
+		if b.life <= 0.0 or not in_bounds(to, 0.0) or _bullet_hits(b, from, to, space):
 			bullets[i] = bullets[bullets.size() - 1]
 			bullets.pop_back()
 		else:
@@ -751,11 +760,17 @@ func _update_shells(dt: float, space: PhysicsDirectSpaceState3D) -> void:
 			particles.puff("smoke", from, Vector3(randf_range(-5.0, 0.0), 15.0, randf_range(-5.0, 0.0)),
 				0.75 if s.kind == 3 else 0.1, Color(0.9, 0.9, 0.9, 0.7), Color(-0.1, -0.1, -0.1, -0.3), 2.0)
 		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to))
-		var direct := _hit_target_on_segment(s, from, to)
-		if not hit.is_empty() or direct or s.life <= 0.0:
-			var at: Vector3 = hit.position if not hit.is_empty() else to
+		# out of time: removed without a blast (0x44e2c7)
+		if s.life <= 0.0:
+			s.node.queue_free()
+			shells.remove_at(i)
+			i -= 1
+			continue
+		var direct = _hit_target_on_segment(s, from, to)
+		if not hit.is_empty() or direct != null:
+			var at: Vector3 = direct if direct != null else hit.position
 			# ordinance 2 = bomb: ExplosionMedium2, 3 = rocket: ExplosionSmall (RedAce.c:43351)
-			_blast(at, s.blast, s.damage, s.owner, s.allied, s.ground,
+			_blast(at, s.blast, s.damage, s.owner,
 				_bomb_blast_sound if int(s.kind) == 2 else _rocket_blast_sound)
 			s.node.queue_free()
 			shells.remove_at(i)
@@ -765,73 +780,94 @@ func _update_shells(dt: float, space: PhysicsDirectSpaceState3D) -> void:
 		i -= 1
 
 
-## Which ground objects a projectile may damage: the player's hit everything (true), an AI plane's
-## only its assigned ground target, AA fire none. Keeps stray AI fire off protected civilian groups.
-func _ground_filter(owner_obj) -> Variant:
-	if owner_obj is Aircraft:
-		return true if owner_obj.is_player else owner_obj.ground_target
-	return false
-
-
-func _may_damage(filter, t: Dictionary) -> bool:
-	if filter is bool:
-		return filter
-	return is_same(filter, t)
-
-
-func _hit_target_on_segment(s: Dictionary, from: Vector3, to: Vector3) -> bool:
+## Bomb or rocket against objects (FUN_0044d0df): a plane is hit when the line meets the bounding
+## sphere of one of its atomics, and the blast is then centred on the plane; anything else needs the
+## line to meet a triangle. The rocket's line starts 4 steps behind it (0x44dffd). Returns the blast
+## position or null.
+func _hit_target_on_segment(s: Dictionary, from: Vector3, to: Vector3) -> Variant:
+	var start := from - (to - from) * 4.0 if int(s.kind) == 3 else from
 	for p in planes:
-		if not is_same(p, s.owner) and p.present() and _seg_dist(p.global_position, from, to) < p.radius:
-			return true
+		if is_same(p, s.owner) or p.hidden:
+			continue
+		for atom in p.atoms:
+			if _seg_dist(p.global_transform * (atom.center as Vector3), start, to) < float(atom.radius):
+				return p.global_position
 	for t in _targets_near(to):
-		if not t.dead and _seg_dist(t.node.global_transform * t.center, from, to) < t.radius:
-			return true
-	return false
+		var inv: Transform3D = t.node.global_transform.affine_inverse()
+		var a: Vector3 = inv * start
+		var b: Vector3 = inv * to
+		if segment_hits_box(a, b, t.aabb.position, t.aabb.end) and _segment_hits_faces(t, a, b):
+			return to
+	return null
 
 
-## Blast damage as the original (decomp FUN_0044cf81): (blast radius - distance) * damage,
-## times 0.05 for the thrower's own side. Debris burst sized blast * 0.03 (FUN_0044ced8).
-func _blast(at: Vector3, radius: float, damage: float, owner_obj, allied: bool, ground_filter,
-		sound: AudioStream = null) -> void:
+## Blast as the original (FUN_0044cf81): every atomic whose bounding sphere meets the blast sphere takes
+## (blast - d) * damage, where d is RenderWare's normalised distance, centre distance / (atomic radius +
+## blast) (0x4833f0), so 0..1; times 0.05 only for the object that fired it. Burst blast * 0.03 (FUN_0044ced8).
+func _blast(at: Vector3, radius: float, damage: float, owner_obj, sound: AudioStream = null) -> void:
 	particles.burst(at, radius * 0.03)
 	for i in 12:
 		particles.puff("clod", at, Vector3(randf_range(-25, 25), randf_range(20, 50), randf_range(-25, 25)),
 			1.5, Color(0.45, 0.38, 0.3, 1.0), Color(0, 0, 0, -0.6), 0.0, -40.0)
 	play_at(at, sound if sound else _blast_sound)
 	for t in targets:
-		if t.dead or not _may_damage(ground_filter, t):
+		if t.dead:
+			continue
+		var node: Node3D = t.node
+		# the model's half diagonal is t.radius / 0.45: nothing further away can be reached
+		if (node.global_transform * (t.center as Vector3)).distance_to(at) > radius + float(t.radius) * 2.3:
 			continue
 		_last_damage_source = "blast from " + (owner_obj.plane_name if owner_obj is Aircraft else "?")
-		var d: float = maxf((t.node.global_transform * t.center).distance_to(at) - t.radius, 0.0)
-		if d < radius:
-			_damage_target(t, (radius - d) * damage * (0.05 if t.allied == allied and t.groups != 0 else 1.0))
+		_geometry(t)
+		for atom in t.atoms.duplicate():
+			var amount := _blast_amount(node.global_transform * (atom.center as Vector3), float(atom.radius),
+				at, radius, damage)
+			if amount > 0.0:
+				_damage_target(t, amount)
 	for p in planes:
-		if is_same(p, owner_obj) or not p.present():
+		if p.hidden or p.state == Aircraft.State.DEAD:
 			continue
-		var d := maxf(p.global_position.distance_to(at) - p.radius, 0.0)
-		if d < radius:
-			p.take_damage((radius - d) * damage * (0.05 if p.allied == allied else 1.0), owner_obj)
+		for atom in p.atoms:
+			var amount := _blast_amount(p.global_transform * (atom.center as Vector3), float(atom.radius),
+				at, radius, damage)
+			if amount > 0.0:
+				p.take_damage(amount * (0.05 if is_same(p, owner_obj) else 1.0), owner_obj)
 
 
+func _blast_amount(center: Vector3, atom_radius: float, at: Vector3, radius: float, damage: float) -> float:
+	var reach := atom_radius + radius
+	var dist := center.distance_to(at)
+	return (radius - dist / reach) * damage if dist < reach else 0.0
+
+
+## One tick of a round. Fixed 1/60 s steps in the exe too (0x44a0af), which is Godot's physics rate here.
+## Guns meet objects and terrain by exact geometry (rays FUN_0044b921 / FUN_0044b9cb), planes excluded,
+## and that ends the round. AA fire has no such ray (0x44c2df). Planes in groups 4, 8 and 9 are then tested
+## by distance (FUN_0044d311, once for each of these groups): 1 hit on every tick inside the radius,
+## from any round except the plane's own, and the round flies on.
 func _bullet_hits(b: Dictionary, from: Vector3, to: Vector3, space: PhysicsDirectSpaceState3D) -> bool:
+	if not b.aa and _bullet_hits_scenery(b, from, to, space):
+		return true
 	for p in planes:
-		if is_same(p, b.owner) or not p.present() or p.allied == b.allied:
+		if p.proximity_groups == 0 or is_same(p, b.owner) or not p.present():
 			continue
-		if _seg_dist(p.global_position, from, to) < p.radius:
-			# guns reach aircraft by proximity (FUN_0044d311): only the plane's own hit effects
-			# (cloth scrap, knock sound, red flash in FUN_0042eda0), no impact puff
-			p.take_damage(b.damage, b.owner)
-			return true
-	if not b.aa:
-		for t in _targets_near(to):
-			if t.dead or not _may_damage(b.ground, t):
-				continue
-			_last_damage_source = "bullet from " + (b.owner.plane_name if b.owner is Aircraft else "gun")
-			var c: Vector3 = t.node.global_transform * t.center
-			if _seg_dist(c, from, to) < t.radius:
+		if p.global_position.distance_squared_to(to) < p.hit_radius_sq:
+			for k in p.proximity_groups:
+				p.take_damage(b.damage, b.owner)
+	return false
+
+
+func _bullet_hits_scenery(b: Dictionary, from: Vector3, to: Vector3, space: PhysicsDirectSpaceState3D) -> bool:
+	for t in _targets_near(to):
+		var inv: Transform3D = t.node.global_transform.affine_inverse()
+		var a: Vector3 = inv * from
+		var c: Vector3 = inv * to
+		if segment_hits_box(a, c, t.aabb.position, t.aabb.end) and _segment_hits_faces(t, a, c):
+			if not t.dead:
+				_last_damage_source = "bullet from " + (b.owner.plane_name if b.owner is Aircraft else "gun")
 				_damage_target(t, b.damage)
-				particles.puff("hit", to - b.vel * 0.02, Vector3.ZERO, 4.0, Color(1, 1, 1, 0.5), Color(0, 0, 0, -1.0), 4.0)
-				return true
+			particles.puff("hit", to - b.vel * 0.02, Vector3.ZERO, 4.0, Color(1, 1, 1, 0.5), Color(0, 0, 0, -1.0), 4.0)
+			return true
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to))
 	if hit.is_empty():
 		return false
@@ -950,23 +986,47 @@ func collide(p: Aircraft, prev: Vector3, dt: float) -> void:
 ## The exe tests the probe against the object's geometry, not its box (FUN_00430295): triangles of the
 ## object's current model in its local space, cached per damage model.
 func _segment_hits_faces(t: Dictionary, a: Vector3, b: Vector3) -> bool:
-	if t.get("faces_model", -1) != t.model_index:
-		var faces := PackedVector3Array()
-		var node: Node3D = t.node
-		var inv := node.global_transform.affine_inverse()
-		for mi in node.find_children("*", "MeshInstance3D", true, false):
-			if (mi as Node).is_queued_for_deletion() or (mi as MeshInstance3D).mesh == null:
-				continue
-			var xf: Transform3D = inv * (mi as MeshInstance3D).global_transform
-			for v in (mi as MeshInstance3D).mesh.get_faces():
-				faces.append(xf * v)
-		t.faces = faces
-		t.faces_model = t.model_index
+	_geometry(t)
 	var f: PackedVector3Array = t.faces
 	for i in range(0, f.size() - 2, 3):
 		if Geometry3D.segment_intersects_triangle(a, b, f[i], f[i + 1], f[i + 2]) != null:
 			return true
 	return false
+
+
+## Triangles and atomics (centre + radius, as RenderWare's bounding spheres) of the current model, local space.
+func _geometry(t: Dictionary) -> void:
+	if t.get("faces_model", -1) == t.model_index:
+		return
+	var faces := PackedVector3Array()
+	var atoms := []
+	var node: Node3D = t.node
+	var inv := node.global_transform.affine_inverse()
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		if (mi as Node).is_queued_for_deletion() or (mi as MeshInstance3D).mesh == null:
+			continue
+		var xf: Transform3D = inv * (mi as MeshInstance3D).global_transform
+		var own := PackedVector3Array()
+		for v in (mi as MeshInstance3D).mesh.get_faces():
+			own.append(xf * v)
+		faces.append_array(own)
+		if not own.is_empty():
+			atoms.append(sphere_of(own))
+	t.faces = faces
+	t.atoms = atoms
+	t.faces_model = t.model_index
+
+
+## Bounding sphere as RenderWare computes it: the centre of the box, the furthest vertex.
+static func sphere_of(points: PackedVector3Array) -> Dictionary:
+	var box := AABB(points[0], Vector3.ZERO)
+	for v in points:
+		box = box.expand(v)
+	var c := box.get_center()
+	var r := 0.0
+	for v in points:
+		r = maxf(r, c.distance_squared_to(v))
+	return {"center": c, "radius": sqrt(r)}
 
 
 func _seg_dist(p: Vector3, a: Vector3, b: Vector3) -> float:
@@ -979,6 +1039,8 @@ func _seg_dist(p: Vector3, a: Vector3, b: Vector3) -> float:
 ## the damagedff models by damage fraction; each hit plays the hit sound at 0.75 volume; destruction
 ## makes a debris burst (endurance * 0.03), a smoke column and the breakage sound.
 func _damage_target(t: Dictionary, amount: float) -> void:
+	if t.dead:
+		return
 	t.health -= amount
 	var models: Array = t.models
 	# stage = trunc(damage / endurance * (stages - 1)) (FUN_0042c00e): the last model only when destroyed
@@ -1018,34 +1080,72 @@ func _damage_target(t: Dictionary, amount: float) -> void:
 	_count_rule_members()
 
 
+## Vehicles as the exe runs them (FUN_0043c1c0). The target is the nearest living member of the mission's
+## targetgroup, ground objects included; it is kept until it dies or is more than 200 away. A gun whose
+## target is a ground object stays idle (none starts with one in range: the exe would crash reading its
+## speed), so it opens up only once a plane is nearer than that object. Fires while the target is within
+## range (ground distance), the lead point lies in the cone angle about the gun's facing, and above
+## 0.2 elevation. The burst clock only runs while it fires.
 func _update_turrets(dt: float) -> void:
 	for t in targets:
 		if not t.turret or t.dead:
 			continue
-		var pos: Vector3 = t.node.global_transform * t.center + Vector3.UP * 2.0
-		var best: Aircraft = null
-		var best_d := AA_RANGE
-		for p in planes:
-			if not p.present() or p.allied == t.allied:
-				continue
-			var d := p.global_position.distance_to(pos)
+		var pos: Vector3 = t.node.global_position
+		if not _group_member_alive(t.aa_target):
+			t.aa_target = _nearest_in_group(int(t.aa_group), pos)
+		var o = t.aa_target
+		if o == null:
+			continue
+		var to: Vector3 = (o.global_position if o is Aircraft else (o.node as Node3D).global_position) - pos
+		var dist := to.length()
+		if o is Aircraft and Vector2(to.x, to.z).length_squared() < float(t.aa_range) * float(t.aa_range):
+			# lead: speed * distance * 0.005, 1 / the shell's 200 release speed
+			var aim: Vector3 = to + o.flight_basis.z * (o.speed * dist * 0.005)
+			dist = aim.length()
+			var dir := aim / maxf(dist, 0.001)
+			if dir.dot(t.node.global_transform.basis.z) > float(t.aa_cos) and dir.y > 0.2:
+				_turret_fire(t, pos, dir, dt)
+		if dist > 200.0:
+			t.aa_target = _nearest_in_group(int(t.aa_group), pos)
+
+
+func _turret_fire(t: Dictionary, pos: Vector3, dir: Vector3, dt: float) -> void:
+	var cycle: float = t.fire_on + t.fire_off
+	var phase := fmod(t.fire_time, cycle) if cycle > 0.0 else 0.0
+	t.fire_time += dt
+	if phase >= t.fire_on:
+		return
+	t.shots += dt * t.fire_rate
+	while t.shots >= 1.0:
+		t.shots -= 1.0
+		# one of two sounds at random for every shot (0x43c67a)
+		play_at(pos, t.gun_sound if randi() & 1 else t.alt_gun_sound)
+		spawn_ordnance(t, 4, pos, Vector3.ZERO, dir)
+
+
+func _group_member_alive(o: Variant) -> bool:
+	if o is Aircraft:
+		return o.present()
+	return o != null and not o.dead
+
+
+func _nearest_in_group(group: int, pos: Vector3) -> Variant:
+	var best: Variant = null
+	var best_d := INF
+	var bit := 1 << group
+	for p in planes:
+		if p.present() and p.groups & bit:
+			var d := p.global_position.distance_squared_to(pos)
 			if d < best_d:
 				best_d = d
 				best = p
-		if best == null:
-			t.fire_time = 0.0
-			continue
-		var cycle: float = t.fire_on + t.fire_off
-		var phase := fmod(t.fire_time, cycle)
-		t.fire_time += dt
-		if phase >= t.fire_on:
-			continue
-		t.shots += dt * t.fire_rate
-		var shell_speed := Ini.num(ordnance.get(4, {}), "releasespeed", 200.0)
-		var lead := best.global_position + best.velocity * (best_d / shell_speed)
-		while t.shots >= 1.0:
-			t.shots -= 1.0
-			spawn_ordnance(t, 4, pos, Vector3.ZERO, (lead - pos).normalized())
+	for t in targets:
+		if not t.dead and int(t.groups) & bit:
+			var d: float = (t.node as Node3D).global_position.distance_squared_to(pos)
+			if d > 0.1 and d < best_d:
+				best_d = d
+				best = t
+	return best
 
 
 # ---------------------------------------------------------------- mission rules
@@ -1064,7 +1164,7 @@ func _count_rule_members() -> void:
 		for p in planes:
 			if p.groups & bit:
 				total += 1
-				lost += int(p.state == Aircraft.State.DEAD)
+				lost += int(p.counts_as_lost())
 		for t in targets:
 			if t.groups & bit:
 				total += 1

@@ -182,7 +182,7 @@ func _apply_settings() -> void:
 	elif not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen
 			else DisplayServer.WINDOW_MODE_WINDOWED)
-	Engine.time_scale = settings.game_speed if settings.game_speed > 0.0 else 1.0
+	Engine.time_scale = _base_time_scale()
 
 
 static func _vol_db(v: int) -> float:
@@ -297,8 +297,9 @@ func _fill(html: String) -> String:
 		"boost": _check("command:cheat:boost", settings.cheat_boost, false),
 		"infinite": _check("command:cheat:infinite", settings.cheat_infinite, false),
 		"invulnerable": _check("command:cheat:invulnerable", settings.cheat_invulnerable, false),
-		"gamespeed": _bar("command:gamespeed:%d", int(round((settings.game_speed - 0.5) * 10.0)), 10, 5),
-		"enemyendurance": _bar("command:enemyendurance:%d", int(round((settings.enemy_endurance - 0.5) * 10.0)), 10, 5),
+		# exe scales (0x454a03, 0x454b28): speed 0.2 * (i + 1), endurance (0.25 * (i + 1))^2, marked at 1.0
+		"gamespeed": _value_bar("command:gamespeed:%f", GAME_SPEEDS, settings.game_speed, 4),
+		"enemyendurance": _value_bar("command:enemyendurance:%f", ENEMY_ENDURANCES, settings.enemy_endurance, 3),
 	}
 	for i in SLOTS:
 		var q: Dictionary = pilots[i]
@@ -361,6 +362,26 @@ func _bar(cmd: String, value: int, steps: int, default: int, small := false) -> 
 		else:
 			var img := "%sslidedefault.jpg" % pre if i == default else "%sslidebar.jpg" % pre
 			out += "<a href=\"%s\"><img src=\"Menus\\%s\"></a>" % [cmd % i, img]
+	return out
+
+
+const GAME_SPEEDS: Array[float] = [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2]
+const ENEMY_ENDURANCES: Array[float] = [0.0625, 0.25, 0.5625, 1.0, 1.5625, 2.25, 3.0625, 4.0, 5.0625, 6.25, 7.5625]
+
+
+## A slider whose links carry the value itself; the arrow is on the entry nearest the setting.
+func _value_bar(cmd: String, values: Array[float], value: float, default: int) -> String:
+	var at := 0
+	for i in values.size():
+		if absf(values[i] - value) < absf(values[at] - value):
+			at = i
+	var out := ""
+	for i in values.size():
+		if i == at:
+			out += "<img src=\"Menus\\slidearrow.jpg\">"
+		else:
+			out += "<a href=\"%s\"><img src=\"Menus\\%s\"></a>" % [cmd % values[i],
+				"slidedefault.jpg" if i == default else "slidebar.jpg"]
 	return out
 
 
@@ -639,11 +660,11 @@ func _command(c: String) -> void:
 			_save()
 			_refresh()
 		"gamespeed":
-			settings.game_speed = 0.5 + int(a[1]) / 10.0
+			settings.game_speed = float(a[1])
 			_save()
 			_refresh()
 		"enemyendurance":
-			settings.enemy_endurance = 0.5 + int(a[1]) / 10.0
+			settings.enemy_endurance = float(a[1])
 			_save()
 			_refresh()
 		"hardwaresound", "buy", "renderer":
@@ -822,6 +843,10 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	world.cheat_infinite = settings.cheat_infinite
 	world.cheat_invulnerable = settings.cheat_invulnerable
 	world.enemy_endurance = settings.enemy_endurance
+	# retry easing (0x45cebb): from the third retry of a mission, per pilot, up to 5 steps
+	var ease_steps := _retry_steps(id)
+	world.player_side_endurance = 1.0 + ease_steps * 0.06
+	Engine.time_scale = _base_time_scale() * (1.0 - ease_steps * 0.014)
 	world.process_mode = Node.PROCESS_MODE_PAUSABLE
 	world.controls = controls
 	world.finished.connect(_on_finished)
@@ -839,7 +864,26 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 		_save()
 
 
+## Counts this flight for the current pilot and returns the easing steps it earns.
+func _retry_steps(id: int) -> int:
+	var p := _pilot()
+	if p.is_empty():
+		return 0
+	if int(p.get("retry_mission", -1)) != id:
+		p.retry_mission = id
+		p.retries = 0
+	else:
+		p.retries = int(p.get("retries", 0)) + 1
+	_save()
+	return clampi(int(p.retries) - 2, 0, 5)
+
+
+func _base_time_scale() -> float:
+	return settings.game_speed if settings.game_speed > 0.0 else 1.0
+
+
 func _end_flight() -> void:
+	Engine.time_scale = _base_time_scale()
 	get_tree().paused = false
 	if world:
 		world.queue_free()
@@ -897,6 +941,8 @@ func _on_finished(result: String, score: int) -> void:
 		open_page("Menus\\defeat.html")
 		return
 	var p := _pilot()
+	if not p.is_empty():
+		p.retries = 0
 	if not _campaign or p.is_empty() or _mission < 1:
 		open_page("Menus\\victory.html")
 		return

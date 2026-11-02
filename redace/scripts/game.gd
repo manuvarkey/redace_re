@@ -865,7 +865,7 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	world.cheat_invulnerable = settings.cheat_invulnerable
 	world.enemy_endurance = settings.enemy_endurance
 	# retry easing (0x45cebb): from the third retry of a mission, per pilot, up to 5 steps
-	var ease_steps := _retry_steps(id)
+	var ease_steps := 0 if debug else _retry_steps(id)
 	world.player_side_endurance = 1.0 + ease_steps * 0.06
 	Engine.time_scale = _base_time_scale() * (1.0 - ease_steps * 0.014)
 	world.process_mode = Node.PROCESS_MODE_PAUSABLE

@@ -31,6 +31,7 @@ var atoms := []  # bounding sphere of each atomic, plane space (blasts, FUN_0044
 var hit_radius_sq := 64.0  # rounds hit inside this: back length * starboard length (FUN_0044d311)
 var proximity_groups := 0  # how many of groups 4, 8, 9 the plane is in
 var left_map := false  # flew 150 past the world box (0x439046)
+var ahead_alt := 0.0  # see _update_ahead_alt
 
 var mass := 0.3
 var accel := 20.0
@@ -248,8 +249,15 @@ func _process(_dt: float) -> void:
 func _physics_process(dt: float) -> void:
 	if state == State.DEAD:
 		if falling:
-			_fall(dt)
-			_damage_smoke(dt)
+			# state 2 is the normal flight step: the pilot keeps steering, as the AI's goals keep running (FUN_00438937)
+			if not is_player or autopilot:
+				_ai(dt)
+				_apply_ai_commands()
+			var from := global_position
+			_fly(dt)
+			if falling:
+				_terrain_probes(from)
+				_damage_smoke(dt)
 		return
 	if _first_frame:
 		# terrain collision exists only from the first physics frame on
@@ -297,9 +305,8 @@ func _fly(dt: float) -> void:
 		target_speed -= (dive_speed - target_speed) * fwd.y
 	if boost:
 		target_speed *= 1.2
-	var alt := world.height_above_ground(global_position)
-	if alt > 400.0:
-		target_speed -= (alt - 400.0) * 0.5
+	if ahead_alt > 400.0:
+		target_speed -= (ahead_alt - 400.0) * 0.5
 	speed = minf(speed + dt * accel, target_speed)
 	if speed < 0.0:
 		speed = high_speed
@@ -309,7 +316,7 @@ func _fly(dt: float) -> void:
 		bank = 0.0
 		if speed > (stall_speed + cruise_speed) * 0.5 and pitch_rate > 20.0:
 			state = State.FLYING
-	elif speed < stall_speed:
+	elif state != State.DEAD and speed < stall_speed:
 		state = State.STALL
 	elif state == State.STALL:
 		state = State.FLYING
@@ -317,21 +324,34 @@ func _fly(dt: float) -> void:
 	if state != State.GROUND:
 		if state == State.STALL:
 			bank -= 150.0 * dt  # the original rolls off and drops the nose in a stall
-			pitch_rate -= m.y.y * 100.0 * 30.0 * dt
+			pitch_rate -= m.y.y * 100.0  # per step, on top of any AI command (0x433b8f)
 		# Each frame the rate loses 5 toward zero whatever the frame time, and may overshoot it (0x433ce6). An AI
 		# plane sets its command again each frame, so a small command turns the other way, which settles it on
 		# one edge of a +-5 band instead of on the aim line. The player's input integrates, so it keeps a rate.
-		if (is_player and not autopilot) or is_nan(_ai_pitch):
-			pitch_rate = move_toward(pitch_rate, 0.0, 150.0 * dt)
+		if (is_player and not autopilot and not _rate_set) or ((not is_player or autopilot) and is_nan(_ai_pitch)):
+			# the exe's 5 per frame, run at ref_fps. Near zero the rate flips between r and r - 5 for good, so the plane
+			# drifts at r - 2.5 deg/s, 2.5 nose down after a rate that hit its limit (measured under Wine)
+			_decay_frames += ref_fps * dt
+			while _decay_frames >= 1.0:
+				_decay_frames -= 1.0
+				pitch_rate -= 5.0 if pitch_rate >= 0.0 else -5.0
 		else:
-			pitch_rate -= 5.0 if pitch_rate > 0.0 else -5.0
+			pitch_rate -= 5.0 if pitch_rate >= 0.0 else -5.0  # exactly 0 steps nose down
+		_rate_set = false
 		pitch_rate = clampf(pitch_rate, -pitch_lerp, pitch_lerp)
 		# bank limits and roll-out from inverted flight
-		if m.y.y > 0.0:
+		# (not in a stall: bank runs free at 150 deg/s there, so the plane and the camera's swing turn round, RedAce.c:32760)
+		if state == State.STALL:
+			pass
+		elif m.y.y > 0.0:
 			bank = clampf(bank, -90.0, 90.0)
 		elif absf(bank) > 90.0:
 			bank -= 180.0 * signf(bank)
 			m = m * Basis(Vector3.BACK, PI)
+		if falling:
+			# state 2 (0x434320): bank keeps growing but the limit above holds it near 90, and the nose drops
+			bank += 200.0 * dt
+			m = m * Basis(Vector3.RIGHT, deg_to_rad(100.0 * m.y.y * dt))
 		# pitch about the wing axis (nose up = rotation about local x by -angle)
 		m = m * Basis(Vector3.RIGHT, -deg_to_rad(pitch_rate * dt))
 		# bank-driven turn about world up (right bank turns right = toward -x)
@@ -347,7 +367,7 @@ func _fly(dt: float) -> void:
 	var visual := m * Basis(Vector3.BACK, deg_to_rad(bank))
 	fwd = m.z
 	velocity = fwd * (speed * speed / high_speed)
-	if state == State.FLYING:
+	if state == State.FLYING or falling:
 		velocity += visual.y * (speed * speed * mass * 10.0 / (cruise_speed * cruise_speed))
 	if state != State.GROUND:
 		velocity += Vector3.DOWN * mass * 10.0
@@ -366,20 +386,29 @@ func _fly(dt: float) -> void:
 		# the tail lifts as the plane gathers speed
 		var tail := atan2(gear_height, tail_length) * (1.0 - clampf(speed / stall_speed, 0.0, 1.0))
 		visual = Basis.looking_at(-along, n) * Basis(Vector3.RIGHT, -tail)
-	elif pos.y - ground < gear_height:
-		# the down probe (gear height along -up) meets the ground: wheels touch
+	elif pos.y - ground < gear_height and global_position.y - world.ground_height(global_position) >= gear_height:
+		# the down probe (gear height along -up) meets the ground (RedAce.c:32150): spinning, too fast or sinking
+		# faster than 10 crashes; under 5 lands; between them the plane bounces off along its reflected path
 		pos.y = ground + gear_height + 0.05
-		flight_basis = m
-		global_transform = Transform3D(visual, pos)
-		# original ground contact (RedAce.c:32150): sinking faster than 10 or too fast -> crash,
-		# a gentle touch-down (sinking under 5, wings near level) lands the plane
-		if -velocity.y < 5.0 and speed <= high_speed and absf(bank) < 20.0 and m.z.y > -0.2:
-			state = State.GROUND
-		else:
+		var n := world.ground_normal(pos)
+		var sink := velocity.dot(n)
+		if falling or speed > high_speed or sink < -10.0:
+			flight_basis = m
+			global_transform = Transform3D(visual, pos)
 			crash()
-		return
+			return
+		if sink >= -5.0:
+			if state == State.FLYING:
+				state = State.GROUND
+		else:
+			var at := (velocity - n * 2.0 * sink).normalized()
+			var side := Vector3(m.x.x, 0.0, m.x.z).normalized()
+			var lift_axis := at.cross(side).normalized()
+			m = Basis(lift_axis.cross(at).normalized(), lift_axis, at)
+			visual = m * Basis(Vector3.BACK, deg_to_rad(bank))
 	flight_basis = m
 	global_transform = Transform3D(visual, pos)
+	_update_ahead_alt()
 
 	# propellers spin with the throttle (strobe like the original's per-frame rotation)
 	_prop_angle = fmod(_prop_angle + (8.0 + throttle * 30.0) * TAU * dt, TAU)
@@ -387,16 +416,32 @@ func _fly(dt: float) -> void:
 		p.transform.basis = Basis(Vector3.BACK, _prop_angle)
 
 
+## Height used by the speed loss above 400 and the AI's pull-up (plane + 0x160, RedAce.c:31967): a ray straight down
+## from the plane's height to y = 0 at the point 3 s ahead. Terrain above that height, or none below it, reads 0.
+func _update_ahead_alt() -> void:
+	var p := global_position
+	var at := flight_basis.z * speed * 3.0
+	var from := Vector3(p.x + at.x, p.y, p.z + at.z)
+	ahead_alt = world.ground_hit_fraction(from, Vector3(from.x, 0.0, from.z)) * p.y
+
+
 ## Player mouse input in mickeys this frame, original formulas (decomp FUN_004322de, control type 2):
 ##   bank += (s_roll * 0.25 + 0.025) * dt * highroll * dx;  pitch_rate += (s_pitch * 2.5 + 0.25) * dt * highpitch * dy
-## dt is the original frame time; REF_DT fixes it at the original 30 fps so feel is independent of our frame rate.
-const REF_DT := 1.0 / 30.0
+## dt is the original frame time; ref_fps fixes the exe's frame rate for these formulas and its 5 per frame pitch decay,
+## so feel does not follow our frame rate. The exe's own feel does: under Wine it runs at 100 fps.
+## Set in flight with ; and ' (World). Only the player's mouse, joystick pitch and pitch decay read it.
+static var ref_fps := 30.0
 
 
 func mouse_control(dx: float, dy: float, s_roll: float, s_pitch: float) -> void:
 	var up_sign := 1.0 if flight_basis.y.y > 0.0 else -1.0
-	bank += (s_roll * 0.25 + 0.025) * REF_DT * high_roll * dx * up_sign
-	pitch_rate += (s_pitch * 2.5 + 0.25) * REF_DT * high_pitch * dy
+	bank += (s_roll * 0.25 + 0.025) / ref_fps * high_roll * dx * up_sign
+	pitch_rate += (s_pitch * 2.5 + 0.25) / ref_fps * high_pitch * dy * _pitch_sign()
+
+
+## Pitch input reverses when the rolled plane and its unrolled flight frame point opposite ways up (FUN_004322de).
+func _pitch_sign() -> float:
+	return 1.0 if (global_transform.basis.y.y < 0.0) == (flight_basis.y.y < 0.0) else -1.0
 
 
 ## Player keyboard input (control type 1): -1/0/1 per axis. Releasing roll levels the wings at highroll deg/s.
@@ -417,7 +462,12 @@ func key_roll(axis: float, s: float, dt: float) -> void:
 
 func key_pitch(axis: float, s: float, dt: float) -> void:
 	if axis != 0.0:
-		pitch_rate += axis * (s + 0.1) * high_pitch * 100.0 * dt
+		pitch_rate += axis * (s + 0.1) * high_pitch * 100.0 * dt * _pitch_sign()
+	else:
+		# released, the exe writes a rate of 1 nose down each frame when upright (nose up when inverted), so the flight
+		# step's 5 leaves 4 the other way (0x4326c9)
+		pitch_rate = -1.0 if flight_basis.y.y > 0.0 else 1.0
+		_rate_set = true
 
 
 ## Joystick (control type 5): the stick sets the bank directly (value * s * 200) and the pitch rate
@@ -428,7 +478,8 @@ func joy_roll(v: float, s: float) -> void:
 
 
 func joy_pitch(v: float, s: float, _dt: float) -> void:
-	pitch_rate = v * s * 300.0 * REF_DT * high_pitch
+	pitch_rate = v * s * 300.0 / ref_fps * high_pitch * _pitch_sign()
+	_rate_set = true
 
 
 func _guns(dt: float) -> void:
@@ -519,44 +570,12 @@ func crash() -> void:
 	health = 0.0
 	world.particles.burst(global_position, endurance * 0.1)
 	world.particles.smoke_column(global_position, 1.0)
-	world.spawn_explosion(global_position, 12.0, _blast_sound)
+	world.play_at(global_position, _blast_sound)
 	if was_alive:
 		destroyed.emit(self)
 	if _engine_sound:
 		_engine_sound.stop()
-	# wreck: darken the model where it lies
-	for mi in find_children("*", "MeshInstance3D", true, false):
-		(mi as MeshInstance3D).material_overlay = _wreck_material()
 	set_physics_process(false)
-
-
-static var _wreck_mat: StandardMaterial3D
-
-
-static func _wreck_material() -> StandardMaterial3D:
-	if _wreck_mat == null:
-		_wreck_mat = StandardMaterial3D.new()
-		_wreck_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_wreck_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_wreck_mat.albedo_color = Color(0.05, 0.04, 0.03, 0.75)
-	return _wreck_mat
-
-
-## Spinning down after being shot (original state 2): bank += 200 deg/s, nose drops 100 deg/s.
-func _fall(dt: float) -> void:
-	var m := flight_basis
-	bank += 200.0 * dt
-	m = m * Basis(Vector3.RIGHT, deg_to_rad(100.0 * maxf(m.y.y, 0.2) * dt))
-	speed = minf(speed + accel * dt, dive_speed)
-	velocity = m.z * (speed * speed / high_speed) + Vector3.DOWN * mass * 10.0
-	var pos := global_position + velocity * dt
-	flight_basis = m.orthonormalized()
-	global_transform = Transform3D(flight_basis * Basis(Vector3.BACK, deg_to_rad(bank)), pos)
-	if pos.y - world.ground_height(pos) < gear_height:
-		crash()
-	_prop_angle = fmod(_prop_angle + 6.0 * TAU * dt, TAU)
-	for p in _propellers:
-		p.transform.basis = Basis(Vector3.BACK, _prop_angle)
 
 
 ## Damage smoke (RedAce.c:31878): puffs per second = damage * 5 / endurance + hit smoke while flying,
@@ -573,8 +592,9 @@ func _damage_smoke(dt: float) -> void:
 		for i in mini(n, 8):
 			var v := Vector3(randf_range(-5, 5), 30.0 if falling else 15.0, randf_range(-5, 5))
 			if falling:
-				var g := randf_range(0.3, 0.6)
-				world.particles.puff("smoke", global_position, v, 4.0, Color(g, g, g * 0.95, 1.0),
+				# r 0.3..0.65, g 0.3..0.6 and never above r, b 0.3: brown to orange
+				var red := randf_range(0.3, 0.65)
+				world.particles.puff("smoke", global_position, v, 4.0, Color(red, minf(randf_range(0.3, 0.6), red), 0.3, 1.0),
 					Color(-0.2, -0.2, -0.2, -0.2), 5.0)
 			else:
 				world.particles.puff("smoke", global_position, v, 2.0, Color(0.9, 0.9, 0.9, clampf(rate * 0.05, 0.1, 0.9)),
@@ -632,6 +652,8 @@ const BULLET_LEAD := 1.0 / 275.0  # 0x70 leads an aircraft by distance * 0.00363
 var _goal_timer := 0.0
 var attack_time_limit := 0.0  # 0x130 real (pilot + 0x414); 0 = no limit
 var _ai_bank := 0.0  # commanded bank, deg (pilot + 0x11c)
+var _decay_frames := 0.0
+var _rate_set := false  # the player's input wrote the pitch rate this step, so the flight step acts on it like an AI's
 var _ai_pitch := NAN  # pitch rate commanded this frame, deg/s, + = nose up (pilot + 0x120, negated);
 # when a goal sets none (waits) the rate decays in the flight model and the bank holds, so the plane circles
 
@@ -648,7 +670,9 @@ func _ai(dt: float) -> void:
 	if hidden:
 		return
 	if goal.is_empty() and (state != State.GROUND or is_player):
-		_free_goal()
+		_edge_of_battle()
+		if current_goal().is_empty():
+			_free_goal()
 		goal = current_goal()
 	if goal.is_empty():
 		return
@@ -680,10 +704,7 @@ func _ai(dt: float) -> void:
 		G_BOMB_RUN:
 			done = _bomb_run(goal)
 		G_WAIT_NEAR, G_WAIT_TIME:
-			# visible wait: parked planes wait to scramble, flying ones circle on their last bank
-			# (the exe's wait sets no command; the low-altitude pull-up is added here)
-			if state != State.GROUND:
-				_avoid_terrain()
+			pass  # visible wait: parked planes wait to scramble, flying ones circle on their last bank
 		_:
 			done = true  # 0x110 / 0x150 are unused by the shipped missions
 	if done and current_goal() == goal:
@@ -695,7 +716,6 @@ func _ai(dt: float) -> void:
 		# a parked plane given somewhere to go rolls and lifts off on its own
 		throttle = 1.0
 		_ai_pitch = 0.0 if speed < stall_speed else 30.0
-	_edge_of_battle()
 
 
 ## Point in the plane's frame: x = toward the right wing, y = up, z = forward (unit vector).
@@ -719,7 +739,7 @@ func _steer(aim: Vector3) -> void:
 ## FUN_0043b2a8: pull up when low; the threshold rises when diving.
 func _avoid_terrain() -> void:
 	var at_y := flight_basis.z.y
-	if world.height_above_ground(global_position) < 120.0 - 90.0 * at_y:
+	if ahead_alt < 120.0 - 90.0 * at_y:
 		_ai_pitch = 20.0 - 70.0 * at_y if flight_basis.y.y >= 0.0 else -(20.0 + 70.0 * at_y)
 
 
@@ -749,19 +769,19 @@ static func _airborne(o) -> bool:
 	return o is Aircraft and o.state != State.GROUND
 
 
-## 0x30: hold the target's local offset (stored as goal pos - target pos, y = 0) and match its speed.
+## 0x30: hold the target's local offset (goal pos - target pos at load, y = 0) and react to its speed.
 func _formation(goal: Dictionary) -> bool:
 	var o = _goal_object(goal)
 	if o == null:
 		return false
 	if not goal.has("offset"):
-		var tp: Vector3 = _obj_pos(o)
-		goal.offset = Vector3(goal.pos.x - tp.x, 0.0, goal.pos.z - tp.z)
+		goal.offset = Vector3.ZERO  # target is not an aircraft placed at load
 	var ob: Basis = o.flight_basis if o is Aircraft else o.node.global_transform.basis
 	_steer(_obj_pos(o) + ob * goal.offset)
 	_avoid_terrain()
 	var their: float = (flight_basis.z.dot(o.flight_basis.z) * o.speed) if o is Aircraft else 0.0
-	var diff := speed - their
+	# the exe slows the wingman when the leader is the faster one (0x4392cf; measured live under Wine)
+	var diff := their - speed
 	if diff > 1.0:
 		throttle = maxf(1.0 - diff * 0.1, 0.5)
 	elif diff < -1.0:
@@ -784,6 +804,7 @@ func _attack(goal: Dictionary, dt: float) -> bool:
 		var lead: float = dist * BULLET_LEAD * o.speed
 		var tb: Basis = o.global_transform.basis.orthonormalized()
 		to += tb.z * lead + Vector3(tb.y.x, 0.0, tb.y.z) * (lead * 0.75)
+		dist = to.length()  # the firing range is measured to the aim point (0x43a0e5)
 		throttle = clampf(throttle + (-0.3 if o.speed < speed else 0.5) * dt, 0.65, 1.0)
 	else:
 		# ground targets: the firing range is measured along the ground (0x43a141)
@@ -802,9 +823,6 @@ func _attack(goal: Dictionary, dt: float) -> bool:
 		side = goal.side
 	_ai_bank = clampf(side * 180.0, -90.0, 90.0)
 	fire_input = l.z > 0.8 and dist < 300.0
-	# not in FUN_00439e6f: the general low-altitude pull-up, since this flight model needs more room
-	# than the exe's 4 s look-ahead below leaves when strafing
-	_avoid_terrain()
 	# attack time limit (0x130 real) and breaking off when badly damaged
 	if endurance - health > endurance * 0.8:
 		return true
@@ -882,14 +900,19 @@ func _bomb_run(goal: Dictionary) -> bool:
 		_ai_pitch = pitch_rate
 	var fwd := Vector3(flight_basis.z.x, 0.0, flight_basis.z.z).normalized()
 	if fwd.dot(flat_to / maxf(flat, 0.001)) > 0.9 and flat < 600.0:
-		var impact := world.bomb_impact(global_position, velocity)
-		if Vector2(impact.x - tp.x, impact.z - tp.z).length() < 30.0:
+		# the exe's release estimate (0x43af48): nose direction * speed and a drop of 60 t^2, though bombs fall at
+		# half that, so its bombs land long
+		var v := flight_basis.z * speed
+		var t := (v.y + sqrt(maxf(v.y * v.y + 240.0 * h, 0.0))) / 120.0
+		if tp.distance_to(global_position + v * t + Vector3.DOWN * 60.0 * t * t) < 30.0:
 			if ordnance_left > 0 and ordnance_type == 1:
 				secondary_input = true
 			else:
 				_switch_to_guns(goal, tp, 200.0)
 	if flat < 20.0:
-		_push_goal({"type": G_WAYPOINT, "pos": global_position + fwd * (h + 300.0), "radius": 40.0, "targetid": 0})
+		var ahead := flight_basis.z * (h + 300.0)
+		_push_goal({"type": G_WAYPOINT, "pos": global_position + Vector3(ahead.x, 0.0, ahead.z), "radius": 40.0,
+			"targetid": 0})
 	_avoid_terrain()
 	return false
 
@@ -925,7 +948,7 @@ func _free_goal() -> void:
 	var b := world.map_bounds
 	var x := randf_range(b.position.x, b.end.x)
 	var z := randf_range(b.position.y, b.end.y)
-	var y := world.ground_height(Vector3(x, 0.0, z)) + randf_range(100.0, 400.0)
+	var y := randf_range(world.map_height.x, world.map_height.y)  # anywhere in the world box (RedAce.c:35232)
 	_push_goal({"type": G_WAYPOINT, "pos": Vector3(x, y, z), "radius": 100.0, "targetid": 0})
 
 
@@ -934,11 +957,6 @@ func _edge_of_battle() -> void:
 	var b := world.map_bounds
 	var p := global_position
 	if not (p.x < b.position.x + 500.0 or p.x > b.end.x - 500.0 or p.z < b.position.y + 500.0 or p.z > b.end.y - 500.0):
-		return
-	var g := current_goal()
-	if not g.is_empty() and int(g.type) != G_WAYPOINT:
-		return
-	if not g.is_empty() and b.grow(-500.0).has_point(Vector2(g.pos.x, g.pos.z)):
 		return
 	var tx := p.x + flight_basis.z.x * speed
 	var tz := p.z + flight_basis.z.z * speed
@@ -964,7 +982,7 @@ func on_hit(attacker) -> void:
 		if top != G_EVADE:
 			var m := flight_basis
 			var r := func() -> float: return float(randi() & 0x3ff) * 0.9765625 - 1.0
-			var p := global_position + m.z * 50.0 + Vector3(-m.x.x * r.call(), -m.x.y * r.call(), -m.x.z * r.call())
+			var p := global_position + m.z * 50.0 + Vector3(m.x.x * r.call(), m.x.y * r.call(), m.x.z * r.call())
 			_push_goal({"type": G_EVADE, "pos": p, "radius": 0.5, "targetid": 0})
 		return
 	if attacker == null:
@@ -1018,12 +1036,18 @@ func _script_goal(goal: Dictionary, dt: float) -> bool:
 		match int(goal.type):
 			G_APPEAR:
 				var p: Vector3 = goal.pos
+				# the nose stays up as parked: measured under Wine at.y = 0.196 on every plane type tried
 				place(Transform3D(Basis.looking_at(-Vector3(flight_basis.z.x, 0.0, flight_basis.z.z).normalized(),
-					Vector3.UP), p))
+					Vector3.UP) * Basis(Vector3.RIGHT, -asin(0.196)), p))
 				state = State.FLYING
 				throttle = 1.0
 				speed = high_speed
 				velocity = flight_basis.z * speed
+				if is_player and not autopilot:
+					# on its first flying frames the player's plane takes the stall kick with nothing overwriting it:
+					# at.y falls from 0.2 to about 0 inside 0.6 s, leaving a rate of 3.6 nose down (measured under Wine)
+					flight_basis = flight_basis * Basis(Vector3.RIGHT, asin(0.196))
+					pitch_rate = -3.6
 			G_HIDE:
 				_set_hidden(true)
 			G_RETALIATE_ON:
@@ -1062,14 +1086,28 @@ func _player_script() -> void:
 func _place_shadow() -> void:
 	if _shadow == null:
 		return
-	var g := world.ground_height(global_position)
-	_shadow.visible = g > -999.0
+	# rays down at both wingtips (RedAce.c:31814): the shadow sits between the hits, level with the higher one; with one
+	# hit it sits on that hit
 	var b := global_transform.basis
+	var p := global_position
+	var left := p - b.x * starboard_length
+	var right := p + b.x * port_length
+	var gl := world.ground_height(left)
+	var gr := world.ground_height(right)
+	var at := p
+	var y := -1000.0
+	if gl > -999.0 and gr > -999.0:
+		at = (Vector3(left.x, 0.0, left.z) + Vector3(right.x, 0.0, right.z)) * 0.5
+		y = maxf(gl, gr)
+	elif gl > -999.0 or gr > -999.0:
+		at = left if gl > -999.0 else right
+		y = maxf(gl, gr)
+	_shadow.visible = y > -999.0
 	b.x.y = 0.0
 	b.y.y = 0.0
 	b.z.y = 0.0
 	b.y += Vector3(0.0, 0.01, 0.0)  # keep the basis invertible
-	_shadow.global_transform = Transform3D(b, Vector3(global_position.x, g + 0.5, global_position.z))
+	_shadow.global_transform = Transform3D(b, Vector3(at.x, y + 0.5, at.z))
 
 
 func _set_hidden(h: bool) -> void:
@@ -1136,7 +1174,6 @@ func box_hit(a: Vector3, b: Vector3) -> bool:
 	return false
 
 
-## Alive and in the world: can be seen, targeted and hit.
 ## AI planes more than 150 outside the world box are sent away for good (0x438fb2).
 func _left_the_map() -> bool:
 	if left_map or hidden or is_player:
@@ -1149,5 +1186,6 @@ func _left_the_map() -> bool:
 	return left_map
 
 
+## Alive and in the world: can be seen, targeted and hit.
 func present() -> bool:
 	return state != State.DEAD and not hidden

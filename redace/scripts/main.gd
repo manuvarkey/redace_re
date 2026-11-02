@@ -43,6 +43,7 @@ var time_limit := 0.0
 var mission_time := 0.0
 var mission_over := false
 var map_bounds := Rect2()
+var map_height := Vector2.ZERO  # lowest and highest point of the terrain
 
 var camera: Camera3D
 var hud_label: Label
@@ -263,7 +264,6 @@ func load_mission(id: int) -> void:
 	mission_time = 0.0
 	mission_over = false
 	_fade_in = 0.0
-	_dead_time = 0.0
 	_end_time = -1.0
 	_flashes.clear()
 	if touch:
@@ -294,6 +294,12 @@ func load_mission(id: int) -> void:
 	for sec_name in m.keys():
 		if sec_name.begins_with("air") and not sec_name.contains("goal"):
 			_spawn_plane(sec_name, m)
+	# the exe stores a formation goal's offset as it builds the goal, from where the leader is placed (FUN_00437f92)
+	for p in planes:
+		for g in p.goals:
+			var o = objects_by_id.get(g.targetid)
+			if g.type == Aircraft.G_FORMATION and o is Aircraft:
+				g.offset = Vector3(g.pos.x - o.global_position.x, 0.0, g.pos.z - o.global_position.z)
 	if player == null and not planes.is_empty():
 		player = planes[0]
 		player.is_player = true
@@ -386,6 +392,7 @@ func _load_map(map_name: String) -> void:
 			box = b if first else box.merge(b)
 			first = false
 		map_bounds = Rect2(box.position.x, box.position.z, box.size.x, box.size.z)
+		map_height = Vector2(box.position.y, box.end.y)
 	var map_png := Ini.data_path(dir + "map.png")
 	hud.map_texture = Hud.with_mipmaps(load(map_png)) if ResourceLoader.exists(map_png) else null
 
@@ -400,7 +407,7 @@ func _load_map(map_name: String) -> void:
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_light_color = fog
-	env.fog_depth_begin = view_distance * 0.27
+	env.fog_depth_begin = view_distance * 0.45
 	env.fog_depth_end = view_distance
 	env.fog_sky_affect = 0.0
 	var we := WorldEnvironment.new()
@@ -615,7 +622,9 @@ func ground_normal(pos: Vector3) -> Vector3:
 
 ## Fraction along from..to where the segment first meets the terrain or an object, 0 when clear.
 func ground_hit_fraction(from: Vector3, to: Vector3) -> float:
-	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from, to))
+	var q := PhysicsRayQueryParameters3D.create(from, to)
+	q.hit_back_faces = false  # the exe's probes only meet terrain from above: mission 20 starts a plane under a hill
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
 	return from.distance_to(hit.position) / maxf(from.distance_to(to), 0.001) if hit else 0.0
 
 
@@ -642,16 +651,6 @@ func _perf_line() -> String:
 
 
 const BOMB_GRAVITY := 60.0  # 0x44d5fb
-
-
-## Where a bomb released now would hit the ground (same integration as _update_shells, 0.05 s steps).
-func bomb_impact(pos: Vector3, vel: Vector3) -> Vector3:
-	for i in 400:
-		vel += Vector3.DOWN * BOMB_GRAVITY * 0.05
-		pos += vel * 0.05
-		if pos.y <= ground_height(pos):
-			return pos
-	return pos
 
 
 func in_bounds(pos: Vector3, margin: float) -> bool:
@@ -838,7 +837,7 @@ func _physics_process(dt: float) -> void:
 	if not _vehicles_snapped:
 		_vehicles_snapped = true
 		_snap_vehicles()
-	if player and player.state != Aircraft.State.DEAD and not autopilot:
+	if player and (player.state != Aircraft.State.DEAD or player.falling) and not autopilot:
 		_player_input(dt)
 	if not mission_over:
 		mission_time += dt
@@ -1300,11 +1299,9 @@ func _count_rule_members() -> void:
 func _check_rules() -> void:
 	if mission_over or player == null:
 		return
-	# plane destroyed once the player's plane is down (a shot-down plane first spins to the ground)
+	# plane destroyed as soon as it is shot down or crashed (states 2 and 3, FUN_00434b50)
 	if player.state == Aircraft.State.DEAD:
-		_dead_time += get_physics_process_delta_time()
-		if not player.falling or _dead_time > 15.0:
-			_end_mission(false, "death")
+		_end_mission(false, "death")
 		return
 	if time_limit > 0.0 and mission_time > time_limit:
 		_end_mission(false, "time")
@@ -1366,7 +1363,6 @@ func abort_mission() -> void:
 ## missionaborted. A key press skips the rest.
 const END_FADE := 2.5
 var _fade_in := 1.0
-var _dead_time := 0.0
 var _end_time := -1.0
 var _end_result := ""
 var _end_score := 0
@@ -1465,8 +1461,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_mouse_dx += event.relative.x
-		_mouse_dy += event.relative.y
+		_mouse_dx += event.screen_relative.x  # real mickeys: relative is scaled by the window stretch
+		_mouse_dy += event.screen_relative.y
 	elif event is InputEventKey and event.pressed and not event.echo:
 		if _end_time >= 0.0:
 			_end_time = END_FADE  # any key ends the fade (RedAce.c:51044)
@@ -1490,6 +1486,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_nudge_sensitivity("roll", 0.1 if event.physical_keycode == KEY_BRACKETRIGHT else -0.1)
 			KEY_MINUS, KEY_EQUAL:
 				_nudge_sensitivity("pitch", 0.1 if event.physical_keycode == KEY_EQUAL else -0.1)
+			KEY_SEMICOLON, KEY_APOSTROPHE:
+				_step_ref_fps(1 if event.physical_keycode == KEY_SEMICOLON else -1)
 
 
 ## In-flight shortcut for the Controls page sensitivity bars.
@@ -1499,6 +1497,18 @@ func _nudge_sensitivity(action: String, d: float) -> void:
 	controls.save()
 	message_label.text = "%s sensitivity %.1f" % [action.capitalize(), b.sensitivity]
 	get_tree().create_timer(1.5).timeout.connect(_clear_message)
+
+
+## In-flight shortcut for Aircraft.ref_fps: a lower frame rate means stronger mouse response.
+func _step_ref_fps(d: int) -> void:
+	var i := REF_FPS_STEPS.find(Aircraft.ref_fps)
+	Aircraft.ref_fps = REF_FPS_STEPS[clampi((i if i >= 0 else 0) + d, 0, REF_FPS_STEPS.size() - 1)]
+	controls.save()
+	message_label.text = "Mouse response as at %d fps" % int(Aircraft.ref_fps)
+	get_tree().create_timer(1.5).timeout.connect(_clear_message)
+
+
+const REF_FPS_STEPS: Array[float] = [20.0, 30.0, 40.0, 50.0, 60.0, 75.0, 100.0]
 
 
 func _clear_message() -> void:
@@ -1547,6 +1557,7 @@ func _setup_camera() -> void:
 
 
 var _camera_pos := Vector3.INF
+const CAMERA_REF_FPS := 100.0
 
 
 ## Original chase camera (decomp FUN_00435c19 / FUN_0043572b): d = forward with its vertical part
@@ -1581,16 +1592,19 @@ func _update_camera(dt: float) -> void:
 	off.y += 5.0
 	var dist := 30.0 if pos.y >= 200.0 else (200.0 - pos.y) * 0.1 + 30.0
 	var want := pos + off.normalized() * dist * k
-	if _camera_pos == Vector3.INF or _camera_pos.distance_to(want) >= 200.0:
+	if _camera_pos == Vector3.INF:
 		_camera_pos = want
-	else:
-		_camera_pos += (want - _camera_pos) * minf(dt, 0.25) * 4.0
+	elif player.state != Aircraft.State.DEAD:  # from state 2 on it stops following and only looks (FUN_00435c19, FUN_00434b50)
+		if _camera_pos.distance_to(want) >= 200.0:
+			_camera_pos = want
+		else:
+			_camera_pos += (want - _camera_pos) * minf(dt, 0.25) * 4.0
 	var target := pos + look
 	var dir := (target - _camera_pos).normalized()
 	if camera_mode != 8 and absf(dir.y) > 0.6:
-		# keep the view within +-0.6 vertical: move the camera, as the original does
-		_camera_pos.y += (dir.y - 0.6 * signf(dir.y)) * 5.0
-	_camera_pos.y = maxf(_camera_pos.y, ground_height(_camera_pos) + 2.0)
+		# a steep view swings the camera out along the plane's rolled right axis (FUN_0043572b). The exe moves it per
+		# frame, so the swing grows with frame rate; CAMERA_REF_FPS is the rate it runs at under Wine.
+		_camera_pos += player.global_transform.basis.x * (0.6 * signf(dir.y) - dir.y) * 5.0 * dt * CAMERA_REF_FPS
 	camera.global_position = _camera_pos
 	if not _camera_pos.is_equal_approx(target):
 		var up := Vector3.UP if absf((target - _camera_pos).normalized().y) < 0.999 else Vector3.FORWARD
@@ -1725,7 +1739,7 @@ func _show_briefing(id: int) -> void:
 		txt = txt.replace(k, words[k])
 	var ws := RegEx.create_from_string("\\s+")
 	var keys := "\n\n[Tilt the phone (or STICK: drag on the left) to fly   THR slider: throttle   FIRE / BOMB   VIEW: hold and swipe   OBJ: objectives   CAL: level the tilt]" \
-		if touch and touch.active else "\n\n[Mouse: fly   Right Shift/Ctrl or W/S: throttle   Left/right button: guns/bombs   Space: boost   Arrows: views   F2: keyboard controls   [ ] - =: roll/pitch sensitivity   Tab: objectives   R: retry   N: next]"
+		if touch and touch.active else "\n\n[Mouse: fly   Right Shift/Ctrl or W/S: throttle   Left/right button: guns/bombs   Space: boost   Arrows: views   F2: keyboard controls   [ ] - =: roll/pitch sensitivity   ; ': mouse response   Tab: objectives   R: retry   N: next]"
 	brief_label.text = ws.sub(txt, " ", true).strip_edges() + keys
 	brief_time = 14.0
 

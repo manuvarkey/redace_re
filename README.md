@@ -431,10 +431,12 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 <details>
 <summary><b>Not done yet</b></summary>
 
-- AI deviations from the exe: gun attacks and visible waits also use the general low-altitude pull-up
-  (this flight model needs more room than the exe's 4 s look-ahead; without it AI planes flew into hills);
-  formation speed matching slows down when faster than the leader (decompiled it reads inverted);
-  goals 0x110/0x150 (unused by the missions) are ignored.
+- Goals 0x110/0x150 (unused by the missions) are ignored.
+- Mouse and joystick pitch feel: the exe's formulas depend on its frame rate. `Aircraft.ref_fps` (default 30; `;` and `'`
+  in flight, saved) picks the rate used; the original runs at about 100 under Wine. It touches nothing else: no damage,
+  AI, camera or flight speed code reads it.
+- Lighting: the terrain x2 brightness and the fog start (45% of the draw distance) are fitted to screenshots, not traced.
+  The RenderWare camera reports near 5, far 600 and fog plane 5, but linear fog from 5 looks far hazier than the original under Wine.
 - `splat.bmp` is loaded by the original but never drawn, so it is not used here either.
 - Mission 17 names a non-existent object `aagu_light`; it is skipped (as the original could not load it).
 

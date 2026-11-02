@@ -4,13 +4,17 @@ extends Node3D
 ## smoke, cloth, hit, maroon and clod textures from objects/particles. Each particle has position,
 ## velocity, gravity, size growth and a colour that changes linearly; it dies when its alpha reaches 0.
 ## Emitters (decomp RedAce.c):
-##   burst (FUN_004511f8, size s clamped 1..2): ~1 s of fiery puffs, velocity x,z in -20s..20s,
-##     y in 15s..45s, gravity -15, size 2s, colour 0.9/0.9/0.6 fading;
-##   smoke column (FUN_004510d2, size s): burns (rand(0..127) + 120) * s seconds, grey puffs rising;
+##   burst (FUN_004511f8 / FUN_00451f91, size s clamped 1..2): for 10 s, 20s streams with fixed velocities (x,z in
+##     -20s..20s, y in 15s..45s, y falls by 15 t^2) each draw a dark head at age t, an orange trail 0.15 s apart behind it
+##     and four core puffs; recomputed from the age every frame, not simulated;
+##   smoke column (FUN_004510d2 / FUN_00451c5f, size s): never ends; puffs on a repeating lifetime u = 0..1 climb
+##     (120..247) * s, spread 20s * u, grow to 20s * u, fade alpha 0.7 * (1 - u) and grey 1 - 0.7u, thinned by distance;
 ##   damage smoke (RedAce.c:31878), cloth on hits (FUN_0042eda0), hit / maroon puffs on bullet impacts
 ##     (FUN_0044cd2a) are emitted by their callers through puff().
 
-const MAX_PER_SYSTEM := {"smoke": 700, "cloth": 60, "hit": 80, "maroon": 80, "clod": 120}
+const MAX_PER_SYSTEM := {"smoke": 700, "cloth": 60, "hit": 80, "maroon": 80, "clod": 120, "emitters": 2500}
+const QUAD_SCALE := 2.0  # the exe draws one triangle whose texture square is 2 * size wide; the rest is the mask's empty edge (FUN_004517ef)
+const MAX_COLUMNS := 400
 
 var camera: Camera3D
 var detail := 0.7  # options "Effects Detail" 0..1; thins out smoke and debris
@@ -29,7 +33,7 @@ func _ready() -> void:
 		mat.vertex_color_use_as_albedo = true
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
-		var p := Ini.data_path("objects/particles/%s.png" % n)
+		var p := Ini.data_path("objects/particles/%s.png" % ("smoke" if n == "emitters" else n))
 		if ResourceLoader.exists(p):
 			mat.albedo_texture = load(p)
 		quad.material = mat
@@ -62,44 +66,137 @@ func puff(system: String, pos: Vector3, vel: Vector3, size: float, color: Color,
 
 func burst(pos: Vector3, size: float) -> void:
 	size = clampf(size, 1.0, 2.0)
-	_bursts.append({"pos": pos, "s": size, "t": 0.0, "acc": 0.0})
+	var streams := []
+	for i in int(20.0 * size):
+		streams.append(Vector3(randf_range(-20, 20) * size, randf_range(15, 45) * size, randf_range(-20, 20) * size))
+	_bursts.append({"pos": pos, "s": size, "t": 0.0, "streams": streams,
+		"weight": streams.size() * int(4.0 + size) * 1.5})
 
 
 func smoke_column(pos: Vector3, size: float) -> void:
-	_columns.append({"pos": pos, "s": size, "life": (randi() % 128 + 120) * size, "acc": 0.0})
+	var height := float(randi() % 128 + 120) * size
+	var life := size * height * 0.05
+	var jitter := PackedVector3Array()
+	for i in 64:
+		jitter.append(Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)))
+	_columns.append({"pos": pos, "s": size, "height": height, "life": life, "t": -life, "weight": int(25.0 * size),
+		"jitter": jitter})
+	if _columns.size() > MAX_COLUMNS:
+		_columns.pop_front()
+
+
+## Share of the effects budget for an emitter (FUN_00451409): by distance, nothing behind the camera or past far.
+func _emitter_weight(pos: Vector3, weight: float, far: float, limit: float) -> float:
+	var to := pos - camera.global_position
+	if -camera.global_transform.basis.z.dot(to) <= 0.0 or to.length() >= limit:
+		return -1.0
+	return (far - to.length()) * weight * 2.0 / far
+
+
+func _add_quad(list: Array, pos: Vector3, size: float, c: Color) -> void:
+	list.append([pos, absf(size) * QUAD_SCALE, c])
+
+
+func _emit_columns(list: Array, far: float) -> void:
+	var total := 0.0
+	var weights := []
+	for c in _columns:
+		var w := _emitter_weight(c.pos, c.weight, far, far)
+		weights.append(w)
+		total += maxf(w, 0.0)
+	var share := minf(detail * 1000.0 * 0.4 / total, 1.5) if total > 0.0 else 0.0
+	for i in _columns.size():
+		var left := int(weights[i] * share)
+		if left <= 0:
+			continue
+		var c: Dictionary = _columns[i]
+		var jitter: PackedVector3Array = c.jitter
+		var step := 0.5
+		var n := 0
+		while left > 0 and step > 0.0004:
+			var f := step
+			while f < 1.0 and left > 0:
+				var u: float = c.t / c.life + f
+				if c.t > 0.0:
+					u = fmod(u, 1.0)
+				left -= 1
+				n += 1
+				f += step * 2.0
+				if u <= 0.0:
+					continue
+				var j: Vector3 = jitter[n % jitter.size()]
+				var grey := 1.0 - u * 0.7
+				_add_quad(list, c.pos + Vector3.UP * (u * c.height) + j * (u * 20.0 * c.s), u * 20.0 * c.s,
+					Color(grey, grey, grey, (1.0 - u) * 0.7))
+			step *= 0.5
+
+
+func _emit_bursts(list: Array, far: float) -> void:
+	var total := 0.0
+	var weights := []
+	for b in _bursts:
+		var w := _emitter_weight(b.pos, b.weight, far, 600.0)
+		weights.append(w)
+		total += maxf(w, 0.0)
+	var share := detail * 1000.0 * 0.6 / total if total > 0.0 else 1.0
+	for i in _bursts.size():
+		if weights[i] * share < 1.0:
+			continue
+		var b: Dictionary = _bursts[i]
+		var s: float = b.s
+		var trail := int(4.0 + s) * 3 / 2
+		var streams: int = b.streams.size()
+		var budget := maxi(int(weights[i] * share), 20)
+		while streams * trail > budget and streams > 0:
+			streams -= 1
+		var samples := trail / 3 * 2
+		for k in streams:
+			var v: Vector3 = b.streams[k]
+			var at: float = b.t
+			_add_quad(list, _on_path(b.pos, v, at), 2.0 * s, Color(0.1, 0.1, 0.1, 0.9))
+			at = maxf(at - 0.15, 0.0)
+			for j in range(1, samples):
+				var p := _on_path(b.pos, v, at)
+				at -= 0.15
+				if at >= 0.0:
+					_add_quad(list, p, -at * 0.5 * s + 2.0 * s,
+						Color(0.9 - j * 0.08, 0.6 - j * 0.08, 0.4 - j * 0.05, 0.8 - j * 0.05))
+			at = 0.15 * b.t * 2.5
+			var size := 2.0 * s * 2.5
+			for j in 4:
+				var p: Vector3 = b.pos + v * (at * 0.5) + Vector3.DOWN * 15.0 * 0.5 * (at * at + b.t * b.t)
+				at += 0.15 * b.t * 2.5
+				size *= 0.75
+				var d := float(3 - j) * 2.0
+				_add_quad(list, p, size * 1.5, Color(0.9 - d * 0.08, 0.6 - d * 0.08, 0.4 - d * 0.05, 0.8))
+
+
+static func _on_path(from: Vector3, v: Vector3, t: float) -> Vector3:
+	return from + v * t + Vector3.DOWN * 15.0 * t * t
 
 
 func _process(dt: float) -> void:
 	for b in _bursts:
 		b.t += dt
-		b.acc += dt * 40.0 * b.s
-		var s: float = b.s
-		while b.acc >= 1.0:
-			b.acc -= 1.0
-			var v := Vector3(randf_range(-20, 20) * s, randf_range(15, 45) * s, randf_range(-20, 20) * s)
-			puff("smoke", b.pos, v, 2.0 * s * 3.0, Color(0.9, 0.9, 0.6, 0.8), Color(-0.8, -0.8, -0.5, -0.6),
-				6.0 * s, -15.0)
-			if randf() < 0.3:
-				puff("clod", b.pos, v * 1.5, 1.5, Color(0.4, 0.35, 0.3, 1.0), Color(0, 0, 0, -0.5), 0.0, -40.0)
-	_bursts = _bursts.filter(func(b): return b.t < 1.0)
-
-	var cam_pos := camera.global_position if camera else Vector3.ZERO
+	_bursts = _bursts.filter(func(b): return b.t <= 10.0)
 	for c in _columns:
-		c.life -= dt
-		# the original spreads a fixed particle budget over visible columns by distance
-		var d: float = cam_pos.distance_to(c.pos)
-		if d > 2500.0:
-			continue
-		c.acc += dt * (6.0 if d < 800.0 else 2.0)
-		while c.acc >= 1.0:
-			c.acc -= 1.0
-			puff("smoke", c.pos + Vector3(randf_range(-3, 3), 0, randf_range(-3, 3)),
-				Vector3(randf_range(-2, 2), randf_range(12, 18), randf_range(-2, 2)), 6.0 * c.s,
-				Color(0.35, 0.35, 0.35, 0.7), Color(0.08, 0.08, 0.08, -0.09), 2.5 * c.s, 0.0)
-	_columns = _columns.filter(func(c): return c.life > 0.0)
+		c.t += dt
+	var quads := []
+	if camera:
+		_emit_columns(quads, camera.far)
+		_emit_bursts(quads, camera.far)
+	var emm: MultiMesh = _systems["emitters"].mm
+	var emit_basis := camera.global_transform.basis if camera else Basis.IDENTITY
+	emm.visible_instance_count = mini(quads.size(), MAX_PER_SYSTEM["emitters"])
+	for i in emm.visible_instance_count:
+		var q: Array = quads[i]
+		emm.set_instance_transform(i, Transform3D(emit_basis * Basis.from_scale(Vector3.ONE * q[1]), q[0]))
+		emm.set_instance_color(i, Color(clampf(q[2].r, 0, 1), clampf(q[2].g, 0, 1), clampf(q[2].b, 0, 1), clampf(q[2].a, 0, 1)))
 
 	var cam_basis := camera.global_transform.basis if camera else Basis.IDENTITY
 	for n in _systems:
+		if n == "emitters":
+			continue
 		var sys: Dictionary = _systems[n]
 		var parts: Array = sys.parts
 		var alive := []

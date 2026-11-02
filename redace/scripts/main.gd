@@ -1593,7 +1593,8 @@ func _setup_camera() -> void:
 
 
 var _camera_pos := Vector3.INF
-const CAMERA_REF_FPS := 100.0
+const CAMERA_STEP := 0.01
+var _camera_steps := 0.0
 
 
 ## Original chase camera (decomp FUN_00435c19 / FUN_0043572b): d = forward with its vertical part
@@ -1628,19 +1629,23 @@ func _update_camera(dt: float) -> void:
 	off.y += 5.0
 	var dist := 30.0 if pos.y >= 200.0 else (200.0 - pos.y) * 0.1 + 30.0
 	var want := pos + off.normalized() * dist * k
+	var target := pos + look
 	if _camera_pos == Vector3.INF:
 		_camera_pos = want
-	elif player.state != Aircraft.State.DEAD:  # from state 2 on it stops following and only looks (FUN_00435c19, FUN_00434b50)
-		if _camera_pos.distance_to(want) >= 200.0:
-			_camera_pos = want
-		else:
-			_camera_pos += (want - _camera_pos) * minf(dt, 0.25) * 4.0
-	var target := pos + look
-	var dir := (target - _camera_pos).normalized()
-	if camera_mode != 8 and absf(dir.y) > 0.6:
-		# a steep view swings the camera out along the plane's rolled right axis (FUN_0043572b). The exe moves it per
-		# update, and updates come from a fixed 10 ms timer: CAMERA_REF_FPS.
-		_camera_pos += player.global_transform.basis.x * (0.6 * signf(dir.y) - dir.y) * 5.0 * dt * CAMERA_REF_FPS
+	# the exe steps the camera on its 10 ms update (RedAce.c:14177). Past 0.6 vertical each step pushes the camera along the
+	# plane's rolled right axis (FUN_0043572b); the view then flips across the limit from step to step, which is the
+	# vibration seen when the nose is steep (measured under Wine: about 0.3-0.6 deg per step, none below the limit)
+	_camera_steps = minf(_camera_steps + dt, CAMERA_STEP * 25.0)
+	while _camera_steps >= CAMERA_STEP:
+		_camera_steps -= CAMERA_STEP
+		if player.state != Aircraft.State.DEAD:  # from state 2 on it stops following and only looks (FUN_00435c19, FUN_00434b50)
+			if _camera_pos.distance_to(want) >= 200.0:
+				_camera_pos = want
+			else:
+				_camera_pos += (want - _camera_pos) * CAMERA_STEP * 4.0
+		var dir := (target - _camera_pos).normalized()
+		if camera_mode != 8 and absf(dir.y) > 0.6:
+			_camera_pos += player.global_transform.basis.x * (0.6 * signf(dir.y) - dir.y) * 5.0
 	camera.global_position = _camera_pos
 	if not _camera_pos.is_equal_approx(target):
 		var up := Vector3.UP if absf((target - _camera_pos).normalized().y) < 0.999 else Vector3.FORWARD

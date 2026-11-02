@@ -33,6 +33,7 @@ func _ready() -> void:
 		mat.vertex_color_use_as_albedo = true
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+		mat.disable_fog = true  # render state 6 is off while particles draw (FUN_00451409)
 		var p := Ini.data_path("objects/particles/%s.png" % ("smoke" if n == "emitters" else n))
 		if ResourceLoader.exists(p):
 			mat.albedo_texture = load(p)

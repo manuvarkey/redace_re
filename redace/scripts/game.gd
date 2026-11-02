@@ -230,6 +230,10 @@ func open_page(path: String) -> void:
 	var html := f.get_as_text()
 	if rel.ends_with("controloptions.html"):
 		html = _controls_defaults_row(html)
+	elif html.contains("blackboard.jpg"):
+		# Deviation (user request): the debriefing pages' links sit 4 px high in their buttons, in the exe too. A taller
+		# message table centres them.
+		html = RegEx.create_from_string("<table width=640 height=\\d+>").sub(html, "<table width=640 height=428>")
 	view.show_html(_fill(html))
 
 

@@ -164,21 +164,23 @@ static func load_sound(file_name: String) -> AudioStream:
 
 ## RenderWare's lighting as the exe sets it up (0x44ebc6): a white directional light along (1, -1, 1) and a
 ## white ambient light, both for atomics only (flag 1; world flags 0xd drop its lighting, 0x44e93e), so terrain
-## is texture * baked colour. Footage of the original shows fields at full texture brightness while their baked
-## value is about 0.67 and hedges at 0 stay black, so the baked colour counts double, clamped: fitted, not traced.
+## is texture * baked colour; hedges at 0 stay black. Fog is per vertex; with it the plain product matches the same view of the
+## original under Wine.
 ## An object's vertex light is ambient + diffuse * N.L from its ini [appearance] (0x42e1e2), clamped to 1. Both
 ## multiply the texture in display space, which is why the shader raises them to 2.2.
 const LIGHT_DIR := Vector3(0.57735, -0.57735, 0.57735)
+const FOG_PLANE := 5.0  # read from the RwCamera under Wine
 static var _lit_shaders := {}
 
 
 static func _lit_shader(cull_off: bool, blend: int) -> Shader:
+	_add_fog_globals()
 	var key := "%s%d" % [cull_off, blend]
 	if not _lit_shaders.has(key):
 		var sh := Shader.new()
 		sh.code = """
 shader_type spatial;
-render_mode unshaded%s%s;
+render_mode unshaded, fog_disabled%s%s;
 uniform sampler2D tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform vec4 base : source_color = vec4(1.0);
 uniform float ambient = 1.0;
@@ -186,11 +188,15 @@ uniform float diffuse = 0.0;
 uniform bool prelit = false;
 uniform float scissor = 0.5;
 uniform vec3 light_dir;
+global uniform vec3 ra_fog_colour;
+global uniform float ra_fog_far;
 varying vec3 lit;
+varying float fogged;
 
 void vertex() {
+	fogged = clamp((-(MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).z - FOG_PLANE) / (ra_fog_far - FOG_PLANE), 0.0, 1.0);
 	if (prelit) {
-		lit = min(COLOR.rgb * 2.0, vec3(1.0));
+		lit = min(COLOR.rgb, vec3(1.0));
 	} else {
 		vec3 n = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 		lit = vec3(clamp(ambient + diffuse * max(dot(n, -light_dir), 0.0), 0.0, 1.0));
@@ -199,10 +205,10 @@ void vertex() {
 
 void fragment() {
 	vec4 c = texture(tex, UV) * base;
-	ALBEDO = c.rgb * pow(lit, vec3(2.2));
+	ALBEDO = pow(mix(pow(c.rgb, vec3(1.0 / 2.2)) * lit, ra_fog_colour, fogged), vec3(2.2));
 	%s
 }
-""" % [", cull_disabled" if cull_off else "", ", depth_draw_opaque" if blend == 2 else "",
+""".replace("FOG_PLANE", "%.1f" % FOG_PLANE) % [", cull_disabled" if cull_off else "", ", depth_draw_opaque" if blend == 2 else "",
 			{0: "", 1: "ALPHA = c.a; ALPHA_SCISSOR_THRESHOLD = scissor;", 2: "ALPHA = c.a;"}[blend]]
 		_lit_shaders[key] = sh
 	return _lit_shaders[key]
@@ -236,6 +242,17 @@ static func apply_lighting(model: Node3D, ambient: float, diffuse: float, prelit
 			mat.set_shader_parameter("scissor", src.alpha_scissor_threshold)
 			mat.set_shader_parameter("light_dir", LIGHT_DIR)
 			mesh.surface_set_material(i, mat)
+
+
+static var _fog_globals_added := false
+
+
+static func _add_fog_globals() -> void:
+	if _fog_globals_added:
+		return
+	_fog_globals_added = true
+	RenderingServer.global_shader_parameter_add("ra_fog_colour", RenderingServer.GLOBAL_VAR_TYPE_VEC3, Vector3.ONE)
+	RenderingServer.global_shader_parameter_add("ra_fog_far", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 600.0)
 
 
 static var _white: Texture2D
@@ -407,9 +424,14 @@ func _load_map(map_name: String) -> void:
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_light_color = fog
-	env.fog_depth_begin = view_distance * 0.45
+	env.fog_depth_begin = FOG_PLANE
+	env.fog_depth_curve = 2.2  # objects: Godot blends in linear light, D3D in display space
 	env.fog_depth_end = view_distance
 	env.fog_sky_affect = 0.0
+	# D3D vertex fog in display space, linear from the fog plane to the far clip: big terrain triangles spread it softly
+	_add_fog_globals()
+	RenderingServer.global_shader_parameter_set("ra_fog_colour", Vector3(fog.r, fog.g, fog.b))
+	RenderingServer.global_shader_parameter_set("ra_fog_far", view_distance)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	_level.add_child(we)

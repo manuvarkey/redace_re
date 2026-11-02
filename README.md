@@ -254,10 +254,10 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   `releasespeed` plus the firer's velocity plus a per-axis random +-`jitter * maxspeed`, for up to 10 s or until
   they leave the map. The burst clock runs only with the trigger held and is never reset (0x430444).
 - Bombs (`ordinancetype = 1`) and rockets (`2`) with the mission's `numordinance` count.
-- Lighting as the exe sets it up (0x44ebc6): terrain is unlit, texture * min(2 * baked colour, 1) (the factor is
-  fitted to footage of the original, not traced); objects use ambient + diffuse * N.L from their ini with a white
-  light along (1, -1, 1), per vertex, multiplied in display space. View distance is 200..2200 in steps of 200,
-  default 600, used for the far clip and the end of the fog (0x454541, 0x458ea2).
+- Lighting as the exe sets it up (0x44ebc6): terrain is unlit, texture * baked colour; objects are ambient + diffuse * N.L.
+  Fog is per vertex and blended in display space, linear from the RwCamera's fog plane (5) to the far clip. Both were
+  checked against the same fixed view of the original under Wine (mean difference under 5 per channel on near fields).
+  View distance is 200..2200 in steps of 200, default 600, used for the far clip and the end of the fog (0x454541, 0x458ea2).
 - Vehicles are placed on the highest terrain under them and turned to its slope (`FUN_0042bd45`); mission 7's
   `aagun` 2302 is stored 18.5 units underground. Placed objects keep their stored matrix, scale included.
 - Every `[vehicleN]` is a turret (`FUN_0043c1c0`; the exe never reads `[ai] turret`, so tanks fire too): it aims at
@@ -435,8 +435,6 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 - Mouse and joystick pitch feel: the exe's formulas depend on its frame rate. `Aircraft.ref_fps` (default 30; `;` and `'`
   in flight, saved) picks the rate used; the original runs at about 100 under Wine. It touches nothing else: no damage,
   AI, camera or flight speed code reads it.
-- Lighting: the terrain x2 brightness and the fog start (45% of the draw distance) are fitted to screenshots, not traced.
-  The RenderWare camera reports near 5, far 600 and fog plane 5, but linear fog from 5 looks far hazier than the original under Wine.
 - `splat.bmp` is loaded by the original but never drawn, so it is not used here either.
 - Mission 17 names a non-existent object `aagu_light`; it is skipped (as the original could not load it).
 

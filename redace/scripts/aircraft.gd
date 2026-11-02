@@ -307,14 +307,18 @@ func _fly(dt: float) -> void:
 		target_speed *= 1.2
 	if ahead_alt > 400.0:
 		target_speed -= (ahead_alt - 400.0) * 0.5
-	speed = minf(speed + dt * accel, target_speed)
-	if speed < 0.0:
-		speed = high_speed
+	if state != State.GROUND:
+		speed = minf(speed + dt * accel, target_speed)
+		if speed < 0.0:
+			speed = high_speed
 
 	if state == State.GROUND:
-		speed = minf(speed + dt * accel * 2.0, target_speed)
-		bank = 0.0
-		if speed > (stall_speed + cruise_speed) * 0.5 and pitch_rate > 20.0:
+		# state 4 (RedAce.c:32820): twice the acceleration toward the throttle's speed, no attitude or altitude terms
+		speed = minf(speed + dt * accel * 2.0, sin(throttle * 1.57) * high_speed)
+		bank = clampf(bank, -speed * 0.03, speed * 0.03)
+		m = _ground_attitude(m, dt)
+		fwd = m.z
+		if speed > (stall_speed + cruise_speed) * 0.5:
 			state = State.FLYING
 	elif state != State.DEAD and speed < stall_speed:
 		state = State.STALL
@@ -366,7 +370,7 @@ func _fly(dt: float) -> void:
 
 	var visual := m * Basis(Vector3.BACK, deg_to_rad(bank))
 	fwd = m.z
-	velocity = fwd * (speed * speed / high_speed)
+	velocity = fwd * (speed * speed / high_speed * (0.9 if state == State.GROUND else 1.0))
 	if state == State.FLYING or falling:
 		velocity += visual.y * (speed * speed * mass * 10.0 / (cruise_speed * cruise_speed))
 	if state != State.GROUND:
@@ -375,17 +379,9 @@ func _fly(dt: float) -> void:
 	var pos := global_position + velocity * dt
 	var ground := world.ground_height(pos)
 	if state == State.GROUND:
-		# hit point + normal * (down + 0.05) (RedAce.c:32176), the plane following the ground's slope
+		# hit point + normal * (down + 0.05) (RedAce.c:32176)
 		var n := world.ground_normal(pos)
 		pos.y = ground + (gear_height + 0.05) / maxf(n.y, 0.5)
-		var flat := Vector3(fwd.x, 0, fwd.z).normalized()
-		m = Basis.looking_at(-flat, Vector3.UP)  # flight stays level: no roll carried into the take-off
-		var along := (flat - n * flat.dot(n)).normalized()
-		pitch_rate = clampf(pitch_rate, 0.0, 30.0)
-		# tail-dragger: parked nose up by atan(down / back) (original state 4),
-		# the tail lifts as the plane gathers speed
-		var tail := atan2(gear_height, tail_length) * (1.0 - clampf(speed / stall_speed, 0.0, 1.0))
-		visual = Basis.looking_at(-along, n) * Basis(Vector3.RIGHT, -tail)
 	elif pos.y - ground < gear_height and global_position.y - world.ground_height(global_position) >= gear_height:
 		# the down probe (gear height along -up) meets the ground (RedAce.c:32150): spinning, too fast or sinking
 		# faster than 10 crashes; under 5 lands; between them the plane bounces off along its reflected path
@@ -414,6 +410,20 @@ func _fly(dt: float) -> void:
 	_prop_angle = fmod(_prop_angle + (8.0 + throttle * 30.0) * TAU * dt, TAU)
 	for p in _propellers:
 		p.transform.basis = Basis(Vector3.BACK, _prop_angle)
+
+
+## On the ground the flight frame is level, whatever the slope, pitched up by the rate (state 4, RedAce.c:32840): the tail
+## rests at atan(down / back), lifts between stall and cruise speed, then the rate decays.
+func _ground_attitude(m: Basis, dt: float) -> Basis:
+	var rest := rad_to_deg(atan2(gear_height, tail_length))
+	pitch_rate -= dt * pitch_rate
+	pitch_rate = minf(pitch_rate, rest)
+	if speed < stall_speed:
+		pitch_rate = rest
+	elif speed < cruise_speed:
+		pitch_rate = maxf(pitch_rate, (1.0 - (speed - stall_speed) / (high_speed - stall_speed)) * rest)
+	var flat := Vector3(m.z.x, 0.0, m.z.z).normalized()
+	return Basis.looking_at(-flat, Vector3.UP) * Basis(Vector3.RIGHT, -deg_to_rad(pitch_rate))
 
 
 ## Height used by the speed loss above 400 and the AI's pull-up (plane + 0x160, RedAce.c:31967): a ray straight down
@@ -653,6 +663,7 @@ var _goal_timer := 0.0
 var attack_time_limit := 0.0  # 0x130 real (pilot + 0x414); 0 = no limit
 var _ai_bank := 0.0  # commanded bank, deg (pilot + 0x11c)
 var _decay_frames := 0.0
+var _last_ai_bank := 0.0
 var _rate_set := false  # the player's input wrote the pitch rate this step, so the flight step acts on it like an AI's
 var _ai_pitch := NAN  # pitch rate commanded this frame, deg/s, + = nose up (pilot + 0x120, negated);
 # when a goal sets none (waits) the rate decays in the flight model and the bank holds, so the plane circles
@@ -681,7 +692,7 @@ func _ai(dt: float) -> void:
 		G_TAKEOFF:
 			throttle = 1.0
 			if state == State.GROUND:
-				_ai_pitch = 0.0 if speed < stall_speed else 30.0
+				_ai_pitch = 1.0  # the exe's 0x13 sub-goal; on the ground the tail logic decides (FUN_0043b39c)
 			else:
 				done = true
 		G_WAYPOINT:
@@ -715,7 +726,7 @@ func _ai(dt: float) -> void:
 	elif state == State.GROUND and int(goal.type) != G_TAKEOFF:
 		# a parked plane given somewhere to go rolls and lifts off on its own
 		throttle = 1.0
-		_ai_pitch = 0.0 if speed < stall_speed else 30.0
+		_ai_pitch = 1.0
 
 
 ## Point in the plane's frame: x = toward the right wing, y = up, z = forward (unit vector).
@@ -1014,11 +1025,10 @@ func _apply_ai_commands() -> void:
 	if state == State.GROUND:
 		pitch_rate = 0.0 if is_nan(_ai_pitch) else _ai_pitch
 		return
-	if flight_basis.y.y < 0.0:
-		bank = 100.0 * (signf(bank) if bank != 0.0 else 1.0)
-	else:
-		var rate := high_roll * 3.0 * dt  # 0x438e2e
-		bank = move_toward(bank, _ai_bank, rate)
+	# limited against the last command, not the current bank, so the flight step's stall and spin roll never builds
+	# up on an AI plane (0x438e2e, pilot + 0x408)
+	_last_ai_bank = move_toward(_last_ai_bank, _ai_bank, high_roll * 3.0 * dt)
+	bank = _last_ai_bank
 	if not is_nan(_ai_pitch):
 		pitch_rate = _ai_pitch
 

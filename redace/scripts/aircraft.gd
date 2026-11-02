@@ -438,9 +438,9 @@ func _update_ahead_alt() -> void:
 ## Player mouse input in mickeys this frame, original formulas (decomp FUN_004322de, control type 2):
 ##   bank += (s_roll * 0.25 + 0.025) * dt * highroll * dx;  pitch_rate += (s_pitch * 2.5 + 0.25) * dt * highpitch * dy
 ## dt is the original frame time; ref_fps fixes the exe's frame rate for these formulas and its 5 per frame pitch decay,
-## so feel does not follow our frame rate. The exe's own feel does: under Wine it runs at 100 fps.
+## so feel does not follow our frame rate. The exe's update is a fixed 10 ms timer, so its own value is 100.
 ## Set in flight with ; and ' (World). Only the player's mouse, joystick pitch and pitch decay read it.
-static var ref_fps := 30.0
+static var ref_fps := 50.0
 
 
 func mouse_control(dx: float, dy: float, s_roll: float, s_pitch: float) -> void:

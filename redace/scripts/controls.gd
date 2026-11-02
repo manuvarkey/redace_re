@@ -68,7 +68,7 @@ static func load_saved() -> Controls:
 			var saved = s.get_value("bindings", a, null)
 			if saved is Dictionary:
 				c.bind[a].merge(saved, true)
-	Aircraft.ref_fps = float(s.get_value("controls", "ref_fps", Aircraft.ref_fps))
+	Aircraft.ref_fps = float(s.get_value("controls", "mouse_response", Aircraft.ref_fps))
 	return c
 
 
@@ -77,7 +77,7 @@ func save() -> void:
 	s.load(SETTINGS_PATH)
 	for a in bind:
 		s.set_value("bindings", a, bind[a])
-	s.set_value("controls", "ref_fps", Aircraft.ref_fps)
+	s.set_value("controls", "mouse_response", Aircraft.ref_fps)
 	s.save(SETTINGS_PATH)
 
 

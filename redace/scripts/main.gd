@@ -164,10 +164,9 @@ static func load_sound(file_name: String) -> AudioStream:
 
 ## RenderWare's lighting as the exe sets it up (0x44ebc6): a white directional light along (1, -1, 1) and a
 ## white ambient light, both for atomics only (flag 1; world flags 0xd drop its lighting, 0x44e93e), so terrain
-## is texture * baked colour; hedges at 0 stay black. Fog is per vertex; with it the plain product matches the same view of the
-## original under Wine.
+## is texture * baked colour; hedges at 0 stay black. Checked against the same views of the original under Wine.
 ## An object's vertex light is ambient + diffuse * N.L from its ini [appearance] (0x42e1e2), clamped to 1. Both
-## multiply the texture in display space, which is why the shader raises them to 2.2.
+## multiply the texture in display space.
 const LIGHT_DIR := Vector3(0.57735, -0.57735, 0.57735)
 const FOG_PLANE := 5.0  # read from the RwCamera under Wine
 static var _lit_shaders := {}
@@ -190,11 +189,12 @@ uniform float scissor = 0.5;
 uniform vec3 light_dir;
 global uniform vec3 ra_fog_colour;
 global uniform float ra_fog_far;
+uniform bool flash = false;
 varying vec3 lit;
 varying float fogged;
 
 void vertex() {
-	fogged = clamp((-(MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).z - FOG_PLANE) / (ra_fog_far - FOG_PLANE), 0.0, 1.0);
+	fogged = clamp(((-(MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).z - FOG_PLANE) / (ra_fog_far - FOG_PLANE) - 0.25) / 0.75, 0.0, 1.0);
 	if (prelit) {
 		lit = min(COLOR.rgb, vec3(1.0));
 	} else {
@@ -205,7 +205,9 @@ void vertex() {
 
 void fragment() {
 	vec4 c = texture(tex, UV) * base;
-	ALBEDO = pow(mix(pow(c.rgb, vec3(1.0 / 2.2)) * lit, ra_fog_colour, fogged), vec3(2.2));
+	// the Compatibility renderer shows ALBEDO as is (measured), so this is display space, as in D3D
+	vec3 shade = c.rgb * lit;
+	ALBEDO = flash ? mix(shade, vec3(1.0, 0.0, 0.0), 0.5) : mix(shade, ra_fog_colour, fogged);
 	%s
 }
 """.replace("FOG_PLANE", "%.1f" % FOG_PLANE) % [", cull_disabled" if cull_off else "", ", depth_draw_opaque" if blend == 2 else "",
@@ -428,7 +430,8 @@ func _load_map(map_name: String) -> void:
 	env.fog_depth_curve = 2.2  # objects: Godot blends in linear light, D3D in display space
 	env.fog_depth_end = view_distance
 	env.fog_sky_affect = 0.0
-	# D3D vertex fog in display space, linear from the fog plane to the far clip: big terrain triangles spread it softly
+	# D3D vertex fog in display space. The exe's fog table (RedAce.c:44097) is 0 for the first quarter of the range from the
+	# fog plane to the far clip, then rises linearly to full; per vertex, so big terrain triangles spread it softly
 	_add_fog_globals()
 	RenderingServer.global_shader_parameter_set("ra_fog_colour", Vector3(fog.r, fog.g, fog.b))
 	RenderingServer.global_shader_parameter_set("ra_fog_far", view_distance)
@@ -801,28 +804,39 @@ func spawn_explosion(pos: Vector3, size := 12.0, sound: AudioStream = null) -> v
 	play_at(pos, sound if sound else _blast_sound)
 
 
-## Hit flash (decomp FUN_0042c2b6 / FUN_0044a1bc): an object hit within the last 0.25 s is drawn
-## through a red fog at half strength (fog table 0x80, fog colour 0xffff0000).
+## Hit flash (decomp FUN_0042c2b6 / FUN_0044a1bc): an object hit within the last 0.25 s is drawn through a red fog at half
+## strength (fog table 0x80, fog colour 0xffff0000). It replaces the fog in the lit shader, per pixel on the object's own
+## triangles, so alpha-cut texture areas stay clear.
 var _flashes := {}  # Node3D -> seconds left
-var _flash_mat: StandardMaterial3D
 
 
 func flash(node: Node3D, seconds := 0.25) -> void:
 	if node == null or not is_instance_valid(node):
 		return
-	if _flash_mat == null:
-		_flash_mat = StandardMaterial3D.new()
-		_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_flash_mat.albedo_color = Color(1, 0, 0, 0.5)
 	if not _flashes.has(node):
-		_set_overlay(node, _flash_mat)
+		_set_flash(node, true)
 	_flashes[node] = seconds
 
 
-func _set_overlay(node: Node3D, mat: Material) -> void:
-	for mi in node.find_children("*", "MeshInstance3D", true, false):
-		(mi as MeshInstance3D).material_overlay = mat
+func _set_flash(node: Node3D, on: bool) -> void:
+	for n in node.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		for i in mi.mesh.get_surface_count():
+			mi.set_surface_override_material(i, _flash_material(mi.mesh.surface_get_material(i)) if on else null)
+
+
+static var _flash_materials := {}
+
+
+## The flashing copy of a surface's lit material, made once per material.
+static func _flash_material(base: Material) -> Material:
+	if not (base is ShaderMaterial):
+		return null
+	if not _flash_materials.has(base):
+		var copy := base.duplicate() as ShaderMaterial
+		copy.set_shader_parameter("flash", true)
+		_flash_materials[base] = copy
+	return _flash_materials[base]
 
 
 func _update_flashes(dt: float) -> void:
@@ -832,7 +846,7 @@ func _update_flashes(dt: float) -> void:
 			continue
 		_flashes[node] -= dt
 		if _flashes[node] <= 0.0:
-			_set_overlay(node, null)
+			_set_flash(node, false)
 			_flashes.erase(node)
 
 
@@ -1625,7 +1639,7 @@ func _update_camera(dt: float) -> void:
 	var dir := (target - _camera_pos).normalized()
 	if camera_mode != 8 and absf(dir.y) > 0.6:
 		# a steep view swings the camera out along the plane's rolled right axis (FUN_0043572b). The exe moves it per
-		# frame, so the swing grows with frame rate; CAMERA_REF_FPS is the rate it runs at under Wine.
+		# update, and updates come from a fixed 10 ms timer: CAMERA_REF_FPS.
 		_camera_pos += player.global_transform.basis.x * (0.6 * signf(dir.y) - dir.y) * 5.0 * dt * CAMERA_REF_FPS
 	camera.global_position = _camera_pos
 	if not _camera_pos.is_equal_approx(target):

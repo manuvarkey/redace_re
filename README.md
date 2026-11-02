@@ -433,7 +433,6 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 
 - AI deviations from the exe: gun attacks and visible waits also use the general low-altitude pull-up
   (this flight model needs more room than the exe's 4 s look-ahead; without it AI planes flew into hills);
-  the bombing run's +-1 deg/s altitude nudge uses the corrective sign (decompiled it reads inverted);
   formation speed matching slows down when faster than the leader (decompiled it reads inverted);
   goals 0x110/0x150 (unused by the missions) are ignored.
 - `splat.bmp` is loaded by the original but never drawn, so it is not used here either.

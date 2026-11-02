@@ -871,12 +871,15 @@ func _bomb_run(goal: Dictionary) -> bool:
 	if l.z < 0.0:
 		side = 1.0 if l.x >= 0.0 else -1.0
 	_ai_bank = side * 90.0
-	# nudge the pitch rate by 1 deg/s outside 140..160 above the target (the exe's -1 / +1; its sign as
-	# decompiled would climb when too high, so the corrective sign is used here)
+	# outside 140..160 above the target the pitch rate is set to 1 the wrong way (exe -1 / +1, negated here); the
+	# flight step's 5 per frame then turns that into 4 the right way (0x43aeb8, 0x433ce6). Inside the band nothing is
+	# written, so the last rate keeps stepping by 5 and alternates (-4, +1 after a descent).
 	if h > 160.0:
-		_ai_pitch = -1.0
-	elif h < 140.0:
 		_ai_pitch = 1.0
+	elif h < 140.0:
+		_ai_pitch = -1.0
+	else:
+		_ai_pitch = pitch_rate
 	var fwd := Vector3(flight_basis.z.x, 0.0, flight_basis.z.z).normalized()
 	if fwd.dot(flat_to / maxf(flat, 0.001)) > 0.9 and flat < 600.0:
 		var impact := world.bomb_impact(global_position, velocity)

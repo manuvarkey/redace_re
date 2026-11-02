@@ -1522,6 +1522,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				_nudge_sensitivity("roll", 0.1 if event.physical_keycode == KEY_BRACKETRIGHT else -0.1)
 			KEY_MINUS, KEY_EQUAL:
 				_nudge_sensitivity("pitch", 0.1 if event.physical_keycode == KEY_EQUAL else -0.1)
+			KEY_BACKSLASH:
+				controls.recentre_gyro()
+				message_label.text = "Controller tilt recentred"
+				get_tree().create_timer(1.5).timeout.connect(_clear_message)
 			KEY_SEMICOLON, KEY_APOSTROPHE:
 				_step_ref_fps(1 if event.physical_keycode == KEY_SEMICOLON else -1)
 
@@ -1780,7 +1784,7 @@ func _show_briefing(id: int) -> void:
 		txt = txt.replace(k, words[k])
 	var ws := RegEx.create_from_string("\\s+")
 	var keys := "\n\n[Tilt the phone (or STICK: drag on the left) to fly   THR slider: throttle   FIRE / BOMB   VIEW: hold and swipe   OBJ: objectives   CAL: level the tilt]" \
-		if touch and touch.active else "\n\n[Mouse: fly   Right Shift/Ctrl or W/S: throttle   Left/right button: guns/bombs   Space: boost   Arrows: views   F2: keyboard controls   [ ] - =: roll/pitch sensitivity   ; ': mouse response   Tab: objectives   R: retry   N: next]"
+		if touch and touch.active else "\n\n[Mouse: fly   Right Shift/Ctrl or W/S: throttle   Left/right button: guns/bombs   Space: boost   Arrows: views   F2: keyboard controls   [ ] - =: roll/pitch sensitivity   ; ': mouse response   \\: recentre controller tilt   Tab: objectives   R: retry   N: next]"
 	brief_label.text = ws.sub(txt, " ", true).strip_edges() + keys
 	brief_time = 14.0
 

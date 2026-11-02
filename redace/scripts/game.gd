@@ -252,6 +252,7 @@ func _controls_defaults_row(html: String) -> String:
 		"camdownvalue": "<a href=\"controldefault:mousekeys.ini\">Mouse</a>",
 		"cambehindvalue": "<a href=\"controldefault:joystick.ini\">Joystick</a>",
 		"camleftvalue": "<a href=\"controldefault:keyboard.ini\">Keyboard</a>",
+		"camrightvalue": "^joygyro^",
 	}
 	for k in fill:
 		var cell := RegEx.create_from_string("(\\^%s\\^</center></a></td><td></td>\\s*)<td></td>" % k)
@@ -305,6 +306,8 @@ func _fill(html: String) -> String:
 		"loadbar": "<img src=\"Menus\\loadbar.jpg\" width=298 height=20>",
 		"rollbar": _sens_bar(1, controls.bind.roll.sensitivity),
 		"pitchbar": _sens_bar(0, controls.bind.pitch.sensitivity),
+		"joygyro": "Gyroscope?" + _check("command:joygyro", controls.gyro_enabled, true) if controls.gyro_available() \
+			else "No gyroscope",
 		"rollsign": _check("command:reverse:roll", controls.bind.roll.reversed, true),
 		"pitchsign": _check("command:reverse:pitch", controls.bind.pitch.reversed, true),
 		"throttlesign": _check("command:reverse:throttle", controls.bind.throttle.reversed, true),
@@ -640,6 +643,11 @@ func _command(c: String) -> void:
 			controls.bind[["pitch", "roll", "throttle"][clampi(int(a[1]), 0, 2)]].sensitivity = int(a[2]) / 10.0
 			_save()
 			_refresh()
+		"joygyro":
+			controls.gyro_enabled = a.size() > 1 and a[1] == "1"
+			controls.recentre_gyro()
+			controls.save()
+			_refresh()
 		"reverse":
 			if controls.bind.has(a[1]):
 				controls.bind[a[1]].reversed = a.size() > 2 and a[2] == "1"
@@ -874,6 +882,7 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	Engine.time_scale = _base_time_scale() * (1.0 - ease_steps * 0.014)
 	world.process_mode = Node.PROCESS_MODE_PAUSABLE
 	world.controls = controls
+	controls.recentre_gyro()
 	world.finished.connect(_on_finished)
 	world.pause_requested.connect(_pause)
 	add_child(world)

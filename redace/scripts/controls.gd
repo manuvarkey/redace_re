@@ -30,6 +30,8 @@ const KEY_NAMES := {
 	"keypad8": KEY_KP_8, "keypad9": KEY_KP_9, ".": KEY_PERIOD, ",": KEY_COMMA,
 }
 
+var gyro_enabled := false
+var _gyro_g0 := Vector3.ZERO
 var bind := {}  # action -> {type, axis, upkey, downkey, key, button, sensitivity, reversed}
 var touch: TouchControls  # on-screen controls (phones); while active they replace the mouse bindings
 
@@ -69,6 +71,7 @@ static func load_saved() -> Controls:
 			if saved is Dictionary:
 				c.bind[a].merge(saved, true)
 	Aircraft.ref_fps = float(s.get_value("controls", "mouse_response", Aircraft.ref_fps))
+	c.gyro_enabled = bool(s.get_value("controls", "joy_gyro", false))
 	return c
 
 
@@ -78,6 +81,7 @@ func save() -> void:
 	for a in bind:
 		s.set_value("bindings", a, bind[a])
 	s.set_value("controls", "mouse_response", Aircraft.ref_fps)
+	s.set_value("controls", "joy_gyro", gyro_enabled)
 	s.save(SETTINGS_PATH)
 
 
@@ -100,6 +104,43 @@ static func name_of_key(k: Key) -> String:
 func _pressed_key(name: String) -> float:
 	var k := key_of(name)
 	return 1.0 if k != KEY_NONE and Input.is_physical_key_pressed(k) else 0.0
+
+
+## Tilt steering from the controller's motion sensors, like the phones' tilt mode (not in the original). Neutral is how the
+## controller is held at the start of a flight or on recentre_gyro().
+func gyro_available() -> bool:
+	return Input.get_connected_joypads().has(0) and Input.has_joy_motion_sensors(0)
+
+
+func recentre_gyro() -> void:
+	_gyro_g0 = Vector3.ZERO
+
+
+## Roll and pitch stick values (x, y) for gravity g, with neutral g0. SDL's axes: x right, y out of the controller's face,
+## z toward the player. Either sign of the reading is accepted: some sensors report the reaction, up.
+static func gyro_axes(g: Vector3, g0: Vector3) -> Vector2:
+	if g0.y > 0.0:
+		g = -g
+		g0 = -g0
+	var roll := atan2(g.x, Vector2(g.y, g.z).length()) - atan2(g0.x, Vector2(g0.y, g0.z).length())
+	# far edge down = nose down = stick forward, a negative stick value
+	var nose_down := wrapf(atan2(-g.z, -g.y) - atan2(-g0.z, -g0.y), -PI, PI)
+	return Vector2(TouchControls._axis(roll), -TouchControls._axis(nose_down))
+
+
+func _gyro_tilt() -> Vector2:
+	if not gyro_enabled or not gyro_available():
+		return Vector2.ZERO
+	if not Input.is_joy_motion_sensors_enabled(0):
+		Input.set_joy_motion_sensors_enabled(0, true)
+	var g := Input.get_joy_gravity(0)
+	if g == Vector3.ZERO:
+		g = Input.get_joy_accelerometer(0)
+	if g.length() < 1.0:
+		return Vector2.ZERO
+	if _gyro_g0 == Vector3.ZERO:
+		_gyro_g0 = g
+	return gyro_axes(g, _gyro_g0)
 
 
 func _joy_axis(axis: int) -> float:
@@ -152,15 +193,20 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 	if touch != null and touch.active:
 		_drive_touch(p, r.sensitivity * rs, q.sensitivity * ps, dt)
 		return
+	var tilt := _gyro_tilt()
 	# roll
 	match r.type:
 		"mouse":
 			p.mouse_control((mouse.x if r.axis == 1 else mouse.y) * rs, 0.0, r.sensitivity, q.sensitivity)
 		"joystick" when int(r.axis) == 0:
 			# upbutton = roll left, like upkey
-			p.key_roll(-_joy_buttons(r) * rs, r.sensitivity, dt)
+			if _joy_buttons(r) == 0.0 and tilt.x != 0.0:
+				p.joy_roll(tilt.x * rs, r.sensitivity)
+			else:
+				p.key_roll(-_joy_buttons(r) * rs, r.sensitivity, dt)
 		"joystick":
-			p.joy_roll(_joy_axis(r.axis) * rs, r.sensitivity)
+			var v := _joy_axis(r.axis)
+			p.joy_roll((v if v != 0.0 else tilt.x) * rs, r.sensitivity)
 		_:
 			# upkey = roll left, downkey = roll right (keyboard.ini: upkey = leftarrow)
 			p.key_roll(_pressed_key(r.downkey) - _pressed_key(r.upkey), r.sensitivity, dt)
@@ -170,9 +216,13 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 			p.mouse_control(0.0, (mouse.y if q.axis == 2 else mouse.x) * ps, r.sensitivity, q.sensitivity)
 		"joystick" when int(q.axis) == 0:
 			# upbutton = nose down, like upkey
-			p.key_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
+			if _joy_buttons(q) == 0.0 and tilt.y != 0.0:
+				p.joy_pitch(tilt.y * ps, q.sensitivity, dt)
+			else:
+				p.key_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
 		"joystick":
-			p.joy_pitch(_joy_axis(q.axis) * ps, q.sensitivity, dt)
+			var v := _joy_axis(q.axis)
+			p.joy_pitch((v if v != 0.0 else tilt.y) * ps, q.sensitivity, dt)
 		_:
 			# upkey = nose down (keyboard.ini: upkey = uparrow)
 			p.key_pitch(_pressed_key(q.downkey) - _pressed_key(q.upkey), q.sensitivity, dt)

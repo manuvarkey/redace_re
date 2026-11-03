@@ -31,6 +31,7 @@ const KEY_NAMES := {
 }
 
 var gyro_enabled := false
+var joystick_response_ms := 0  # 0 = executable's direct response; 200/400 = gradual digital input.
 var _gyro_g0 := Vector3.ZERO
 var bind := {}  # action -> {type, axis, upkey, downkey, key, button, sensitivity, reversed}
 var touch: TouchControls  # on-screen controls (phones); while active they replace the mouse bindings
@@ -72,6 +73,7 @@ static func load_saved() -> Controls:
 				c.bind[a].merge(saved, true)
 	Aircraft.ref_fps = float(s.get_value("controls", "mouse_response", Aircraft.ref_fps))
 	c.gyro_enabled = bool(s.get_value("controls", "joy_gyro", false))
+	c.joystick_response_ms = int(s.get_value("controls", "joystick_response_ms", 0))
 	return c
 
 
@@ -82,6 +84,7 @@ func save() -> void:
 		s.set_value("bindings", a, bind[a])
 	s.set_value("controls", "mouse_response", Aircraft.ref_fps)
 	s.set_value("controls", "joy_gyro", gyro_enabled)
+	s.set_value("controls", "joystick_response_ms", joystick_response_ms)
 	s.save(SETTINGS_PATH)
 
 
@@ -194,6 +197,7 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 		_drive_touch(p, r.sensitivity * rs, q.sensitivity * ps, dt)
 		return
 	var tilt := _gyro_tilt()
+	var response := float(joystick_response_ms) / 1000.0
 	# roll
 	match r.type:
 		"mouse":
@@ -201,12 +205,15 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 		"joystick" when int(r.axis) == 0:
 			# upbutton = roll left, like upkey
 			if _joy_buttons(r) == 0.0 and tilt.x != 0.0:
-				p.joy_roll(tilt.x * rs, r.sensitivity)
+				p.joy_roll(tilt.x * rs, r.sensitivity, response)
 			else:
-				p.key_roll(-_joy_buttons(r) * rs, r.sensitivity, dt)
+				if response > 0.0:
+					p.joy_roll(-_joy_buttons(r) * rs, r.sensitivity, response)
+				else:
+					p.key_roll(-_joy_buttons(r) * rs, r.sensitivity, dt)
 		"joystick":
 			var v := _joy_axis(r.axis)
-			p.joy_roll((v if v != 0.0 else tilt.x) * rs, r.sensitivity)
+			p.joy_roll((v if v != 0.0 else tilt.x) * rs, r.sensitivity, response)
 		_:
 			# upkey = roll left, downkey = roll right (keyboard.ini: upkey = leftarrow)
 			p.key_roll(_pressed_key(r.downkey) - _pressed_key(r.upkey), r.sensitivity, dt)
@@ -217,12 +224,15 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 		"joystick" when int(q.axis) == 0:
 			# upbutton = nose down, like upkey
 			if _joy_buttons(q) == 0.0 and tilt.y != 0.0:
-				p.joy_pitch(tilt.y * ps, q.sensitivity, dt)
+				p.joy_pitch(tilt.y * ps, q.sensitivity, dt, response)
 			else:
-				p.key_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
+				if response > 0.0:
+					p.joy_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt, response)
+				else:
+					p.key_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
 		"joystick":
 			var v := _joy_axis(q.axis)
-			p.joy_pitch((v if v != 0.0 else tilt.y) * ps, q.sensitivity, dt)
+			p.joy_pitch((v if v != 0.0 else tilt.y) * ps, q.sensitivity, dt, response)
 		_:
 			# upkey = nose down (keyboard.ini: upkey = uparrow)
 			p.key_pitch(_pressed_key(q.downkey) - _pressed_key(q.upkey), q.sensitivity, dt)

@@ -158,7 +158,10 @@ func _draw_map(p: Aircraft, s: float) -> void:
 		if q == p or not q.present():
 			continue
 		if q.groups & (1 << GROUP_ENEMY):
-			_icon("smallenemy", q.global_position, p, right, at, scale, icon_centre, s)
+			var icon: String = str(q.get("radar_icon")) if q.get("radar_icon") != null else ""
+			if not icon.is_empty() and not _tex.has(icon) and ResourceLoader.exists(icon):
+				_tex[icon] = with_mipmaps(load(icon))
+			_icon(icon if _tex.has(icon) else "smallenemy", q.global_position, p, right, at, scale, icon_centre, s)
 		elif q.groups & (1 << GROUP_ALLY):
 			_icon("smallally", q.global_position, p, right, at, scale, icon_centre, s)
 	_icon("planeicon", p.global_position, p, right, at, scale, icon_centre, s)

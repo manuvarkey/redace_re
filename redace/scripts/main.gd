@@ -12,6 +12,7 @@ const PLAYER_GROUP_BIT := 0x2
 const BULLET_LIFE := 10.0  # FUN_0044d432: ordnance ends after 10 s or on leaving the world box
 const MAX_BULLETS := 4096
 const MISSIONS := [-3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+const ModLauncher := preload("res://mods/launcher.gd")
 const SETTINGS_PATH := "user://settings.cfg"
 
 signal finished(result: String, score: int)  # result: won, death, defence, time
@@ -39,6 +40,8 @@ var ordnance := {}  # ordinance.ini entries by index: 1 bullet, 2 bomb, 3 rocket
 var bullets: Array[Dictionary] = []
 var shells: Array[Dictionary] = []  # bombs and rockets (model per projectile)
 var rules: Array[Dictionary] = []  # {group, percent, total, lost}
+var require_shot_down := false
+var objective_labels := {}
 var time_limit := 0.0
 var mission_time := 0.0
 var mission_over := false
@@ -58,6 +61,7 @@ var music: AudioStreamPlayer
 var brief_time := 10.0
 var controls: Controls  # player bindings; Game passes its own, debug runs load the saved ones
 var view_distance := 600.0  # options "View Distance", drawdistance in redace.ini (0x458ea2): far clip and fog end
+var _effective_view_distance := 600.0
 var effects_detail := 0.7  # options "Effects Detail"
 var camera_mode := 1  # original camera modes: 1 chase, 4 behind, 6 left, 7 right, 8 above
 var _mouse_dx := 0.0
@@ -68,6 +72,7 @@ var forced_view := 0  # debug: --view=N holds a camera mode
 var _bullets_mi: MeshInstance3D
 var _bullets_mesh: ImmediateMesh
 var _level: Node3D
+var _mod: Node
 var _blast_sound: AudioStream
 # world sounds (decomp RedAce.c:42392): bullet into the ground, bomb blast, rocket blast
 var _bullet_ground_sound: AudioStream
@@ -270,6 +275,7 @@ static func _white_texture() -> Texture2D:
 
 func load_mission(id: int) -> void:
 	mission_id = id
+	_mod = null
 	_vehicles_snapped = false
 	if _level:
 		_level.queue_free()
@@ -303,6 +309,9 @@ func load_mission(id: int) -> void:
 		message_label.text = "Mission %d not found" % id
 		return
 	var map_name: String = m.get("map", {}).get("map", "country")
+	_mod = ModLauncher.for_mission(m)
+	if _mod:
+		_level.add_child(_mod)
 	_load_map(map_name.to_lower())
 
 	for sec_name in m.keys():
@@ -326,6 +335,8 @@ func load_mission(id: int) -> void:
 		player.autopilot = autopilot
 
 	var ms: Dictionary = m.get("mission", {})
+	require_shot_down = Ini.num(ms, "requireshotdown", 0) != 0
+	objective_labels = m.get("objectives", {})
 	time_limit = Ini.num(ms, "timelimit", 0.0)
 	for k in ms:
 		if k.begins_with("group"):
@@ -397,6 +408,7 @@ func _load_map(map_name: String) -> void:
 	var dir := "maps/%s/" % map_name
 	var ini := Ini.load_file(Ini.data_path(dir + "map.ini"))
 	var app: Dictionary = ini.get("appearance", {})
+	_effective_view_distance = maxf(view_distance, Ini.num(app, "minimumviewdistance", 0.0))
 	var terrain := load_model(dir + str(app.get("bsp", "thelandscape2")) + ".gltf")
 	if terrain:
 		apply_lighting(terrain, 0.0, 0.0, true)
@@ -428,16 +440,18 @@ func _load_map(map_name: String) -> void:
 	env.fog_light_color = fog
 	env.fog_depth_begin = FOG_PLANE
 	env.fog_depth_curve = 2.2  # objects: Godot blends in linear light, D3D in display space
-	env.fog_depth_end = view_distance
+	env.fog_depth_end = _effective_view_distance
 	env.fog_sky_affect = 0.0
 	# D3D vertex fog in display space. The exe's fog table (RedAce.c:44097) is 0 for the first quarter of the range from the
 	# fog plane to the far clip, then rises linearly to full; per vertex, so big terrain triangles spread it softly
 	_add_fog_globals()
 	RenderingServer.global_shader_parameter_set("ra_fog_colour", Vector3(fog.r, fog.g, fog.b))
-	RenderingServer.global_shader_parameter_set("ra_fog_far", view_distance)
+	RenderingServer.global_shader_parameter_set("ra_fog_far", _effective_view_distance)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	_level.add_child(we)
+	if _mod:
+		_mod.setup_map(self, env, _level)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, 35, 0)
@@ -595,9 +609,12 @@ func _aabb_of(n: Node3D) -> AABB:
 
 func _spawn_plane(sec_name: String, m: Dictionary) -> void:
 	var sec: Dictionary = m[sec_name]
-	var p := Aircraft.new()
+	# Runtime load keeps the optional mod out of original missions' script dependencies.
+	var p: Aircraft = _mod.create_aircraft() if _mod else Aircraft.new()
 	p.setup(str(sec.get("name", "sopwithcamel")), self)
 	p.object_id = int(Ini.num(sec, "id", 0))
+	if _mod:
+		_mod.configure_aircraft(p, sec)
 	p.groups = int(Ini.num(sec, "groups", 0))
 	p.proximity_groups = (p.groups >> 4 & 1) + (p.groups >> 8 & 1) + (p.groups >> 9 & 1)
 	p.is_player = int(Ini.num(sec, "player", 0)) == 1
@@ -633,10 +650,20 @@ func _spawn_plane(sec_name: String, m: Dictionary) -> void:
 
 # ---------------------------------------------------------------- world queries
 
+func is_sea(pos: Vector3) -> bool:
+	return is_instance_valid(_mod) and _mod.is_sea(pos)
+
+
+func sea_crash(pos: Vector3) -> void:
+	if is_sea(pos):
+		_mod.sea_crash(pos)
+
+
 func ground_height(pos: Vector3) -> float:
 	var q := PhysicsRayQueryParameters3D.create(Vector3(pos.x, 5000.0, pos.z), Vector3(pos.x, -5000.0, pos.z))
 	var hit := get_world_3d().direct_space_state.intersect_ray(q)
-	return hit.position.y if hit else -1000.0
+	var height: float = hit.position.y if hit else -1000.0
+	return maxf(height, 0.0) if is_sea(pos) else height
 
 
 func ground_normal(pos: Vector3) -> Vector3:
@@ -1323,7 +1350,7 @@ func _count_rule_members() -> void:
 		for p in planes:
 			if p.groups & bit:
 				total += 1
-				lost += int(p.counts_as_lost())
+				lost += int(_mod.counts_as_lost(p) if _mod else p.counts_as_lost())
 		for t in targets:
 			if t.groups & bit:
 				total += 1
@@ -1447,6 +1474,7 @@ func _objective_text() -> String:
 		if r.total == 0:
 			continue
 		var what := "enemy aircraft" if r.group == 9 else ("allied aircraft" if r.group == 8 else "targets")
+		what = str(objective_labels.get("group%d" % r.group, what))
 		if r.percent < 0.0:
 			lines.append("Destroy %d%% of %s: %d / %d" % [int(-r.percent), what, r.lost, r.total])
 		else:
@@ -1514,8 +1542,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_R when standalone:
 				load_mission(mission_id)
 			KEY_N when standalone:
-				var idx := MISSIONS.find(mission_id)
-				load_mission(MISSIONS[(idx + 1) % MISSIONS.size()])
+				load_mission(_mission_sequence()[(_mission_sequence().find(mission_id) + 1) % _mission_sequence().size()])
 			KEY_TAB:
 				show_objectives = not show_objectives
 			KEY_BRACKETLEFT, KEY_BRACKETRIGHT:
@@ -1586,7 +1613,7 @@ func _camera_keys() -> int:
 
 func _setup_camera() -> void:
 	camera = Camera3D.new()
-	camera.far = view_distance
+	camera.far = _effective_view_distance
 	camera.near = 0.5
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
 	camera.fov = 90.0  # original view window 1.333 x 1.0 (FUN_00436c50)
@@ -1632,6 +1659,8 @@ func _update_camera(dt: float) -> void:
 			off = -d * 10.0
 	off.y += 5.0
 	var dist := 30.0 if pos.y >= 200.0 else (200.0 - pos.y) * 0.1 + 30.0
+	if _mod and camera_mode == 1:
+		dist *= _mod.camera_distance_scale
 	var want := pos + off.normalized() * dist * k
 	var target := pos + look
 	if _camera_pos == Vector3.INF:
@@ -1814,3 +1843,7 @@ func _play_music(track: int) -> void:
 	music.stream = music_stream(track)
 	if music.stream:
 		music.play()
+
+
+func _mission_sequence() -> Array[int]:
+	return ModLauncher.mission_sequence(MISSIONS)

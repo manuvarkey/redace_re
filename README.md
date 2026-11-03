@@ -438,7 +438,7 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   steers by tilting, like the phones' tilt mode. The stick takes over whenever it is deflected, and `\` in flight recentres.
 - Mouse and joystick roll are rate-limited (user request): the exe applies them at once, here the bank moves at
   `highroll * 6 * sensitivity` deg/s (`Aircraft._roll_speed`), so a sudden move no longer tilts the plane instantly.
-- Mouse and joystick pitch feel: the exe's formulas depend on its update rate. `Aircraft.ref_fps` (default 50; `;` and `'`
+- Mouse and joystick pitch feel: the exe's formulas depend on its update rate. `Aircraft.ref_fps` (default 100; `;` and `'`
   in flight, saved) picks the rate used; the exe's update tick is a fixed 10 ms timer (`0x301` messages, RedAce.c:14177), so 100 is its value on any machine and in every mission. It touches nothing else: no damage,
   AI, camera or flight speed code reads it.
 - `splat.bmp` is loaded by the original but never drawn, so it is not used here either.

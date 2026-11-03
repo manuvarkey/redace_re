@@ -442,7 +442,7 @@ func _update_ahead_alt() -> void:
 ## dt is the original frame time; ref_fps fixes the exe's frame rate for these formulas and its 5 per frame pitch decay,
 ## so feel does not follow our frame rate. The exe's update is a fixed 10 ms timer, so its own value is 100.
 ## Set in flight with ; and ' (World). Only the player's mouse, joystick pitch and pitch decay read it.
-static var ref_fps := 50.0
+static var ref_fps := 100.0
 
 
 func mouse_control(dx: float, dy: float, s_roll: float, s_pitch: float) -> void:

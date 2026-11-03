@@ -328,7 +328,7 @@ func _fly(dt: float) -> void:
 	if state != State.GROUND:
 		if state == State.STALL:
 			bank -= 150.0 * dt  # the original rolls off and drops the nose in a stall
-			pitch_rate -= m.y.y * 100.0  # per step, on top of any AI command (0x433b8f)
+			pitch_rate -= m.y.y * 100.0 * (dt / 0.01)  # 100 per original 10 ms update (0x433b8f)
 		# Each frame the rate loses 5 toward zero whatever the frame time, and may overshoot it (0x433ce6). An AI
 		# plane sets its command again each frame, so a small command turns the other way, which settles it on
 		# one edge of a +-5 band instead of on the aim line. The player's input integrates, so it keeps a rate.
@@ -493,7 +493,8 @@ func joy_roll(v: float, s: float, response_seconds := 0.0) -> void:
 
 
 func joy_pitch(v: float, s: float, dt: float, response_seconds := 0.0) -> void:
-	var target := v * s * 300.0 / ref_fps * high_pitch * _pitch_sign()
+	var multiplier := 20.0 if state == State.STALL else 300.0
+	var target := v * s * multiplier / ref_fps * high_pitch * _pitch_sign()
 	pitch_rate = move_toward(pitch_rate, target, maxf(absf(target), high_pitch) / response_seconds * dt) \
 		if response_seconds > 0.0 else target
 	_rate_set = true

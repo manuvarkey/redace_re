@@ -147,8 +147,7 @@ func _gyro_tilt() -> Vector2:
 
 
 func _joy_axis(axis: int) -> float:
-	var v := Input.get_joy_axis(0, axis - 1) if Input.get_connected_joypads().size() > 0 else 0.0
-	return v if absf(v) > 0.08 else 0.0
+	return Input.get_joy_axis(0, axis - 1) if Input.get_connected_joypads().size() > 0 else 0.0
 
 
 ## One joystick button (or hat direction, or gamepad trigger) held.

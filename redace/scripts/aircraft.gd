@@ -325,12 +325,10 @@ func _fly(dt: float) -> void:
 	elif state == State.STALL:
 		state = State.FLYING
 
-	if is_player and not autopilot:
-		_apply_player_roll(dt)
 	if state != State.GROUND:
 		if state == State.STALL:
 			bank -= 150.0 * dt  # the original rolls off and drops the nose in a stall
-			pitch_rate -= m.y.y * 100.0  # per step, on top of any AI command (0x433b8f)
+			pitch_rate -= m.y.y * 100.0 * (dt / 0.01)  # 100 per original 10 ms update (0x433b8f)
 		# Each frame the rate loses 5 toward zero whatever the frame time, and may overshoot it (0x433ce6). An AI
 		# plane sets its command again each frame, so a small command turns the other way, which settles it on
 		# one edge of a +-5 band instead of on the aim line. The player's input integrates, so it keeps a rate.
@@ -447,8 +445,7 @@ static var ref_fps := 100.0
 
 func mouse_control(dx: float, dy: float, s_roll: float, s_pitch: float) -> void:
 	var up_sign := 1.0 if flight_basis.y.y > 0.0 else -1.0
-	_roll_pending += (s_roll * 0.25 + 0.025) / ref_fps * high_roll * dx * up_sign
-	_roll_rate = _roll_speed(s_roll)
+	bank += (s_roll * 0.25 + 0.025) / ref_fps * high_roll * dx * up_sign
 	pitch_rate += (s_pitch * 2.5 + 0.25) / ref_fps * high_pitch * dy * _pitch_sign()
 
 
@@ -483,38 +480,23 @@ func key_pitch(axis: float, s: float, dt: float) -> void:
 		_rate_set = true
 
 
-## Roll speed limit for mouse and joystick, deg/s. Deviation (user request): the exe applies both at once, so a sudden move
-## tilts the plane instantly. The limit is the AI's 3 * highroll at the default sensitivity 0.5, and scales with sensitivity.
-func _roll_speed(s: float) -> float:
-	return high_roll * 6.0 * maxf(absf(s), 0.1)
-
-
-## Moves the bank by what the mouse or stick asked for, at most _roll_rate this step.
-func _apply_player_roll(dt: float) -> void:
-	if _roll_pending == 0.0:
-		return
-	var step := clampf(_roll_pending, -_roll_rate * dt, _roll_rate * dt)
-	bank += step
-	_roll_pending -= step
-	# upright the bank stops at 90: what is left over would only hold the plane there after the input ended
-	if flight_basis.y.y > 0.0 and absf(bank) >= 90.0 and signf(_roll_pending) == signf(bank):
-		_roll_pending = 0.0
-
-
-## Joystick (control type 5): the stick asks for a bank of value * s * 200 (reached at the rate above, see _roll_speed) and sets
-## the pitch rate (value * s * 300 * frame time * highpitch). In a stall the stick adds value * s * 50 deg/s instead (FUN_004322de).
-func joy_roll(v: float, s: float) -> void:
+## Direct is the executable's axis behaviour. Optional gradual response suits D-pads
+## and buttons that some controllers report as a full-scale axis in one frame.
+func joy_roll(v: float, s: float, response_seconds := 0.0) -> void:
 	var up_sign := 1.0 if flight_basis.y.y > 0.0 else -1.0
 	if state == State.STALL:
 		bank += up_sign * v * s * 50.0 * get_physics_process_delta_time()
-		_roll_pending = 0.0
 		return
-	_roll_pending = v * s * 200.0 * up_sign - bank
-	_roll_rate = _roll_speed(s)
+	var target := v * s * 200.0 * up_sign
+	bank = move_toward(bank, target, 200.0 * maxf(absf(s), 0.1) / response_seconds * get_physics_process_delta_time()) \
+		if response_seconds > 0.0 else target
 
 
-func joy_pitch(v: float, s: float, _dt: float) -> void:
-	pitch_rate = v * s * 300.0 / ref_fps * high_pitch * _pitch_sign()
+func joy_pitch(v: float, s: float, dt: float, response_seconds := 0.0) -> void:
+	var multiplier := 20.0 if state == State.STALL else 300.0
+	var target := v * s * multiplier / ref_fps * high_pitch * _pitch_sign()
+	pitch_rate = move_toward(pitch_rate, target, maxf(absf(target), high_pitch) / response_seconds * dt) \
+		if response_seconds > 0.0 else target
 	_rate_set = true
 
 
@@ -689,8 +671,6 @@ var _goal_timer := 0.0
 var attack_time_limit := 0.0  # 0x130 real (pilot + 0x414); 0 = no limit
 var _ai_bank := 0.0  # commanded bank, deg (pilot + 0x11c)
 var _decay_frames := 0.0
-var _roll_pending := 0.0  # bank change the player's mouse or stick has asked for and the plane has not made yet
-var _roll_rate := 0.0
 var _last_ai_bank := 0.0
 var _rate_set := false  # the player's input wrote the pitch rate this step, so the flight step acts on it like an AI's
 var _ai_pitch := NAN  # pitch rate commanded this frame, deg/s, + = nose up (pilot + 0x120, negated);

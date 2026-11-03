@@ -253,6 +253,7 @@ func _controls_defaults_row(html: String) -> String:
 		"cambehindvalue": "<a href=\"controldefault:joystick.ini\">Joystick</a>",
 		"camleftvalue": "<a href=\"controldefault:keyboard.ini\">Keyboard</a>",
 		"camrightvalue": "^joygyro^",
+		"specialvalue": "^joyresponse^",
 	}
 	for k in fill:
 		var cell := RegEx.create_from_string("(\\^%s\\^</center></a></td><td></td>\\s*)<td></td>" % k)
@@ -287,7 +288,7 @@ func _fill(html: String) -> String:
 		"quiturl": _link("command:quit", _s("quit")),
 		"homepage": "http://www.smallrockets.com/",
 		# registered copy: the exe's last writes leave "Version 1.02" and an empty second line (RedAce.c:46430)
-		"version1": "Version 1.02 (Remake v1.2.1)",
+		"version1": "Version 1.02 (Remake v1.3)",
 		"version2": "",
 		"continue": _continue_link(p),
 		"fullname": str(p.get("name", "")),
@@ -308,6 +309,8 @@ func _fill(html: String) -> String:
 		"pitchbar": _sens_bar(0, controls.bind.pitch.sensitivity),
 		"joygyro": "Gyroscope?" + _check("command:joygyro", controls.gyro_enabled, true) if controls.gyro_available() \
 			else "No gyroscope",
+		"joyresponse": "Stick: " + _link("command:joystickresponse",
+			{0: "Direct", 200: "Quick", 400: "Gentle"}.get(controls.joystick_response_ms, "Direct")),
 		"rollsign": _check("command:reverse:roll", controls.bind.roll.reversed, true),
 		"pitchsign": _check("command:reverse:pitch", controls.bind.pitch.reversed, true),
 		"throttlesign": _check("command:reverse:throttle", controls.bind.throttle.reversed, true),
@@ -646,6 +649,11 @@ func _command(c: String) -> void:
 		"joygyro":
 			controls.gyro_enabled = a.size() > 1 and a[1] == "1"
 			controls.recentre_gyro()
+			controls.save()
+			_refresh()
+		"joystickresponse":
+			var choices := [0, 200, 400]
+			controls.joystick_response_ms = choices[(choices.find(controls.joystick_response_ms) + 1) % choices.size()]
 			controls.save()
 			_refresh()
 		"reverse":

@@ -5,18 +5,32 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to build
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 env:
   GODOT_VERSION: 4.7.2
+  RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Restore persistent Android signing key
         env:
@@ -88,7 +102,7 @@ jobs:
           python3 - <<'PYEXPORT'
           import os, re, subprocess
           from pathlib import Path
-          tag = os.environ['GITHUB_REF_NAME']
+          tag = os.environ['RELEASE_TAG']
           match = re.fullmatch(r'v(\d+)\.(\d+)(?:\.(\d+))?', tag)
           if not match:
               raise SystemExit('Android releases require a vMAJOR.MINOR[.PATCH] tag.')
@@ -118,7 +132,7 @@ jobs:
 
       - name: Package
         run: |
-          v=${GITHUB_REF_NAME}
+          v=${RELEASE_TAG}
           mkdir dist
           (cd build/linux && zip -q -9 ../../dist/redace-$v-linux-x86_64.zip redace.x86_64 redace.pck)
           (cd build/windows && zip -q -9 ../../dist/redace-$v-windows-x86_64.zip redace.exe redace.pck)
@@ -128,9 +142,10 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          name: Red Ace remake ${{ github.ref_name }}
+          name: Red Ace remake ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.RELEASE_TAG }}
           body: |
-            Builds of the Godot 4 remake at ${{ github.ref_name }}.
+            Builds of the Godot 4 remake at ${{ env.RELEASE_TAG }}.
 
             - **Windows** / **Linux** (x86_64): unzip and run `redace.exe` / `redace.x86_64` (keep `redace.pck` next to it).
             - **Web**: unzip onto any static web server, or play at https://manuvarkey.github.io/redace_re/.

@@ -15,12 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 7544ee1d8ea24483d1c5e6c63789fca9af13cb47
-      - name: Create v1.6 at the validated release commit
+          ref: ${{ github.sha }}
+      - name: Create v1.6 at the current release commit
         run: |
           if git ls-remote --exit-code origin refs/tags/v1.6 >/dev/null 2>&1; then
             git fetch origin tag v1.6
-            test "$(git rev-list -n 1 v1.6)" = 7544ee1d8ea24483d1c5e6c63789fca9af13cb47
+            test "$(git rev-list -n 1 v1.6)" = "$GITHUB_SHA"
           else
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

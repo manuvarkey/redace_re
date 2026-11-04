@@ -18,6 +18,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore persistent Android signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          python3 - <<'PYKEY'
+          import base64, os
+          from pathlib import Path
+          required = ('KEYSTORE_BASE64', 'KEYSTORE_ALIAS', 'KEYSTORE_PASSWORD')
+          if any(not os.environ.get(name) for name in required):
+              raise SystemExit('Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_ALIAS and ANDROID_KEYSTORE_PASSWORD repository secrets. Never generate a new key per release.')
+          key = Path(os.environ['RUNNER_TEMP']) / 'redace-release.keystore'
+          key.touch(mode=0o600)
+          key.write_bytes(base64.b64decode(os.environ['KEYSTORE_BASE64'], validate=True))
+          key.chmod(0o600)
+          with open(os.environ['GITHUB_ENV'], 'a') as out:
+              out.write(f'GODOT_ANDROID_KEYSTORE_RELEASE_PATH={key}\n')
+          PYKEY
+
       - name: Install cabextract
         run: sudo apt-get update && sudo apt-get install -y cabextract
 
@@ -56,8 +76,45 @@ jobs:
           printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\n' \
             "$ANDROID_HOME" "$JAVA_HOME" > ~/.config/godot/editor_settings-4.7.tres
 
-      - name: Build
-        run: GODOT=~/godot/Godot_v$GODOT_VERSION-stable_linux.x86_64 ./build.sh Web Linux Windows Android
+      - name: Build Web, Linux and Windows
+        run: GODOT=~/godot/Godot_v$GODOT_VERSION-stable_linux.x86_64 ./build.sh Web Linux Windows
+
+      - name: Build Android with persistent signing and release version
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          mkdir -p build/android
+          python3 - <<'PYEXPORT'
+          import os, re, subprocess
+          from pathlib import Path
+          tag = os.environ['GITHUB_REF_NAME']
+          match = re.fullmatch(r'v(\d+)\.(\d+)(?:\.(\d+))?', tag)
+          if not match:
+              raise SystemExit('Android releases require a vMAJOR.MINOR[.PATCH] tag.')
+          major, minor, patch = (int(n or 0) for n in match.groups())
+          code = major * 1000000 + minor * 1000 + patch
+          if minor > 999 or patch > 999 or not 1 <= code <= 2100000000:
+              raise SystemExit('Android version components/code are out of range.')
+          presets = Path('redace/export_presets.cfg')
+          original = presets.read_text()
+          marker = '[preset.3.options]'
+          if marker not in original:
+              raise SystemExit('Android preset options were not found.')
+          before, options = original.split(marker, 1)
+          options, count = re.subn(r'^version/code=\d+$', f'version/code={code}', options, flags=re.M)
+          if count != 1:
+              raise SystemExit('Expected one Android version/code setting.')
+          options, count = re.subn(r'^version/name="[^\"]+"$', f'version/name="{tag[1:]}"', options, flags=re.M)
+          if count != 1:
+              raise SystemExit('Expected one Android version/name setting.')
+          godot = Path.home() / 'godot' / f'Godot_v{os.environ["GODOT_VERSION"]}-stable_linux.x86_64'
+          try:
+              presets.write_text(before + marker + options)
+              subprocess.run([str(godot), '--headless', '--path', 'redace', '--export-release', 'Android'], check=True)
+          finally:
+              presets.write_text(original)
+          PYEXPORT
 
       - name: Package
         run: |
@@ -77,6 +134,11 @@ jobs:
 
             - **Windows** / **Linux** (x86_64): unzip and run `redace.exe` / `redace.x86_64` (keep `redace.pck` next to it).
             - **Web**: unzip onto any static web server, or play at https://manuvarkey.github.io/redace_re/.
-            - **Android**: install the APK (debug-signed, arm64 and x86_64; allow installs from unknown sources).
+            - **Android**: install the APK (release-signed, arm64 and x86_64; allow installs from unknown sources).
+              Future APKs use the same signing key so updates preserve pilots and settings.
               Tilt to steer, or tap STICK for a drag stick.
           files: dist/*
+
+      - name: Remove temporary signing key
+        if: always()
+        run: python3 -c 'import os; from pathlib import Path; (Path(os.environ["RUNNER_TEMP"]) / "redace-release.keystore").unlink(missing_ok=True)'

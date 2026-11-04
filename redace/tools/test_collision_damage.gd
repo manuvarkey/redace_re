@@ -13,6 +13,9 @@ class TestWorld extends World:
 	func play_at(_pos: Vector3, _stream: AudioStream, _volume_db := 0.0) -> void:
 		pass
 
+	func ground_contact(_a: Vector3, _b: Vector3) -> Dictionary:
+		return {}
+
 	func flash(_node: Node3D, _seconds := 0.25) -> void:
 		pass
 
@@ -26,12 +29,9 @@ class TestPlane extends Aircraft:
 		set_process(false)
 		destroyed.connect(func(_plane): deaths += 1)
 
-	func probe_segments(prev: Vector3) -> Array:
-		return [[prev, prev + Vector3.RIGHT], [prev, prev + Vector3.UP]]
-
-	func box_hit(_a: Vector3, _b: Vector3) -> bool:
+	func collision_hit_count(_a: Vector3, _b: Vector3) -> int:
 		hits += 1
-		return true
+		return 1
 
 	func on_hit(_attacker) -> void:
 		pass
@@ -80,20 +80,23 @@ func run() -> void:
 	var c := plane(world)
 	var hidden_plane := plane(world)
 	hidden_plane.hidden = true
-	world.collide(a, Vector3.ZERO, 0.01)
-	check(a.deaths == 1 and a.falling, "prober dies once across multiple contacts")
+	# Original flags 0x401/0x601: two callback contacts cause 0.4 each way, not death.
+	for i in 2:
+		world._collide_segment(a, Vector3.ZERO, Vector3.RIGHT, 0.01)
+	check(a.deaths == 0 and is_equal_approx(a.health, 98.4), "prober takes fractional damage from both targets")
 	check(is_equal_approx(b.health, 99.2), "both probes damage the target by 0.4 each")
 	check(is_equal_approx(c.health, 99.2), "contacts continue beyond first aircraft")
 	check(hidden_plane.hits == 0, "hidden aircraft are excluded")
-	# B's probes must still collide with A after A has entered its falling state.
+	# B's probes still contact a falling A, but receive fractional damage.
+	a.take_damage(101.0)
 	world.planes.erase(c)
 	b._physics_process(0.01)
-	check(b.deaths == 1 and b.falling, "reciprocal contact with falling aircraft kills second prober")
+	check(b.deaths == 0 and b.health < 99.2, "contact with falling aircraft damages second prober gradually")
 	check(a.deaths == 1, "hits on falling target do not emit destruction again")
 	var hits_before := b.hits
 	a._physics_process(0.01)
 	check(a.moves == 1 and b.hits > hits_before, "falling aircraft still moves and probes objects")
-	check(a.deaths == 1 and b.deaths == 1, "falling collisions do not repeat death effects")
+	check(a.deaths == 1 and b.deaths == 0, "falling collisions do not repeat death effects")
 	a.falling = false
 	hits_before = b.hits
 	a._physics_process(0.01)

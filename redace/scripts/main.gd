@@ -672,6 +672,17 @@ func ground_normal(pos: Vector3) -> Vector3:
 	return (hit.normal as Vector3).normalized() if hit and hit.normal.y > 0.0 else Vector3.UP
 
 
+## Exact triangle contact used by the original lower probe's landing/bounce response.
+func ground_contact(from: Vector3, to: Vector3) -> Dictionary:
+	if from == to:
+		return {}
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	query.hit_back_faces = false
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	# FUN_00431607 only responds to strictly positive hit fractions.
+	return hit if not hit.is_empty() and from.distance_squared_to(hit.position) > 0.0 else {}
+
+
 ## Fraction along from..to where the segment first meets the terrain or an object, 0 when clear.
 func ground_hit_fraction(from: Vector3, to: Vector3) -> float:
 	var q := PhysicsRayQueryParameters3D.create(from, to)
@@ -1125,45 +1136,146 @@ static func segment_hits_box(a: Vector3, b: Vector3, lo: Vector3, hi: Vector3) -
 	return true
 
 
-## Plane against other planes and ground objects, as the exe does it (FUN_00431607 probes, callback
-## FUN_00430199 for each object whose geometry a probe meets, other than the plane itself):
-##   the object takes 2 * dt * plane endurance * (0.2 for aircraft, 15 for ground objects);
-##   the plane takes endurance + 1 (destroyed) from anything solid, or 2 * dt * object endurance * k
-##   from soft objects ([physics] soft = 1). Aircraft are never soft (mission flags 0x400 / 0x600).
+## FUN_00431607 interleaves terrain and per-atomic object callbacks. Aircraft
+## constructors set flag 1 (0x42d267), so plane-plane contact damages BOTH gradually.
 func collide(p: Aircraft, prev: Vector3, dt: float) -> void:
-	if p.hidden:
+	_collide_probes(p, prev, dt, true)
+
+
+func _collide_probes(p: Aircraft, prev: Vector3, dt: float, objects: bool) -> void:
+	if p.hidden or dt <= 0.0 or (p.state == Aircraft.State.DEAD and not p.falling):
 		return
-	var segs := p.probe_segments(prev)
-	var reach := p.global_position.distance_to(prev) + maxf(p.radius, maxf(p.front_length, maxf(p.back_length, maxf(p.down_length, p.port_length)))) + 20.0
-	# FUN_00431607 queries every probe; FUN_00430295 does not exclude dead targets.
-	for sg in segs:
-		for q in planes:
-			if q == p or q.hidden or q.global_position.distance_to(p.global_position) > reach + q.radius:
+	p._terrain_collision_processed = true
+	# The exe keeps these two centres fixed even when a lower contact moves the plane.
+	var origin := p.global_position
+	var margin := maxf(p.front_length, maxf(p.down_length, maxf(p.back_length, p.port_length)))
+	var candidates := _collision_candidates(p, prev, origin, margin) if objects else []
+	for index in 6:
+		if index == 2 and p.state == Aircraft.State.GROUND:
+			continue
+		var sg := p.probe_segment(index, prev, origin)
+		var hit := ground_contact(sg[0], sg[1])
+		if index <= 1 and not hit.is_empty():
+			p.crash()
+			return
+		if index >= 4 and not hit.is_empty():
+			p.wing_ground_contact()
+		if objects:
+			_collide_segment(p, sg[0], sg[1], dt, candidates)
+		if index == 2 and not hit.is_empty():
+			if not p.resolve_ground_contact(hit, sg[1], dt):
+				return
+		# The fourth terrain query is made by the exe but has no response.
+
+
+## Traverse one combined scene-order list. Test the WHOLE segment, rather than
+## only ground-grid cells near the endpoint. Wrecks retain their collision geometry.
+func _collision_candidates(p: Aircraft, a: Vector3, b: Vector3, margin := 0.0) -> Array:
+	var candidates: Array = []
+	for q in planes:
+		if q == p or q.hidden:
+			continue
+		if q._model != null:
+			q.prepare_collision_parts()
+			if not segment_near_node(q._model, q._collision_reach, a, b, margin):
 				continue
-			if q.box_hit(sg[0], sg[1]):
+		candidates.append({"node": q, "plane": q})
+	for t in targets:
+		_prepare_target_collision(t)
+		if segment_near_node(t.node, float(t.collision_reach), a, b, margin):
+			candidates.append({"node": t.node, "target": t})
+	candidates.sort_custom(func(x, y): return x.node.get_index() < y.node.get_index())
+	return candidates
+
+
+func _prepare_target_collision(t: Dictionary) -> void:
+	if t.get("collision_model", -1) != t.model_index:
+		t.collision_parts = collision_parts(t.node)
+		t.collision_reach = parts_reach(t.collision_parts)
+		t.collision_model = t.model_index
+
+
+func _collide_segment(p: Aircraft, a: Vector3, b: Vector3, dt: float, candidates: Variant = null) -> void:
+	if candidates == null:
+		candidates = _collision_candidates(p, a, b)
+	for candidate in candidates:
+		if candidate.has("plane"):
+			var q: Aircraft = candidate.plane
+			for contact in q.collision_hit_count(a, b):
 				q.take_damage(2.0 * dt * p.endurance * 0.2, p)
-				p.take_damage(p.endurance + 1.0, p)
+				p.take_damage(2.0 * dt * q.endurance * 0.2, p)
 				if _perf:
 					print("collision %s %d with %s %d" % [p.plane_name, p.object_id, q.plane_name, q.object_id])
-		for t in _targets_near(p.global_position):
-			if t.dead:
+		else:
+			var t: Dictionary = candidate.target
+			_prepare_target_collision(t)
+			if not segment_near_node(t.node, float(t.collision_reach), a, b):
 				continue
-			var node: Node3D = t.node
-			if node.global_position.distance_to(p.global_position) > reach + float(t.radius) * 2.0:
-				continue
-			var inv := node.global_transform.affine_inverse()
-			var box: AABB = t.aabb
-			var a: Vector3 = inv * sg[0]
-			var b: Vector3 = inv * sg[1]
-			if segment_hits_box(a, b, box.position, box.end) and _segment_hits_faces(t, a, b):
+			for contact in parts_hit_count(t.collision_parts, a, b):
 				_last_damage_source = "collision with " + p.plane_name
 				_damage_target(t, 2.0 * dt * p.endurance * 15.0)
 				if t.soft:
-					p.take_damage(2.0 * dt * float(t.endurance) * 15.0, t)
+					p.take_damage(2.0 * dt * float(t.endurance) * 15.0, p)
 				else:
 					p.take_damage(p.endurance + 1.0, p)
-				if _perf and not t.soft:
-					print("collision %s %d with %s" % [p.plane_name, p.object_id, t.name])
+
+
+static func collision_parts(model: Node3D) -> Array:
+	var parts := []
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null or mi.is_queued_for_deletion():
+			continue
+		var ancestor: Node = mi.get_parent()
+		var deleted := false
+		while ancestor != null and ancestor != model:
+			deleted = deleted or ancestor.is_queued_for_deletion()
+			ancestor = ancestor.get_parent()
+		if not deleted:
+			var box: AABB = mi.mesh.get_aabb()
+			var reach := box.position.abs().max(box.end.abs()).length()
+			var frame: Node3D = mi
+			# A sphere about each pivot bounds arbitrary child rotations, including propellers/turrets.
+			while frame != model:
+				reach = reach * frame.scale.abs()[frame.scale.abs().max_axis_index()] + frame.position.length()
+				frame = frame.get_parent() as Node3D
+			parts.append({"node": mi, "box": box, "faces": mi.mesh.get_faces(), "reach": reach})
+	return parts
+
+
+static func parts_reach(parts: Array) -> float:
+	var reach := 0.0
+	for part in parts:
+		reach = maxf(reach, part.reach)
+	return reach
+
+
+static func segment_near_node(node: Node3D, reach: float, a: Vector3, b: Vector3, margin := 0.0) -> bool:
+	var ab := b - a
+	var fraction := clampf((node.global_position - a).dot(ab) / maxf(ab.length_squared(), 1e-12), 0.0, 1.0)
+	var scale := node.global_basis.get_scale().abs()
+	var radius := reach * scale[scale.max_axis_index()] + margin
+	return node.global_position.distance_squared_to(a + ab * fraction) <= radius * radius
+
+
+static func parts_hit_count(parts: Array, a: Vector3, b: Vector3) -> int:
+	var hits := 0
+	for part in parts:
+		if not is_instance_valid(part.node) or part.node.is_queued_for_deletion():
+			continue
+		var inv: Transform3D = part.node.global_transform.affine_inverse()
+		var la := inv * a
+		var lb := inv * b
+		var box: AABB = part.box
+		if segment_hits_box(la, lb, box.position, box.end) and faces_hit(part.faces, la, lb):
+			hits += 1
+	return hits
+
+
+static func faces_hit(faces: PackedVector3Array, a: Vector3, b: Vector3) -> bool:
+	for i in range(0, faces.size() - 2, 3):
+		if Geometry3D.segment_intersects_triangle(a, b, faces[i], faces[i + 1], faces[i + 2]) != null:
+			return true
+	return false
 
 
 ## The exe tests the probe against the object's geometry, not its box (FUN_00430295): triangles of the

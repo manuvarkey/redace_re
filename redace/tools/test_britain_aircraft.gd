@@ -43,6 +43,10 @@ class TestWorld extends World:
 			return (from.y - floor) / (from.y - to.y)
 		return 0.0
 
+	func ground_contact(from: Vector3, to: Vector3) -> Dictionary:
+		var fraction := ground_hit_fraction(from, to)
+		return {"position": from.lerp(to, fraction), "normal": ground_normal(to)} if fraction > 0.0 else {}
+
 	func is_sea(pos: Vector3) -> bool:
 		sea_queries.append(pos)
 		return water

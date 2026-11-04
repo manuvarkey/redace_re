@@ -40,8 +40,8 @@ func run() -> void:
 	me._avoid_collision()
 	var goal := me.current_goal()
 	check(int(goal.get("type", 0)) == Aircraft.G_EVADE, "nearby group 8 aircraft triggers evade")
-	var expected := other.global_basis.z.cross(me.global_basis.y) * 50.0
-	check(goal.get("pos", Vector3.INF).is_equal_approx(expected), "sidestep uses both visual frames without normalizing")
+	var expected := Vector3(-50, 0, 0)  # Both unbanked frames are identity.
+	check(goal.get("pos", Vector3.INF).is_equal_approx(expected), "sidestep ignores visual bank and uses unbanked frames")
 	check(is_equal_approx(float(goal.get("radius", 0)), 1.5), "original 1.5 second evade duration")
 	me._avoid_collision()
 	check(me.goals.size() == 1, "active evade does not enqueue another evade")
@@ -59,7 +59,10 @@ func run() -> void:
 	check(me._ai_pitch == 20, "upright low-altitude pull-up matches original")
 	me.basis = Basis(Vector3.BACK, PI)
 	me._avoid_terrain()
-	check(me._ai_pitch == -20, "inverted visual frame reverses pull-up")
+	check(me._ai_pitch == 20, "visual bank alone does not invert terrain avoidance")
+	me.flight_basis = Basis(Vector3.BACK, PI)
+	me._avoid_terrain()
+	check(me._ai_pitch == -20, "inverted control frame reverses pull-up")
 	w.free()
 	print("Avoidance regression: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(1 if failures else 0)

@@ -97,6 +97,10 @@ var _blast_sound: AudioStream
 var _hit_sound_time := -1.0
 var _model: Node3D
 var _probe_previous_basis := Basis.IDENTITY
+var _terrain_collision_processed := false
+var _collision_parts_model: Node3D
+var _collision_parts: Array = []
+var _collision_reach := 0.0
 var _faces := PackedVector3Array()  # clump triangles in this node's space, for collisions
 var _rocket_sound: AudioStream
 var _shadow: Node3D
@@ -250,6 +254,7 @@ func _process(_dt: float) -> void:
 
 
 func _physics_process(dt: float) -> void:
+	_terrain_collision_processed = false
 	if state == State.DEAD:
 		if falling:
 			# state 2 is the normal flight step: the pilot keeps steering, as the AI's goals keep running (FUN_00438937)
@@ -285,7 +290,7 @@ func _physics_process(dt: float) -> void:
 	_fly(dt)
 	if state != State.DEAD:
 		world.collide(self, prev, dt)
-	if state != State.DEAD and state != State.GROUND:
+	if state != State.DEAD or falling:
 		_terrain_probes(prev)
 	_guns(dt)
 	_damage_smoke(dt)
@@ -296,7 +301,7 @@ func _physics_process(dt: float) -> void:
 
 
 func _fly(dt: float) -> void:
-	_probe_previous_basis = global_transform.basis
+	_probe_previous_basis = flight_basis
 	var m := flight_basis
 	var fwd := m.z
 	var k := clampf(speed / high_speed, 0.0, 1.5)
@@ -383,31 +388,9 @@ func _fly(dt: float) -> void:
 		velocity += Vector3.DOWN * mass * 10.0
 
 	var pos := global_position + velocity * dt
-	var ground := world.ground_height(pos)
 	if state == State.GROUND:
-		# hit point + normal * (down + 0.05) (RedAce.c:32176)
-		var n := world.ground_normal(pos)
-		pos.y = ground + (gear_height + 0.05) / maxf(n.y, 0.5)
-	elif pos.y - ground < gear_height and global_position.y - world.ground_height(global_position) >= gear_height:
-		# the down probe (gear height along -up) meets the ground (RedAce.c:32150): spinning, too fast or sinking
-		# faster than 10 crashes; under 5 lands; between them the plane bounces off along its reflected path
-		pos.y = ground + gear_height + 0.05
-		var n := world.ground_normal(pos)
-		var sink := velocity.dot(n)
-		if falling or speed > high_speed or sink < -10.0:
-			flight_basis = m
-			global_transform = Transform3D(visual, pos)
-			crash()
-			return
-		if sink >= -5.0:
-			if state == State.FLYING:
-				state = State.GROUND
-		else:
-			var at := (velocity - n * 2.0 * sink).normalized()
-			var side := Vector3(m.x.x, 0.0, m.x.z).normalized()
-			var lift_axis := at.cross(side).normalized()
-			m = Basis(lift_axis.cross(at).normalized(), lift_axis, at)
-			visual = m * Basis(Vector3.BACK, deg_to_rad(bank))
+		# Original state 4 projects vertically onto the ground, then adds downlength.
+		pos.y = world.ground_height(pos) + gear_height
 	flight_basis = m
 	global_transform = Transform3D(visual, pos)
 	_update_ahead_alt()
@@ -436,7 +419,7 @@ func _ground_attitude(m: Basis, dt: float) -> Basis:
 ## from the plane's height to y = 0 at the point 3 s ahead. Terrain above that height, or none below it, reads 0.
 func _update_ahead_alt() -> void:
 	var p := global_position
-	var at := global_transform.basis.z * speed * 3.0
+	var at := flight_basis.z * speed * 3.0
 	var from := Vector3(p.x + at.x, p.y, p.z + at.z)
 	ahead_alt = world.ground_hit_fraction(from, Vector3(from.x, 0.0, from.z)) * p.y
 
@@ -766,9 +749,9 @@ func _steer(aim: Vector3) -> void:
 	_avoid_collision()
 
 
-## FUN_0043b2a8 reads the model frame: pull up when low, reversed when inverted.
+## FUN_0043b2a8 reads the unbanked control frame (+0x08), not the render frame (+0x110).
 func _avoid_terrain() -> void:
-	var frame := global_transform.basis
+	var frame := flight_basis
 	var at_y := frame.z.y
 	if ahead_alt < 120.0 - 90.0 * at_y:
 		_ai_pitch = 20.0 - 70.0 * at_y if frame.y.y >= 0.0 else -(20.0 + 70.0 * at_y)
@@ -783,7 +766,7 @@ func _avoid_collision() -> void:
 		return
 	# Property 0x1a returns plane + 0x16c; +0x40/+0x38 are starboard/back lengths.
 	if global_position.distance_squared_to(o.global_position) < o.starboard_length * o.back_length * 2.5:
-		var side: Vector3 = o.global_transform.basis.z.cross(global_transform.basis.y)
+		var side: Vector3 = o.flight_basis.z.cross(flight_basis.y)
 		_push_goal({"type": G_EVADE, "pos": global_position + side * 50.0, "radius": 1.5, "targetid": 0})
 
 
@@ -1154,67 +1137,90 @@ func counts_as_lost() -> bool:
 	return groups & (1 << 9) != 0 if left_map else hidden
 
 
-## FUN_00431607, in callback order. The exe uses the previous visual frame for
-## the nose and lower starts, the flight frame for top/wing ends, and the current
-## visual frame for lower ends. Its fourth probe uses backlength along -up.
+## FUN_00431607: +0x08 and the saved +0xd0 are unbanked; +0x110 is the
+## banked RenderWare frame (bank rotation at 0x4343c9). Indices retain exe order.
+func probe_segment(index: int, prev: Vector3, origin: Vector3) -> Array:
+	match index:
+		0: return [prev, prev + _probe_previous_basis.z * front_length]
+		1: return [prev, origin + global_transform.basis.y * down_length]
+		2: return [prev - _probe_previous_basis.y * down_length, origin - flight_basis.y * down_length]
+		3: return [prev - _probe_previous_basis.y * back_length, origin - flight_basis.y * back_length]
+		4: return [prev, origin - global_transform.basis.x * port_length]
+		5: return [prev, origin + global_transform.basis.x * port_length]
+	return []
+
+
 func probe_segments(prev: Vector3) -> Array:
-	var old := _probe_previous_basis
-	var b := global_transform.basis
-	var p := global_position
-	var segs := [[prev, prev + old.z * front_length],
-		[prev, p + flight_basis.y * down_length]]
-	if state != State.GROUND:
-		segs.append([prev - old.y * down_length, p - b.y * down_length])
-	segs.append([prev - old.y * back_length, p - b.y * back_length])
-	segs.append([prev, p - flight_basis.x * port_length])
-	segs.append([prev, p + flight_basis.x * port_length])
+	var segs := []
+	for index in 6:
+		if index != 2 or state != State.GROUND:
+			segs.append(probe_segment(index, prev, global_position))
 	return segs
 
 
-## Terrain probes of FUN_00431607 use the same nose and wing paths as object tests.
-## The nose segment meeting the ground crashes the plane (state 3);
-## a wingtip segment meeting it adds 1 damage and sends the plane into its falling spin (state 2).
-## (The exe also runs them while taxiing; here only in the air, so uneven runways do not clip wingtips.)
+## Legacy terrain-only entry point and mod hook. World.collide normally interleaves
+## these tests with object callbacks; do not run them twice in the same flight step.
 func _terrain_probes(prev: Vector3) -> void:
-	var segs := probe_segments(prev)
-	if world.ground_hit_fraction(segs[0][0], segs[0][1]) > 0.0:
+	if not _terrain_collision_processed:
+		world._collide_probes(self, prev, get_physics_process_delta_time(), false)
+
+
+## Underside contact of FUN_00431607. Impact speed is the endpoint-to-contact
+## displacement along the hit triangle normal divided by dt, not velocity at the centre.
+func resolve_ground_contact(hit: Dictionary, endpoint: Vector3, dt: float) -> bool:
+	var normal: Vector3 = hit.normal
+	var contact: Vector3 = hit.position
+	var displacement := endpoint - contact
+	var sink := displacement.dot(normal) / dt
+	if sink < -10.0 or speed > high_speed or falling:
 		crash()
-		return
-	for sg in segs.slice(segs.size() - 2):
-		if world.ground_hit_fraction(sg[0], sg[1]) > 0.0:
-			# no burst: the exe only sets state 2
-			var was_alive := state != State.DEAD
-			health -= 1.0
-			state = State.DEAD
-			falling = true
-			if was_alive:
-				destroyed.emit(self)
-			return
+		return false
+	var offset := normal * (down_length + 0.05)
+	if sink >= -5.0:
+		if state == State.FLYING:
+			state = State.GROUND
+		global_position = contact + offset
+	else:
+		# Rotate displacement 180 degrees about the normal, then negate: reflection.
+		var reflected := displacement.bounce(normal)
+		global_position = contact + reflected + offset
+		var forward := reflected.normalized()
+		var up := forward.cross(flight_basis.x).normalized()
+		if not up.is_zero_approx():
+			flight_basis = Basis(flight_basis.x, up, forward)
+	return true
 
 
-## Does segment a..b meet the current model triangles (bounds first)?
-func box_hit(a: Vector3, b: Vector3) -> bool:
+func wing_ground_contact() -> void:
+	health -= 1.0
+	if state != State.DEAD:
+		state = State.DEAD
+		falling = true
+		destroyed.emit(self)
+
+
+## One callback per intersected RenderWare atomic, stopping at its first triangle.
+## Parts retain their own live transforms (e.g. a spinning propeller).
+func prepare_collision_parts() -> void:
+	if not is_instance_valid(_collision_parts_model) or _collision_parts_model != _model:
+		_collision_parts_model = _model
+		_collision_parts = World.collision_parts(_model)
+		_collision_reach = World.parts_reach(_collision_parts)
+
+
+func collision_hit_count(a: Vector3, b: Vector3) -> int:
+	if _model != null:
+		prepare_collision_parts()
+		if not World.segment_near_node(_model, _collision_reach, a, b):
+			return 0
+		return World.parts_hit_count(_collision_parts, a, b)
+	# Also supports procedural aircraft with collision triangles but no visible model.
 	var inv := global_transform.affine_inverse()
-	var la := inv * a
-	var lb := inv * b
-	# FUN_00430295 tests the current clump, including its damage model.
-	if _faces.is_empty() and _model:
-		var to_self := global_transform.affine_inverse()
-		for mi in _model.find_children("*", "MeshInstance3D", true, false):
-			var xf: Transform3D = to_self * (mi as MeshInstance3D).global_transform
-			for v in (mi as MeshInstance3D).mesh.get_faces():
-				_faces.append(xf * v)
-	if _faces.is_empty():
-		return false
-	var box := AABB(_faces[0], Vector3.ZERO)
-	for v in _faces:
-		box = box.expand(v)
-	if not World.segment_hits_box(la, lb, box.position, box.end):
-		return false
-	for i in range(0, _faces.size() - 2, 3):
-		if Geometry3D.segment_intersects_triangle(la, lb, _faces[i], _faces[i + 1], _faces[i + 2]) != null:
-			return true
-	return false
+	return int(World.faces_hit(_faces, inv * a, inv * b))
+
+
+func box_hit(a: Vector3, b: Vector3) -> bool:
+	return collision_hit_count(a, b) > 0
 
 
 ## AI planes more than 150 outside the world box are sent away for good (0x438fb2).

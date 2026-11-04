@@ -30,11 +30,11 @@ func run() -> void:
 	var probes := p.probe_segments(prev)
 	check(probes.size() == 6, "six airborne probes")
 	segment(probes[0], prev, Vector3(8, 2, 3), "nose uses previous position and forward")
-	segment(probes[1], prev, Vector3(10, 20, 32), "top uses current flight up and downlength")
-	segment(probes[2], Vector3(1, 0, 3), Vector3(12, 20, 30), "bottom sweeps both offset ends")
-	segment(probes[3], Vector3(1, -6, 3), Vector3(18, 20, 30), "fourth probe uses backlength along minus up")
-	segment(probes[4], prev, Vector3(1, 20, 30), "negative wing uses flight frame")
-	segment(probes[5], prev, Vector3(19, 20, 30), "positive wing uses same model extent")
+	segment(probes[1], prev, Vector3(8, 20, 30), "top uses banked render up and downlength")
+	segment(probes[2], Vector3(1, 0, 3), Vector3(10, 20, 28), "bottom uses previous/current unbanked up")
+	segment(probes[3], Vector3(1, -6, 3), Vector3(10, 20, 22), "fourth probe uses unbanked up and backlength")
+	segment(probes[4], prev, Vector3(10, 11, 30), "negative wing uses banked render frame")
+	segment(probes[5], prev, Vector3(10, 29, 30), "positive wing uses banked render frame")
 	p.state = Aircraft.State.GROUND
 	check(p.probe_segments(prev).size() == 5, "ground state omits underside sweep")
 

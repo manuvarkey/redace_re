@@ -54,8 +54,10 @@ Underside normal speed is `(endpoint-contact).dot(normal)/dt`:
 - Between -10 and -5: reflect the displacement about the normal, place at contact plus reflected
   displacement plus the normal offset, and steer toward the reflected direction.
 
-Ground-state movement still projects vertically onto the ground and adds down length, matching
-original state 4. The removed approximation was the airborne next-center height check: this
+Parked initialization projects the mission position onto the runway and adds wheel height before
+the first saved probe origin, matching the original constructor. Scripted airborne appearances
+run afterward and retain their specified altitude. Ground-state movement still projects vertically
+onto the ground and adds down length, matching original state 4. The removed approximation was the airborne next-center height check: this
 could snap a plane up a cliff before its swept probes had a chance to register a crash.
 
 ## Geometry and broad phase

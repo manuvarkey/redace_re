@@ -179,6 +179,7 @@ func run() -> void:
 	world.real_segment(p, Vector3(-2, 0, 0), Vector3(2, 0, 0), 0.01)
 	check(is_equal_approx(p.health, 99.2) and is_equal_approx(q.health, 199.6), "aircraft constructors' soft flag gives fractional damage both ways")
 	await real_terrain()
+	await ground_start_regression()
 	world.free()
 	print("Collision management: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)
@@ -233,4 +234,41 @@ func real_terrain() -> void:
 	check(is_equal_approx(aircraft.position.y, 2.05), "flight step does not teleport up a cliff using endpoint ground height")
 	terrain.collide(aircraft, prev, 0.2)
 	check(aircraft.crashed and aircraft.deaths == 1, "real vertical cliff contact crashes before later probes")
+	terrain.free()
+
+
+func ground_start_regression() -> void:
+	var terrain := PhysicsWorld.new()
+	root.add_child(terrain)
+	body(terrain, Vector3(100, 2, 100), Vector3(0, -1, 0))
+	var runway: Node3D = terrain.get_child(0)
+	runway.rotation.x = -0.05
+	runway.position = runway.basis * Vector3.DOWN
+	var aircraft := TestPlane.new()
+	aircraft.world = terrain
+	aircraft.is_player = true
+	terrain.add_child(aircraft)
+	aircraft.position = Vector3(0, 0.002, 0)
+	aircraft.down_length = 2
+	aircraft.gear_height = 2
+	aircraft.front_length = 6
+	aircraft.tail_length = 5
+	aircraft._first_frame = true
+	await physics_frame
+	await physics_frame
+	aircraft._physics_process(1.0 / 60.0)
+	check(aircraft.state == Aircraft.State.GROUND and aircraft.deaths == 0,
+		"first parked sweep starts at wheel height, not the raw mission ground position")
+	check(aircraft.position.y >= 1.99, "parked plane is initialized above the sloped runway")
+	for tick in 30:
+		aircraft._physics_process(1.0 / 60.0)
+	check(aircraft.state == Aircraft.State.GROUND and aircraft.deaths == 0, "parked aircraft remains stable on later runway sweeps")
+	var airborne := TestPlane.new()
+	airborne.world = terrain
+	airborne.is_player = true
+	terrain.add_child(airborne)
+	airborne.position = Vector3.ZERO
+	airborne.goals.assign([{"type": Aircraft.G_APPEAR, "pos": Vector3(0, 30, 0), "targetid": 0, "radius": 0.0}])
+	airborne._physics_process(1.0 / 60.0)
+	check(airborne.state != Aircraft.State.DEAD and airborne.position.y > 29.0, "airborne appearance overrides parked initialization")
 	terrain.free()

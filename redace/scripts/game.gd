@@ -368,10 +368,22 @@ func _level_selector() -> String:
 	# replay any mission the current pilot has reached (all of them after completing the game)
 	var p := _pilot()
 	var top := LAST_MISSION if _any_completed() else maxi(int(p.get("mission", 1)) - 1, 0)
-	var out := ""
-	for m in range(1, mini(top, LAST_MISSION) + 1):
-		out += "<a href=\"missions\\%d\\mission.html\">%s %d</a> <br>" % [m, _s("mission"), m]
-	return out
+	var count := mini(top, LAST_MISSION)
+	if count == 0:
+		return ""
+	# Fill down the left column, then down the right; 25 missions need only 13 rows.
+	var rows := ceili(count / 2.0)
+	var out := "<table width=200>"
+	for row in rows:
+		out += "<tr>"
+		for column in 2:
+			var mission := row + column * rows + 1
+			out += "<td width=100 height=16 align=center>"
+			if mission <= count:
+				out += _link("missions\\%d\\mission.html" % mission, "%s %d" % [_s("mission"), mission])
+			out += "</td>"
+		out += "</tr>"
+	return out + "</table>"
 
 
 func _any_completed() -> bool:

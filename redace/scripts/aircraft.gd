@@ -277,6 +277,10 @@ func _physics_process(dt: float) -> void:
 		state = State.GROUND
 		speed = 0.0
 		throttle = 0.0
+		# The exe's constructor lifts the parked centre before saving its old matrix.
+		# Mission positions lie on the runway; using one as the first probe origin
+		# makes the nose intersect rising terrain before the centre is lifted in _fly.
+		global_position.y = world.ground_height(global_position) + gear_height
 	if not is_player or autopilot:
 		_ai(dt)
 		_apply_ai_commands()

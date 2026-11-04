@@ -364,12 +364,13 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
   are all opaque; the dark corners are transparent in the original); the HUD samples them with mipmaps.
 - Mouse cursor: the original's own (`Ui/cursor.ini`: `menucursor.bmp` + mask), frame 0 (arrow) on all
   pages including over links, hotspot at the tip, Real-ESRGAN-upscaled and shown at the page scale.
-- Collisions (`FUN_00431607` probes, `FUN_00430199`): nose/tail/wingtip/top/underside segments from the
-  previous position, against other planes' and ground objects' triangles (box test first), as the exe tests atomics.
-  Deviation: the probes keep plane.ini's [collision] lengths; the exe's wingspan-sized ones made the
-  remake's formations collide constantly. Hitting a
+- Collisions (`FUN_00431607` probes, `FUN_00430199`): model bounds replace INI collision lengths.
+  Nose, top, lower and wing probes use the original previous/current visual and flight frames,
+  against other planes' and ground objects' triangles (box test first). Hitting a
   plane or solid object destroys the prober (endurance + 1); the other takes 2 * dt * endurance * 0.2
   (planes) or * 15 (ground objects); `[physics] soft = 1` objects (trees) wear the plane down instead.
+  All probes process their contacts, including falling/crashed aircraft as targets; falling aircraft
+  continue probing. Repeated lethal hits do not repeat destruction effects.
   Nose into terrain crashes; a wingtip into terrain sends the plane into its falling spin.
 - Joystick: an axis on Throttle is an absolute lever like the exe (a self-centring axis returns to half);
   a joystick button (or gamepad trigger) pressed on a Throttle/Roll/Pitch row binds upbutton/downbutton,

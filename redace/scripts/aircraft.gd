@@ -96,6 +96,7 @@ var _smoke_timer := 0.0
 var _blast_sound: AudioStream
 var _hit_sound_time := -1.0
 var _model: Node3D
+var _probe_previous_basis := Basis.IDENTITY
 var _faces := PackedVector3Array()  # clump triangles in this node's space, for collisions
 var _rocket_sound: AudioStream
 var _shadow: Node3D
@@ -168,19 +169,20 @@ func setup(name_: String, main: World) -> void:
 	speed = cruise_speed
 
 
-## Gear height and tail length from the clump's vertex bounds (decomp FUN_0042e91a, RedAce.c:30730:
-## every atomic's untransformed vertices; the exe replaces all six [collision] lengths with them):
-## down = -min y (the wheels), back = -min z. Parked, the plane sits down + 0.05 above the ground, nose up
-## by atan(down / back), which rests it on wheels and tail skid. Deviation: the collision probes keep the
-## plane.ini lengths; with the exe's wingspan-sized probes the remake's formations kept colliding.
+## Model bounds replace the six INI collision lengths (FUN_0042e91a, 0x42e7c8).
 func _lengths_from_model(model: Node3D) -> void:
-	var lo := Vector3(INF, INF, INF)
-	for mi in model.find_children("*", "MeshInstance3D", true, false):
-		lo = lo.min((mi as MeshInstance3D).get_aabb().position)
-	if lo.is_finite():
-		gear_height = -lo.y
-		tail_length = -lo.z
 	_read_atoms(model)
+	var box: AABB = _geometry_cache[plane_name].box
+	front_length = box.end.z
+	back_length = -box.position.z
+	port_length = -box.position.x
+	starboard_length = box.end.x
+	up_length = box.end.y
+	down_length = -box.position.y
+	gear_height = down_length
+	tail_length = back_length
+	radius = box.position.abs().max(box.end.abs()).length()
+
 
 
 ## Atomic spheres and the clump box, which replaces plane.ini's [collision] lengths in the exe
@@ -207,7 +209,7 @@ func _read_atoms(model: Node3D) -> void:
 			for v in own:
 				box = AABB(v, Vector3.ZERO) if first else box.expand(v)
 				first = false
-		_geometry_cache[plane_name] = {"atoms": list,
+		_geometry_cache[plane_name] = {"atoms": list, "box": box,
 			"hit": maxf(-box.position.z, 0.0) * maxf(box.end.x, 0.0)}
 	atoms = _geometry_cache[plane_name].atoms
 	hit_radius_sq = _geometry_cache[plane_name].hit
@@ -228,6 +230,7 @@ func place(t: Transform3D) -> void:
 	flight_basis = t.basis.orthonormalized()
 	bank = 0.0
 	global_transform = t
+	_probe_previous_basis = t.basis
 
 
 func _make_player(stream: AudioStream, unit: float) -> AudioStreamPlayer3D:
@@ -256,6 +259,8 @@ func _physics_process(dt: float) -> void:
 			var from := global_position
 			_fly(dt)
 			if falling:
+				# Original state 2 still runs object collision probes (FUN_00430851).
+				world.collide(self, from, dt)
 				_terrain_probes(from)
 				_damage_smoke(dt)
 		return
@@ -291,6 +296,7 @@ func _physics_process(dt: float) -> void:
 
 
 func _fly(dt: float) -> void:
+	_probe_previous_basis = global_transform.basis
 	var m := flight_basis
 	var fwd := m.z
 	var k := clampf(speed / high_speed, 0.0, 1.5)
@@ -430,7 +436,7 @@ func _ground_attitude(m: Basis, dt: float) -> Basis:
 ## from the plane's height to y = 0 at the point 3 s ahead. Terrain above that height, or none below it, reads 0.
 func _update_ahead_alt() -> void:
 	var p := global_position
-	var at := flight_basis.z * speed * 3.0
+	var at := global_transform.basis.z * speed * 3.0
 	var from := Vector3(p.x + at.x, p.y, p.z + at.z)
 	ahead_alt = world.ground_hit_fraction(from, Vector3(from.x, 0.0, from.z)) * p.y
 
@@ -760,11 +766,12 @@ func _steer(aim: Vector3) -> void:
 	_avoid_collision()
 
 
-## FUN_0043b2a8: pull up when low; the threshold rises when diving.
+## FUN_0043b2a8 reads the model frame: pull up when low, reversed when inverted.
 func _avoid_terrain() -> void:
-	var at_y := flight_basis.z.y
+	var frame := global_transform.basis
+	var at_y := frame.z.y
 	if ahead_alt < 120.0 - 90.0 * at_y:
-		_ai_pitch = 20.0 - 70.0 * at_y if flight_basis.y.y >= 0.0 else -(20.0 + 70.0 * at_y)
+		_ai_pitch = 20.0 - 70.0 * at_y if frame.y.y >= 0.0 else -(20.0 + 70.0 * at_y)
 
 
 ## FUN_004394df: sidestep (0x60 for 1.5 s) when close to the nearest member of group 8 (player and allies).
@@ -774,9 +781,9 @@ func _avoid_collision() -> void:
 	var o = world.object_for_goal(-8, self)
 	if not (o is Aircraft):
 		return
-	var r: float = o.radius
-	if global_position.distance_squared_to(o.global_position) < r * o.back_length * 2.5:
-		var side: Vector3 = o.flight_basis.z.cross(flight_basis.y)
+	# Property 0x1a returns plane + 0x16c; +0x40/+0x38 are starboard/back lengths.
+	if global_position.distance_squared_to(o.global_position) < o.starboard_length * o.back_length * 2.5:
+		var side: Vector3 = o.global_transform.basis.z.cross(global_transform.basis.y)
 		_push_goal({"type": G_EVADE, "pos": global_position + side * 50.0, "radius": 1.5, "targetid": 0})
 
 
@@ -1147,50 +1154,63 @@ func counts_as_lost() -> bool:
 	return groups & (1 << 9) != 0 if left_map else hidden
 
 
-## Collision probes (decomp FUN_00431607): segments from the previous position to the nose, tail,
-## wingtips, top and underside, using plane.ini [collision] lengths. basis.x is the left (port) wing.
+## FUN_00431607, in callback order. The exe uses the previous visual frame for
+## the nose and lower starts, the flight frame for top/wing ends, and the current
+## visual frame for lower ends. Its fourth probe uses backlength along -up.
 func probe_segments(prev: Vector3) -> Array:
+	var old := _probe_previous_basis
 	var b := global_transform.basis
 	var p := global_position
-	return [p + b.z * front_length, p - b.z * back_length, p + b.x * port_length, p - b.x * starboard_length,
-		p + b.y * up_length, p - b.y * down_length].map(func(e: Vector3) -> Array: return [prev, e])
+	var segs := [[prev, prev + old.z * front_length],
+		[prev, p + flight_basis.y * down_length]]
+	if state != State.GROUND:
+		segs.append([prev - old.y * down_length, p - b.y * down_length])
+	segs.append([prev - old.y * back_length, p - b.y * back_length])
+	segs.append([prev, p - flight_basis.x * port_length])
+	segs.append([prev, p + flight_basis.x * port_length])
+	return segs
 
 
-## Terrain probes of FUN_00431607: the nose segment meeting the ground crashes the plane (state 3);
+## Terrain probes of FUN_00431607 use the same nose and wing paths as object tests.
+## The nose segment meeting the ground crashes the plane (state 3);
 ## a wingtip segment meeting it adds 1 damage and sends the plane into its falling spin (state 2).
 ## (The exe also runs them while taxiing; here only in the air, so uneven runways do not clip wingtips.)
 func _terrain_probes(prev: Vector3) -> void:
-	var b := global_transform.basis
-	var p := global_position
-	if world.ground_hit_fraction(prev, p + b.z * front_length) > 0.0:
+	var segs := probe_segments(prev)
+	if world.ground_hit_fraction(segs[0][0], segs[0][1]) > 0.0:
 		crash()
 		return
-	for tip in [p + b.x * port_length, p - b.x * starboard_length]:
-		if world.ground_hit_fraction(prev, tip) > 0.0:
+	for sg in segs.slice(segs.size() - 2):
+		if world.ground_hit_fraction(sg[0], sg[1]) > 0.0:
 			# no burst: the exe only sets state 2
+			var was_alive := state != State.DEAD
 			health -= 1.0
 			state = State.DEAD
 			falling = true
-			destroyed.emit(self)
+			if was_alive:
+				destroyed.emit(self)
 			return
 
 
-## Does the segment a..b pass through this plane's collision box?
+## Does segment a..b meet the current model triangles (bounds first)?
 func box_hit(a: Vector3, b: Vector3) -> bool:
 	var inv := global_transform.affine_inverse()
 	var la := inv * a
 	var lb := inv * b
-	var lo := Vector3(-starboard_length, -down_length, -back_length)
-	var hi := Vector3(port_length, up_length, front_length)
-	if not World.segment_hits_box(la, lb, lo, hi):
-		return false
-	# then against the clump's triangles, as the exe's atomic test (FUN_00430295)
+	# FUN_00430295 tests the current clump, including its damage model.
 	if _faces.is_empty() and _model:
 		var to_self := global_transform.affine_inverse()
 		for mi in _model.find_children("*", "MeshInstance3D", true, false):
 			var xf: Transform3D = to_self * (mi as MeshInstance3D).global_transform
 			for v in (mi as MeshInstance3D).mesh.get_faces():
 				_faces.append(xf * v)
+	if _faces.is_empty():
+		return false
+	var box := AABB(_faces[0], Vector3.ZERO)
+	for v in _faces:
+		box = box.expand(v)
+	if not World.segment_hits_box(la, lb, box.position, box.end):
+		return false
 	for i in range(0, _faces.size() - 2, 3):
 		if Geometry3D.segment_intersects_triangle(la, lb, _faces[i], _faces[i + 1], _faces[i + 2]) != null:
 			return true

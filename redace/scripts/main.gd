@@ -1134,26 +1134,25 @@ func collide(p: Aircraft, prev: Vector3, dt: float) -> void:
 	if p.hidden:
 		return
 	var segs := p.probe_segments(prev)
-	var reach := p.global_position.distance_to(prev) + maxf(p.radius, p.front_length) + 20.0
-	for q in planes:
-		if q == p or not q.present() or q.global_position.distance_to(p.global_position) > reach + q.radius:
-			continue
-		for sg in segs:
+	var reach := p.global_position.distance_to(prev) + maxf(p.radius, maxf(p.front_length, maxf(p.back_length, maxf(p.down_length, p.port_length)))) + 20.0
+	# FUN_00431607 queries every probe; FUN_00430295 does not exclude dead targets.
+	for sg in segs:
+		for q in planes:
+			if q == p or q.hidden or q.global_position.distance_to(p.global_position) > reach + q.radius:
+				continue
 			if q.box_hit(sg[0], sg[1]):
 				q.take_damage(2.0 * dt * p.endurance * 0.2, p)
 				p.take_damage(p.endurance + 1.0, p)
 				if _perf:
 					print("collision %s %d with %s %d" % [p.plane_name, p.object_id, q.plane_name, q.object_id])
-				return
-	for t in _targets_near(p.global_position):
-		if t.dead:
-			continue
-		var node: Node3D = t.node
-		if node.global_position.distance_to(p.global_position) > reach + float(t.radius) * 2.0:
-			continue
-		var inv := node.global_transform.affine_inverse()
-		var box: AABB = t.aabb
-		for sg in segs:
+		for t in _targets_near(p.global_position):
+			if t.dead:
+				continue
+			var node: Node3D = t.node
+			if node.global_position.distance_to(p.global_position) > reach + float(t.radius) * 2.0:
+				continue
+			var inv := node.global_transform.affine_inverse()
+			var box: AABB = t.aabb
 			var a: Vector3 = inv * sg[0]
 			var b: Vector3 = inv * sg[1]
 			if segment_hits_box(a, b, box.position, box.end) and _segment_hits_faces(t, a, b):
@@ -1165,7 +1164,6 @@ func collide(p: Aircraft, prev: Vector3, dt: float) -> void:
 					p.take_damage(p.endurance + 1.0, p)
 				if _perf and not t.soft:
 					print("collision %s %d with %s" % [p.plane_name, p.object_id, t.name])
-				return
 
 
 ## The exe tests the probe against the object's geometry, not its box (FUN_00430295): triangles of the

@@ -451,7 +451,12 @@ func mouse_control(dx: float, dy: float, s_roll: float, s_pitch: float) -> void:
 
 ## Pitch input reverses when the rolled plane and its unrolled flight frame point opposite ways up (FUN_004322de).
 func _pitch_sign() -> float:
-	return 1.0 if (global_transform.basis.y.y < 0.0) == (flight_basis.y.y < 0.0) else -1.0
+	var visual_up_y := global_transform.basis.y.y
+	# Input can change bank before the visual transform is rebuilt. At the stored 90°
+	# roll, Godot's cos(PI / 2) rounds negative; the exe's angle factor leaves it positive.
+	if absf(global_transform.basis.y.dot(flight_basis.y)) < 0.000001:
+		return 1.0
+	return 1.0 if (visual_up_y < 0.0) == (flight_basis.y.y < 0.0) else -1.0
 
 
 ## Player keyboard input (control type 1): -1/0/1 per axis. Releasing roll levels the wings at highroll deg/s.

@@ -103,13 +103,12 @@ func _draw_status(p: Aircraft, s: float) -> void:
 		int(24 * s), Color(1, 1, 1))
 
 
-## Heading angle as the original computes it: atan(at.z / at.x) (+pi when at.x >= 0) - pi/2.
+## Equivalent to the original atan(at.z / at.x) with its quadrant adjustment, for horizontal headings.
 func _heading(p: Aircraft) -> float:
 	var at := p.flight_basis.z
-	var h := atan(at.z / at.x) if not is_zero_approx(at.x) else PI * 0.5 * signf(at.z)
-	if at.x >= 0.0:
-		h += PI
-	return h - PI * 0.5
+	if at.x == 0.0 and at.z == 0.0:
+		return 0.0
+	return atan2(at.x, -at.z)
 
 
 func _draw_map(p: Aircraft, s: float) -> void:

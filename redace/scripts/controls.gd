@@ -192,8 +192,9 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 	var t: Dictionary = bind.throttle
 	var rs := -1.0 if r.reversed else 1.0
 	var ps := -1.0 if q.reversed else 1.0
+	var ts := -1.0 if t.reversed else 1.0
 	if touch != null and touch.active:
-		_drive_touch(p, r.sensitivity * rs, q.sensitivity * ps, dt)
+		_drive_touch(p, r.sensitivity * rs, q.sensitivity * ps, rs, ps, ts, dt)
 		return
 	var tilt := _gyro_tilt()
 	var response := float(joystick_response_ms) / 1000.0
@@ -215,7 +216,7 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 			p.joy_roll((v if v != 0.0 else tilt.x) * rs, r.sensitivity, response)
 		_:
 			# upkey = roll left, downkey = roll right (keyboard.ini: upkey = leftarrow)
-			p.key_roll(_pressed_key(r.downkey) - _pressed_key(r.upkey), r.sensitivity, dt)
+			p.key_roll((_pressed_key(r.downkey) - _pressed_key(r.upkey)) * rs, r.sensitivity, dt)
 	# pitch
 	match q.type:
 		"mouse":
@@ -234,38 +235,38 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 			p.joy_pitch((v if v != 0.0 else tilt.y) * ps, q.sensitivity, dt, response)
 		_:
 			# upkey = nose down (keyboard.ini: upkey = uparrow)
-			p.key_pitch(_pressed_key(q.downkey) - _pressed_key(q.upkey), q.sensitivity, dt)
+			p.key_pitch((_pressed_key(q.downkey) - _pressed_key(q.upkey)) * ps, q.sensitivity, dt)
 	# throttle
 	match t.type:
 		"joystick" when int(t.axis) == 0:
-			p.throttle = clampf(p.throttle + _joy_buttons(t) * t.sensitivity * dt, 0.0, 1.0)
+			p.throttle = clampf(p.throttle + _joy_buttons(t) * ts * t.sensitivity * dt, 0.0, 1.0)
 		"joystick":
-			p.throttle = clampf((-_joy_axis(t.axis) * (-1.0 if t.reversed else 1.0) * t.sensitivity + 1.0) * 0.5, 0.0, 1.0)
+			p.throttle = clampf((-_joy_axis(t.axis) * ts * t.sensitivity + 1.0) * 0.5, 0.0, 1.0)
 		_:
-			p.throttle = clampf(p.throttle + (_pressed_key(t.upkey) - _pressed_key(t.downkey)) * t.sensitivity * dt, 0.0, 1.0)
+			p.throttle = clampf(p.throttle + (_pressed_key(t.upkey) - _pressed_key(t.downkey)) * ts * t.sensitivity * dt, 0.0, 1.0)
 	p.fire_input = pressed("fire")
 	p.secondary_input = pressed("secondary")
 
 
 ## Touch steering (tilt or virtual stick) as a joystick; keyboard and joystick bindings still work.
-func _drive_touch(p: Aircraft, s_roll: float, s_pitch: float, dt: float) -> void:
+func _drive_touch(p: Aircraft, s_roll: float, s_pitch: float, rs: float, ps: float, ts: float, dt: float) -> void:
 	var r: Dictionary = bind.roll
 	var q: Dictionary = bind.pitch
 	var t: Dictionary = bind.throttle
 	var kr := _pressed_key(r.downkey) - _pressed_key(r.upkey) if r.type == "keyboard" else 0.0
 	var kp := _pressed_key(q.downkey) - _pressed_key(q.upkey) if q.type == "keyboard" else 0.0
 	if kr != 0.0:
-		p.key_roll(kr, r.sensitivity, dt)
+		p.key_roll(kr * rs, r.sensitivity, dt)
 	else:
 		p.joy_roll(touch.roll, s_roll)
 	if kp != 0.0:
-		p.key_pitch(kp, q.sensitivity, dt)
+		p.key_pitch(kp * ps, q.sensitivity, dt)
 	else:
 		p.joy_pitch(touch.pitch, s_pitch, dt)
 	if touch.throttle >= 0.0:
-		p.throttle = touch.throttle
+		p.throttle = touch.throttle  # absolute on-screen slider follows its displayed position
 	elif t.type == "keyboard":
-		p.throttle = clampf(p.throttle + (_pressed_key(t.upkey) - _pressed_key(t.downkey)) * t.sensitivity * dt, 0.0, 1.0)
+		p.throttle = clampf(p.throttle + (_pressed_key(t.upkey) - _pressed_key(t.downkey)) * ts * t.sensitivity * dt, 0.0, 1.0)
 	touch.player_throttle = p.throttle
 	p.fire_input = pressed("fire")
 	p.secondary_input = pressed("secondary")

@@ -536,8 +536,8 @@ func _snap_vehicles() -> void:
 		if hit.is_empty():
 			continue
 		var up: Vector3 = hit.normal if hit.normal.y >= 0.0 else -hit.normal
-		var right := up.cross(node.global_transform.basis.z)
-		node.global_transform = Transform3D(Basis(right, up, right.cross(up)), hit.position)
+		var right := up.cross(node.global_transform.basis.z).normalized()
+		node.global_transform = Transform3D(Basis(right, up.normalized(), right.cross(up).normalized()), hit.position)
 
 
 func _spawn_ground(sec: Dictionary, vehicle := true) -> void:
@@ -1289,7 +1289,7 @@ func _update_turrets(dt: float) -> void:
 			var aim: Vector3 = to + o.flight_basis.z * (o.speed * dist * 0.005)
 			dist = aim.length()
 			var dir := aim / maxf(dist, 0.001)
-			if dir.dot(t.node.global_transform.basis.z) > float(t.aa_cos) and dir.y > 0.2:
+			if dir.dot(t.node.global_transform.basis.z.normalized()) > float(t.aa_cos) and dir.y > 0.2:
 				_turret_fire(t, pos, dir, dt)
 		if dist > 200.0:
 			t.aa_target = _nearest_in_group(int(t.aa_group), pos)

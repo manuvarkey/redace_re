@@ -288,7 +288,7 @@ func _fill(html: String) -> String:
 		"quiturl": _link("command:quit", _s("quit")),
 		"homepage": "http://www.smallrockets.com/",
 		# registered copy: the exe's last writes leave "Version 1.02" and an empty second line (RedAce.c:46430)
-		"version1": "Version 1.02 (Remake v1.4)",
+		"version1": "Version 1.02 (Remake v1.5)",
 		"version2": "",
 		"continue": _continue_link(p),
 		"fullname": str(p.get("name", "")),

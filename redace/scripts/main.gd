@@ -14,6 +14,7 @@ const MAX_BULLETS := 4096
 const MISSIONS := [-3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 const ModLauncher := preload("res://mods/launcher.gd")
 const SETTINGS_PATH := "user://settings.cfg"
+enum CollisionDamage { DEFAULT, MILD, FULL }
 
 signal finished(result: String, score: int)  # result: won, death, defence, time
 signal pause_requested
@@ -25,6 +26,11 @@ var cheat_infinite := false
 var cheat_invulnerable := false
 var enemy_endurance := 1.0
 var player_side_endurance := 1.0  # retry easing (FUN_0045ce..): group 8 planes
+var collision_damage: CollisionDamage = CollisionDamage.DEFAULT
+# Last contact frame for each unordered pair; multiple probes and continuous contact
+# count as one impact in Mild/Full, rearming after a frame without contact.
+var _plane_contacts := {}
+var _plane_contact_frame := -1
 var strings := {}
 var _edge_warned := false
 var _was_captured := false
@@ -124,6 +130,9 @@ func _ready() -> void:
 	strings = Ini.load_file(Ini.data_path("language/english/strings.ini")).get("strings", {})
 	_build_ui()
 	if standalone:
+		var settings := ConfigFile.new()
+		settings.load(SETTINGS_PATH)
+		collision_damage = clampi(int(settings.get_value("extra", "collision_damage", 0)), 0, 2) as CollisionDamage
 		load_mission(mission_id)
 
 
@@ -1202,8 +1211,7 @@ func _collide_segment(p: Aircraft, a: Vector3, b: Vector3, dt: float, candidates
 		if candidate.has("plane"):
 			var q: Aircraft = candidate.plane
 			for contact in q.collision_hit_count(a, b):
-				q.take_damage(2.0 * dt * p.endurance * 0.2, p)
-				p.take_damage(2.0 * dt * q.endurance * 0.2, p)
+				_plane_collision_damage(p, q, dt)
 				if _perf:
 					print("collision %s %d with %s %d" % [p.plane_name, p.object_id, q.plane_name, q.object_id])
 		else:
@@ -1218,6 +1226,29 @@ func _collide_segment(p: Aircraft, a: Vector3, b: Vector3, dt: float, candidates
 					p.take_damage(2.0 * dt * float(t.endurance) * 15.0, p)
 				else:
 					p.take_damage(p.endurance + 1.0, p)
+
+
+func _plane_collision_damage(p: Aircraft, q: Aircraft, dt: float) -> void:
+	if collision_damage == CollisionDamage.DEFAULT:
+		q.take_damage(2.0 * dt * p.endurance * 0.2, p)
+		p.take_damage(2.0 * dt * q.endurance * 0.2, p)
+		return
+	var frame := Engine.get_physics_frames()
+	if frame != _plane_contact_frame:
+		for pair in _plane_contacts.keys():
+			if _plane_contacts[pair] < frame - 1:
+				_plane_contacts.erase(pair)
+		_plane_contact_frame = frame
+	var pid := p.get_instance_id()
+	var qid := q.get_instance_id()
+	var key := "%d:%d" % [mini(pid, qid), maxi(pid, qid)]
+	var continuing := _plane_contacts.has(key)
+	_plane_contacts[key] = frame
+	if continuing:
+		return
+	var fraction := 0.5 if collision_damage == CollisionDamage.MILD else 1.0
+	q.take_damage(q.endurance * fraction, p)
+	p.take_damage(p.endurance * fraction, p)
 
 
 static func collision_parts(model: Node3D) -> Array:

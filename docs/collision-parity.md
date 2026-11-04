@@ -28,6 +28,14 @@ For equal endurance 100, one callback at dt=0.01 removes **0.4 health from each 
 Two such callbacks leave each at 99.2. Aircraft collisions can eventually kill a plane, but a
 single contact is not automatically lethal. Each plane's own update can register further contacts.
 
+Goodies → Extra Options offers an optional Collision Damage override, saved in
+`settings.cfg` under `[extra] collision_damage`. Default (0) retains the behavior above.
+Mild (1) removes 50% of each aircraft's own maximum health per impact; Full (2) applies
+lethal damage to both. Multiple probes and reciprocal checks count as one impact until
+a physics frame passes without contact between that pair. These overrides apply to
+plane-to-plane contact, including wrecks, in stock and mod missions. Terrain, scenery,
+weapons and the existing invulnerability option retain their usual behavior.
+
 ## Ordered probes
 
 Let `old` be the previous unbanked frame, `control` the current unbanked frame, `render` the

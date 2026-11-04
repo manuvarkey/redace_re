@@ -159,6 +159,7 @@ func _load() -> void:
 		settings["cheat_" + k] = s.get_value("cheats", k, false)
 	settings.game_speed = s.get_value("cheats", "game_speed", 1.0)
 	settings.enemy_endurance = s.get_value("cheats", "enemy_endurance", 1.0)
+	settings.collision_damage = clampi(int(s.get_value("extra", "collision_damage", 0)), 0, 2)
 
 
 func _save() -> void:
@@ -179,6 +180,7 @@ func _save() -> void:
 		s.set_value("cheats", k, settings["cheat_" + k])
 	s.set_value("cheats", "game_speed", settings.game_speed)
 	s.set_value("cheats", "enemy_endurance", settings.enemy_endurance)
+	s.set_value("extra", "collision_damage", settings.get("collision_damage", 0))
 	s.save(SETTINGS_PATH)
 	controls.save()
 
@@ -300,6 +302,7 @@ func _fill(html: String) -> String:
 		"rosterinstructions": _s("typeinyourname") if _typing_slot >= 0 else _s("pilotinstructions"),
 		"rosterback": _link("Menus\\play.html", _s("back")),
 		"levelselector": _level_selector(),
+		"collisiondamage": _collision_damage_options(),
 		"cheat": _link("Menus\\cheatoptions.html", _s("cheatoptions")) if _any_completed() else "",
 		"victoryurl": "Menus\\victorybrief.html",
 		"defeaturl": {"death": "Menus\\faileddeath.html", "defence": "Menus\\faileddefence.html",
@@ -384,6 +387,16 @@ func _level_selector() -> String:
 			out += "</td>"
 		out += "</tr>"
 	return out + "</table>"
+
+
+func _collision_damage_options() -> String:
+	var choices := PackedStringArray()
+	var selected := int(settings.get("collision_damage", 0))
+	for mode in 3:
+		var label: String = ["Default", "Mild", "Full"][mode]
+		choices.append("<b>[%s]</b>" % label if mode == selected else
+			_link("command:collisiondamage:%d" % mode, label))
+	return " / ".join(choices)
 
 
 func _any_completed() -> bool:
@@ -719,6 +732,13 @@ func _command(c: String) -> void:
 			settings.enemy_endurance = float(a[1])
 			_save()
 			_refresh()
+		"collisiondamage":
+			settings.collision_damage = clampi(int(a[1]), 0, 2)
+			if is_instance_valid(world):
+				world.collision_damage = settings.collision_damage as World.CollisionDamage
+				world._plane_contacts.clear()
+			_save()
+			_refresh()
 		"hardwaresound", "buy", "renderer":
 			_refresh()
 
@@ -896,6 +916,7 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	world.cheat_infinite = settings.cheat_infinite
 	world.cheat_invulnerable = settings.cheat_invulnerable
 	world.enemy_endurance = settings.enemy_endurance
+	world.collision_damage = int(settings.get("collision_damage", 0)) as World.CollisionDamage
 	# retry easing (0x45cebb): from the third retry of a mission, per pilot, up to 5 steps
 	var ease_steps := 0 if debug else _retry_steps(id)
 	world.player_side_endurance = 1.0 + ease_steps * 0.06

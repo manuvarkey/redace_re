@@ -23,6 +23,7 @@ class TestPlane extends Aircraft:
 	var deaths := 0
 	var hits := 0
 	var moves := 0
+	var contacts := 1
 
 	func _ready() -> void:
 		set_physics_process(false)
@@ -31,7 +32,7 @@ class TestPlane extends Aircraft:
 
 	func collision_hit_count(_a: Vector3, _b: Vector3) -> int:
 		hits += 1
-		return 1
+		return contacts
 
 	func on_hit(_attacker) -> void:
 		pass
@@ -102,5 +103,39 @@ func run() -> void:
 	a._physics_process(0.01)
 	check(a.moves == 1 and b.hits == hits_before, "crashed aircraft no longer probes")
 	world.free()
+	await extra_modes()
 	print("Collision damage regression: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(1 if failures else 0)
+
+func extra_modes() -> void:
+	var world := TestWorld.new()
+	root.add_child(world)
+	world.collision_damage = World.CollisionDamage.MILD
+	var a := plane(world)
+	var b := plane(world)
+	b.endurance = 200.0
+	b.health = 200.0
+	b.contacts = 3
+	world.collide(a, Vector3.ZERO, 0.01)
+	world.collide(b, Vector3.ZERO, 0.01)
+	check(is_equal_approx(a.health, 50.0) and is_equal_approx(b.health, 100.0),
+		"Mild removes half of each plane's own endurance once across all probes and both directions")
+	await physics_frame
+	world.collide(a, Vector3.ZERO, 0.01)
+	check(a.deaths == 0 and b.deaths == 0, "continuous contact does not repeat Mild damage")
+	await physics_frame
+	await physics_frame
+	world.collide(b, Vector3.ZERO, 0.01)
+	check(a.deaths == 1 and b.deaths == 1, "another impact after separation applies Mild damage again")
+	world.free()
+	world = TestWorld.new()
+	root.add_child(world)
+	world.collision_damage = World.CollisionDamage.FULL
+	a = plane(world)
+	b = plane(world)
+	b.endurance = 200.0
+	b.health = 200.0
+	world.collide(a, Vector3.ZERO, 0.01)
+	world.collide(b, Vector3.ZERO, 0.01)
+	check(a.deaths == 1 and b.deaths == 1, "Full kills both planes, once, regardless of endurance")
+	world.free()

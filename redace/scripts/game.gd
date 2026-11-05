@@ -386,6 +386,8 @@ func _fill(html: String) -> String:
 		"campaigntitle": str(_active_campaign().get("title", "")),
 		"campaigncontinue": _campaign_continue_link(p),
 		"campaignstatus": _campaign_status(p),
+		"campaignreplay": _campaign_replay_list(p),
+		"campaignreplaylink": _campaign_replay_link(p),
 		"rosterinstructions": _s("typeinyourname") if _typing_slot >= 0 else _s("pilotinstructions"),
 		"rosterback": _link("Menus\\play.html", _s("back")),
 		"levelselector": _level_selector(),
@@ -712,6 +714,9 @@ func _on_link(href: String) -> void:
 		if low.get_file() in ["main.html", "play.html", "roster.html", "goodies.html", "bonus.html", "intro.html"]:
 			_campaign_id = ""  # back in the original campaign's menus
 		open_page(h)
+		return
+	if low.begins_with("campaigns\\"):
+		open_page(h)  # a mod campaign's own pages (game_data/language/english/campaigns/...)
 		return
 	if low.begins_with("campaign:"):
 		var c := _find_campaign(h.get_slice(":", 1).strip_edges())
@@ -1380,4 +1385,39 @@ func _campaign_status(p: Dictionary) -> String:
 	var prog := _campaign_progress(p, c.id)
 	return "%s %s<br>Missions flown: %d of %d<br>Score: %d" % [_rank_name(p), str(p.get("name", "")),
 		prog.won.size(), c.missions.size(), int(prog.score)]
+
+
+## Missions of the active mod campaign the pilot may fly again: won ones and the next, every one once
+## the campaign is complete or when the manifest says replayall = 1 (as the original's level selector).
+func _campaign_replayable(p: Dictionary) -> Array:
+	var c := _active_campaign()
+	if c.is_empty() or p.is_empty():
+		return []
+	var next := _next_campaign_mission(p, c)
+	if c.replayall or next == 0:
+		return c.missions
+	var won: Array = _campaign_progress(p, c.id).won
+	return c.missions.filter(func(m): return won.has(m) or m == next)
+
+
+func _campaign_replay_link(p: Dictionary) -> String:
+	var c := _active_campaign()
+	if c.is_empty() or str(c.replay) == "" or _campaign_replayable(p).is_empty():
+		return ""
+	return _link(c.replay, "Replay Missions")
+
+
+## One mission per row, named by its briefing's <title>.
+func _campaign_replay_list(p: Dictionary) -> String:
+	var missions := _campaign_replayable(p)
+	if missions.is_empty():
+		return ""
+	var out := "<table width=200>"
+	var title_re := RegEx.create_from_string("(?is)<title>\\s*(.*?)\\s*</title>")
+	for m in missions:
+		var html := FileAccess.get_file_as_string(Ini.data_path("language/english/missions/%d/mission.html" % m))
+		var found := title_re.search(html)
+		var name: String = found.get_string(1) if found else "%s %d" % [_s("mission"), m]
+		out += "<tr><td width=200 height=16 align=center>%s</td></tr>" % _link("missions\\%d\\mission.html" % m, name)
+	return out + "</table>"
 

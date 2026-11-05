@@ -412,6 +412,20 @@ func _check_campaign_menus() -> void:
 	game._page = "campaigns\\redbaron\\intro.html"
 	var intro := game._fill(_page_text(game._page))
 	check(intro.contains("Start Campaign") and intro.contains("Leutnant Hans Pilot"), "intro: Start Campaign, campaign rank")
+	# Replay Missions (replayall = 1 while the campaign is built: every mission)
+	check(intro.contains("Replay Missions") and intro.contains("campaigns\\redbaron\\replay.html"), "intro links Replay Missions")
+	game._on_link("campaigns\\redbaron\\replay.html")
+	check(game.opened.back() == "campaigns\\redbaron\\replay.html", "Replay Missions page opens")
+	var replay := game._fill(_page_text("campaigns\\redbaron\\replay.html"))
+	check(replay.contains("First Sortie") and replay.contains("Wounded") and replay.contains("missions\\108\\mission.html"),
+		"replay lists missions by title")
+	game._active_campaign().replayall = false
+	check(game._campaign_replayable(game.pilots[0]) == [102], "without replayall: only reached missions")
+	game._active_campaign().replayall = true
+	game._on_link("missions\\108\\mission.html")
+	check(not game._campaign and game._campaign_id == "redbaron" and game.opened.back() == "missions\\108\\mission.html",
+		"replayed mission flies outside the campaign")
+	game._on_link("campaign:redbaron")
 	game._on_link("command:continue")
 	check(game.opened.back() == "missions\\102\\mission.html" and game._campaign and game._mission == 102, "Start briefs the first mission")
 	game._page = "missions\\102\\mission.html"

@@ -124,3 +124,13 @@ Mission 8:
   says "Brenner breaks off after the Scout! Fly close to him to call him back." Rejoin range 200 (was
   150). Message on rejoin "Brenner joins. Return to base." (user's wording). Briefing says how.
 - Mission 8: "You are wounded! Land at the aerodrome." on the wound.
+
+## Replay Missions (user request)
+
+- Generic: manifest keys `replay` (page) and `replayall`; placeholders `^campaignreplay^` (one row per
+  mission, named by its briefing's `<title>`) and `^campaignreplaylink^`; `campaigns\...` links open the
+  campaign's own pages. Listed: missions won + the next, all once complete, or all with `replayall = 1`.
+  A replayed mission flies outside the campaign (no progress), like the original's level selector.
+- Path: Goodies → Bonus Missions → Der Rote Kampfflieger → Replay Missions. Page uses the original's
+  replay art (`Menus\goodiesreplay.jpg`).
+- **`replayall = 1` in `campaign.ini` while the campaign is built and tested; set it to 0 for release.**

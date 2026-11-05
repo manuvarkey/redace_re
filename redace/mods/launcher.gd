@@ -33,7 +33,9 @@ static func for_mission(mission: Dictionary) -> Node:
 ##   id (default: folder name), title, missions = comma-separated mission ids in order,
 ##   ranks / ranksshort = comma-separated names (first = starting rank),
 ##   promotion = comma-separated scores at which rank 1, 2, ... is reached,
-##   intro = menu page with the campaign's Start / Continue link, complete = page after the last mission.
+##   intro = menu page with the campaign's Start / Continue link, complete = page after the last mission,
+##   replay = page listing the missions to fly again (^campaignreplay^), replayall = 1 lists every mission
+##   (for testing; otherwise those the pilot has reached, all once the campaign is complete).
 ## Game keeps each pilot's progress per campaign id, apart from the original campaign's.
 static func campaigns() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
@@ -58,7 +60,8 @@ static func campaigns() -> Array[Dictionary]:
 			continue
 		out.append({"id": str(c.get("id", folder)), "title": str(c.get("title", folder)), "missions": missions,
 			"ranks": ranks, "short": short if short.size() == ranks.size() else ranks, "promotion": promotion,
-			"intro": str(c.get("intro", "")), "complete": str(c.get("complete", "Menus\\congrats.html"))})
+			"intro": str(c.get("intro", "")), "complete": str(c.get("complete", "Menus\\congrats.html")),
+			"replay": str(c.get("replay", "")), "replayall": int(str(c.get("replayall", "0"))) == 1})
 	return out
 
 

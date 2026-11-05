@@ -86,8 +86,16 @@ func _physics_process(_dt: float) -> bool:
 		15: world.load_mission(108)
 		16: _m08_escape()
 		17: _check_campaign_menus()
-		18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35:
+		18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38:
 			_stock_rule_mission(stage - 18)
+		39: world.load_mission(107)
+		40: _m07()
+		41: world.load_mission(111)
+		42: _m11()
+		43: world.load_mission(112)
+		44: _m12()
+		45: world.load_mission(112)
+		46: _m12_rookie_lost()
 		_:
 			print("RED BARON: %d checks, %d failures" % [checks, failures])
 			quit(1 if failures else 0)
@@ -600,6 +608,7 @@ const STOCK_RULE := [
 	[105, "albatros_red", {7: -100.0}, 0.0, 3010, -1],
 	[106, "albatros_red", {7: -100.0}, 0.0, 0, 7],
 	[110, "fokker_red", {7: -75.0}, 300.0, 0, 7],
+	[109, "albatros_red", {3: 60.0, 7: -100.0}, 0.0, 0, 7],
 ]
 
 
@@ -726,3 +735,93 @@ func _stock_rule_mission(i: int) -> void:
 				_settle()
 				check(world.mission_over and world._end_result == "death", "%d: plane destroyed fails" % id)
 			check(FileAccess.file_exists(Ini.data_path("language/english/missions/%d/debrief.html" % id)), "%d: debriefing" % id)
+
+
+# ---------------------------------------------------------------- missions 7, 11, 12 (Phase 6)
+
+func _m07() -> void:
+	var photo: Aircraft = s().plane(3002)
+	check(photo.plane_name == "halberstadt" and photo.get("gunners_enabled") and not photo.retaliate, "107: photo plane, gunners, holds course")
+	check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel").all(func(q): return q.hidden), "107: Camels hidden until it is over their side")
+	photo.global_position = Vector3(8400, 400, 7750)
+	_settle()
+	check(not world.mission_over, "107: no win before the photo run")
+	photo.global_position = Vector3(10300, 450, 12000)
+	_settle()
+	check(s().photographed and world.message_label.text.begins_with("Photographs taken"), "107: photo run done")
+	photo.global_position = Vector3(8400, 400, 7750)
+	_settle()
+	check(world.mission_over and world._end_result == "won", "107: home with the photographs wins")
+	check(FileAccess.file_exists(Ini.data_path("language/english/missions/107/failed_defence.html")), "107: own failure page")
+
+
+func _m11() -> void:
+	var p := world.player
+	var brenner: Aircraft = s().plane(3002)
+	var ts: Aircraft = s().plane(3004)
+	check(brenner.current_goal().type == Aircraft.G_FORMATION and s().plane(3003).current_goal().targetid == 3002, "111: Brenner on the Baron, his second on Brenner")
+	world.mission_time = 61.0
+	_settle()
+	check(s().stage == 1 and s().camel_a.present() and s().camel_b.present() and brenner.current_goal().targetid == 3010, "111: Camels A and B at 60 s, Brenner takes A")
+	s().camel_a.state = Aircraft.State.DEAD
+	_settle()
+	check(s().stage == 2 and brenner.current_goal().type == Aircraft.G_WAYPOINT and brenner.current_goal().pos.x > ts.global_position.x + 1000.0, "111: Brenner chases B away, 1500 off")
+	# leaving the two-seater brings Camels down on it
+	p.global_position = ts.global_position + Vector3(0, 0, 2000)
+	for i in 4:
+		s().run_step(2.0)
+	check(s()._stalked and s().stalkers.all(func(q): return q.present()), "111: leaving the two-seater brings two Camels on it")
+	brenner.global_position = Vector3(10400, 600, 9500)  # away east, as the chase took him
+	p.global_position = Vector3(8400, 350, 7650)
+	ts.global_position = Vector3(8400, 300, 7750)
+	_settle()
+	check(s().safe and ts.hidden and s().stage == 3, "111: two-seater home (landed)")
+	check(s().attackers.all(func(q): return q.present() and q.get("damage_scale") == 0.0), "111: C-E on Brenner, holding until the Baron comes")
+	check(world.map_markers.any(func(m): return MS.near(m.pos, brenner, 50.0)), "111: Brenner marked on the minimap")
+	check(not world.mission_over, "111: no win while Brenner's attackers fly")
+	p.global_position = brenner.global_position + Vector3(0, 0, -300)
+	_settle()
+	check(s().stage == 4 and brenner.state == Aircraft.State.DEAD and world.message_label.text == "Lt. Brenner is down.", "111: Brenner falls as the Baron closes")
+	for a in s().attackers:
+		a.state = Aircraft.State.DEAD
+	_settle()
+	check(world.mission_over and world._end_result == "won", "111: C-E down wins")
+	check(FileAccess.get_file_as_string(Ini.data_path("language/english/missions/111/debrief.html")).contains("Madam"), "111: the letter")
+
+
+func _m12() -> void:
+	var p := world.player
+	check(world.rules.size() == 1 and world.rules[0].group == 3 and world.rules[0].total == 4, "112: four rookies protected")
+	for i in 4:
+		s().rookies[i].left_map = true
+		s().rookies[i]._set_hidden(true)
+		_settle()
+		if i < 3:
+			check(s().phase == 1 and world.message_label.text == "%d of 4 are home." % (i + 1), "112: rookie %d home" % (i + 1))
+	check(not world.mission_over and world.rules[0].lost == 0, "112: rookies off the map are saved, not lost")
+	check(s().phase == 2 and world.progress_was_secured, "112: campaign completion saved on the fourth crossing")
+	check(s().pursuers.all(func(c): return c.current_goal().type == Aircraft.G_ATTACK and c.current_goal().targetid == 3001), "112: pursuers turn on the Baron")
+	for c in s().pursuers:
+		c.state = Aircraft.State.DEAD
+	_settle()
+	check(s().phase == 3, "112: pursuit destroyed: the ridge")
+	s().run_step(0.0)
+	check(s().waves.filter(func(c): return c.present()).size() == 3, "112: a wave of three")
+	world.mission_time += 41.0
+	s().run_step(0.0)
+	check(s().waves.filter(func(c): return c.present()).size() == 6, "112: another every 40 s")
+	world.mission_time = s().phase3_at + 241.0
+	_settle()
+	check(p.state == Aircraft.State.DEAD, "112: ground fire after four minutes")
+	_settle()
+	check(world.mission_over and world._end_result == "epilogue" and world._end_label.text == "", "112: no Plane Destroyed: fade to the epilogue")
+	check(world.result_page("epilogue", true) == "campaigns\\redbaron\\epilogue.html", "112: epilogue page")
+	var epi := FileAccess.get_file_as_string(Ini.data_path("language/english/campaigns/redbaron/epilogue.html"))
+	check(epi.contains("bgcolor=#000000") and epi.contains("To our gallant and worthy foe") and epi.contains("His young pilots reached home"), "112: epilogue text on a black page")
+
+
+func _m12_rookie_lost() -> void:
+	s().rookies[1].state = Aircraft.State.DEAD
+	_settle()
+	check(world.mission_over and world._end_result == "defence", "112: a rookie lost fails")
+	check(FileAccess.file_exists(Ini.data_path("language/english/missions/112/failed_defence.html")), "112: own failure page")

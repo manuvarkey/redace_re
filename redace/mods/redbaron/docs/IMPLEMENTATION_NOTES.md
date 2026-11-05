@@ -399,3 +399,35 @@ Per mission (deviations from the design's INI in **bold**):
   and sagging stage, then a wreck of tatters on the rigging; a tether cable hangs 110 m.
 - The RE8 and balloon placeholders are replaced (missions 3, 4, 5 and 6 pick them up by folder). The
   O/100 is ready for mission 9.
+
+## Phase 6: missions 7, 9, 11, 12 and the ending
+
+Trenches German aerodrome for 7 and 11: scenery placed at (8400, 7750) (three hangars, two tents, a big
+hangar), marked on the minimap.
+
+- 7 The Other Side (`m07.gd`): Halberstadt photo plane (gunners, retaliate off) flies over the British
+  side and home; three Camels appear (0x120) ahead of it when it is deep over their side (spawned behind
+  it, they never caught it). Win: back within 400 of the aerodrome after its photo run ("Photographs
+  taken. Bring them home!"). **Photo plane endurance 150** (design 80: three Camels at 8/s took 80 in
+  about 10 s in simulation). Lost: failed_defence.html.
+- 9 Dusk Raiders (objective.gd): dusk environment; a rail yard (two stations, two sheds, two wagons) at
+  (7500, 6500), Group3 = 60; three O/100s (endurance 90, 6 bombs, bombsight, nose gun 12/s) from the
+  north-east corner round a dogleg in the south-east: about 60 s to the yard (straight in, 25 s).
+  Simulated: first bomb on the yard at about 65 s.
+- 11 Formation (`m11.gd`), design's sequence: Camels A/B at 60 s; Brenner takes A, his second B; A down
+  (or 15 s) -> Brenner chases B 1500 east ("Stay with the two-seater."). Leaving the two-seater more than
+  900 away for 5 s before it is home brings two Camels on it. The two-seater's route is about 110 s
+  (on the first, short route it was home at 35 s, before the Camels). Home within 300 = it lands
+  (hidden, safe); then C-E come for Brenner, far off, marked on the minimap; Brenner and C-E take no
+  damage until the Baron is within 400 (C-E collided and fell before he arrived otherwise); then "Lt.
+  Brenner is down.", his second flies home, C-E turn on the Baron. Win: C-E down. Debriefing: the letter.
+- 12 The Last Patrol (`m12.gd`): rookies run north (about 55 s; the pursuers start 500 behind them);
+  each one off the map is home ("n of 4 are home."); on the fourth `secure_progress()` and the pursuers
+  turn on the Baron; all six down -> waves of three every 40 s near the Baron; ridge guns along the
+  river (8 AA, range 300, all round). After 240 s of the ridge the Baron is shot down by script (whatever
+  the cheats: the story's end). Death after the rookies are home: result `epilogue`, no end line, then
+  `campaigns/redbaron/epilogue.html` (design text verbatim, black page, no tally, no slogan; Continue
+  goes to the campaign page, which then shows the completion page). Not done: steering the waves to push
+  the Baron low over the ridge (the AI cannot be told where to herd the player).
+- Failure pages for scripts' results: 7 / 9 / 11 / 12 `failed_defence.html`.
+- Campaign manifest: all twelve missions, 101-112.

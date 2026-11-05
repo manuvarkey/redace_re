@@ -96,6 +96,10 @@ def build(num):
     bdir = DATA / "language" / "english" / "missions" / str(mission_id)
     bdir.mkdir(parents=True, exist_ok=True)
     (bdir / "mission.html").write_text(page)
+    debrief = SPECS / f"m{num:02d}_debrief.html"
+    if debrief.exists():
+        (bdir / "debrief.html").write_text(DEBRIEF.replace("{TITLE}", conf.get("title", f"Mission {num}"))
+                                           .replace("{BODY}", debrief.read_text().strip()))
     print(f"mission {mission_id}: {n} ground sections, template {template}, {restored} restored to standing")
 
 
@@ -153,6 +157,36 @@ BRIEFING = """<html>
 				</td><td width=8 height=128></td> </tr>
 				<tr> <td width=11 height=13></td><td width=128 height=13></td><td width=365 height=13></td><td width=128 height=13></td><td width=8 height=13></td> </tr>
 			</table>
+		</font>
+	</body>
+</html>
+"""
+
+# Debriefing after a win (Game shows missions/<id>/debrief.html in place of the generic victory message):
+# the original victory message's blackboard page, the story text, and the original's three links.
+DEBRIEF = """<html>
+	<head>
+		<title>
+			{TITLE} - Debriefing
+		</title>
+	</head>
+	<body background = "Menus\\blackboard.jpg" bgcolor=#000000 link=#ff8800 alink=#ffffff vlink=#ffffff>
+		<font face = "courier new" size=3, color=#ffffff>
+		<table width=640 height=424>
+		<tr><td width=70 height=120></td><td width=500></td><td width=70></td></tr>
+		<tr><td></td><td width=500 height=290 valign=top>
+{BODY}^promotionnote^
+		</td><td></td></tr>
+		</table>
+		</font>
+		<font face = "courier new" size=2, color=#ffffffff>
+		<table>
+			<tr>
+				<td width = 214><center><a href="command:redo">Re-Fly Mission</a></center></td>
+				<td width = 216><center><a href="command:continue">Next Mission</a></center></td>
+				<td width = 210><center><a href="campaign:redbaron">Campaign</a></center></td>
+			</tr>
+		</table>
 		</font>
 	</body>
 </html>

@@ -414,7 +414,7 @@ func _m08_wound() -> void:
 	s().fe2ds[3].left_map = true
 	world.mission_time = 40.0
 	_settle()
-	check(s().returning and world.message_label.text == "1 got away. Return to base.", "return to base when none is left")
+	check(s().returning and world.message_label.text == "3 F.E.2ds down, 1 got away. Return to base.", "return to base when none is left")
 	check(not s().overlay()._counter.visible, "counter hidden on the way home")
 	check(s().plane(3002).current_goal().type == Aircraft.G_FORMATION, "Brenner on the Baron's wing on the way home")
 	# halfway home: ambush and wound
@@ -516,6 +516,10 @@ func _check_campaign_menus() -> void:
 	var prog: Dictionary = game.pilots[0].campaigns.redbaron
 	check(prog.won == [102] and prog.score == 600 and prog.rank == 0, "win recorded in the campaign's own progress")
 	check(game.opened.back() == "Menus\\victory.html", "victory page")
+	game._page = "Menus\\victory.html"
+	check(game._fill(_page_text("Menus\\victory.html")).contains("missions\\102\\debrief.html"), "victory leads to the mission's debriefing")
+	var debrief := game._fill(_page_text("missions\\102\\debrief.html"))
+	check(debrief.contains("You brought Brenner home") and not debrief.contains("promoted"), "debriefing text, no promotion yet")
 	check(int(game.pilots[0].mission) == 7 and int(game.pilots[0].score) == 2000 and int(game.pilots[0].rank) == 2,
 		"original campaign progress untouched")
 	game._page = "Menus\\victorybrief.html"
@@ -530,7 +534,14 @@ func _check_campaign_menus() -> void:
 	# win mission 8 (600 more = 1200): promoted to Oberleutnant, campaign (so far) complete
 	game._on_finished("won", 600)
 	check(prog.rank == 1 and prog.won == [102, 108], "promotion at 1000")
-	check(game.opened.back() == "campaigns\\redbaron\\complete.html", "last mission opens the completion page")
+	check(game.opened.back() == "Menus\\victory.html", "last mission: victory, then its debriefing")
+	game._page = "missions\\108\\debrief.html"
+	game._on_link("command:continue")
+	check(game.opened.back() == "campaigns\\redbaron\\complete.html", "Next Mission after the last debriefing: completion page")
+	check(game._debrief_page(5) == "" and game._debrief_page(26) == "", "original missions keep the generic victory message")
+	game._flown = 108
+	check(game._fill(_page_text("missions\\108\\debrief.html")).contains("promoted to the rank of Oberleutnant"),
+		"the debriefing names the promotion")
 	game._page = "Menus\\promotionbrief.html"
 	check(game._fill(_page_text(game._page)).contains("Oberleutnant"), "promotion page names the campaign rank")
 	# back in the original menus everything is stock again

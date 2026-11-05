@@ -393,7 +393,8 @@ func _fill(html: String) -> String:
 		"levelselector": _level_selector(),
 		"collisiondamage": _collision_damage_options(),
 		"cheat": _link("Menus\\cheatoptions.html", _s("cheatoptions")) if _any_completed() else "",
-		"victoryurl": "Menus\\victorybrief.html",
+		"victoryurl": _debrief_page(_flown) if _debrief_page(_flown) != "" else "Menus\\victorybrief.html",
+		"promotionnote": "<br><br>You have been promoted to the rank of %s." % _rank_name(p) if _last_promoted and not p.is_empty() else "",
 		"defeaturl": {"death": "Menus\\faileddeath.html", "defence": "Menus\\faileddefence.html",
 			"time": "Menus\\failedtime.html"}.get(_result, "Menus\\faileddeath.html"),
 		"loadbar": "<img src=\"Menus\\loadbar.jpg\" width=298 height=20>",
@@ -1222,6 +1223,7 @@ func _resume() -> void:
 ## promote when the score reaches the next rank's threshold; finishing mission 25 shows congrats.
 func _on_finished(result: String, score: int) -> void:
 	_result = result
+	_last_promoted = false
 	# mod hook (World.result_page): a mission script may name its own page for this result
 	var custom := world.result_page(result, _campaign) if is_instance_valid(world) else ""
 	var secured := is_instance_valid(world) and world.progress_was_secured
@@ -1243,9 +1245,11 @@ func _on_finished(result: String, score: int) -> void:
 		return
 	if _campaign_id != "":
 		var promoted := _credit_campaign_win(score) or (secured and _promoted_by_secure)
-		var mod_page := "Menus\\promotion.html" if promoted else "Menus\\victory.html"
-		if _next_campaign_mission(p, _active_campaign()) == 0:
-			mod_page = str(_active_campaign().complete)
+		_last_promoted = promoted
+		# a mission with its own debriefing names the promotion there (^promotionnote^)
+		var mod_page := "Menus\\promotion.html" if promoted and _debrief_page(_flown) == "" else "Menus\\victory.html"
+		if _next_campaign_mission(p, _active_campaign()) == 0 and _debrief_page(_flown) == "":
+			mod_page = str(_active_campaign().complete)  # else the debriefing's Next Mission leads there
 		_save()
 		open_page(custom if custom != "" else mod_page)
 		return
@@ -1270,6 +1274,14 @@ func _on_finished(result: String, score: int) -> void:
 
 
 var _promoted_by_secure := false
+var _last_promoted := false  # the last flight earned a promotion (^promotionnote^ on a mission's debriefing)
+
+
+## A mission's own debriefing page (language/english/missions/<id>/debrief.html), shown after a win in
+## place of the generic victory message; "" when the mission has none (all original missions).
+func _debrief_page(id: int) -> String:
+	var rel := "missions\\%d\\debrief.html" % id
+	return rel if FileAccess.file_exists(Ini.data_path("language/english/" + rel.replace("\\", "/"))) else ""
 
 
 ## World.secure_progress (mod mission scripts): the campaign bookkeeping of a win, applied mid-flight so

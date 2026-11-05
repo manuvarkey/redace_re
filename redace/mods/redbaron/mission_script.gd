@@ -195,7 +195,7 @@ func message(text: String, seconds := 3.0) -> void:
 ## A minimap icon at pos (drawn like the map's other icons, held at the rim when far away). Returns the
 ## marker, which unmark() removes.
 func mark_on_map(pos: Vector3, icon := "res://mods/redbaron/aerodrome_icon.png") -> Dictionary:
-	var m := {"pos": pos, "icon": icon}
+	var m := {"pos": pos, "icon": icon, "size": 1.5}
 	world.map_markers.append(m)
 	return m
 

@@ -203,3 +203,18 @@ the wound came from an observer during the attack pass.
   both Nieuports down about 10 s after the ambush, the Baron home with 40..46 of 125.
 - Ambushers appear 250 / 310 behind, 120 either side, 80 / 110 above (they spawned on top of each
   other and collided before).
+
+## Playtest 9: success line, minimap edge marker, debriefings
+
+- Mission 8: "The F.E.2d flight is destroyed. Well done! Return to base." (or "3 F.E.2ds down, 1 got
+  away. Return to base." / "The F.E.2ds got away. Return to base.").
+- Minimap markers (generic `World.map_markers`): drawn after the aircraft icons, at full strength when
+  held at the rim (other far icons are half alpha), optional `size` (Red Baron 1.5x). At half alpha on
+  the rim, behind Brenner's icon, the aerodrome was hard to see.
+- Debriefings (generic): `language/english/missions/<id>/debrief.html` replaces the victory message
+  after a win (`^victoryurl^`); `^promotionnote^` names a promotion there, so a mod mission with a
+  debriefing shows victory → debriefing instead of the promotion page; after the last mission the
+  debriefing's Next Mission leads to the completion page. Original missions have none.
+- Debriefing texts for missions 1-11 in `tools/missions/mNN_debrief.html` (11 is the letter from the
+  design); the build tool writes them for built missions. Each closes on the next mission's setting.
+  Mission 1 notes Hawker as "a brave man and a fine pilot"; nothing claimed about his burial.

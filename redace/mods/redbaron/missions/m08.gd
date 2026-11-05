@@ -67,7 +67,12 @@ func step(_dt: float) -> void:
 			return_distance = distance(p, AERODROME, true)
 			overlay().set_counter("")
 			formation(brenner, p, Vector3(-30.0, 0.0, -30.0))
-			_event("Return to base." if _escaped() == 0 else "%d got away. Return to base." % _escaped())
+			if _escaped() == 0:
+				_event("The F.E.2d flight is destroyed. Well done! Return to base.")
+			elif _down() == 0:
+				_event("The F.E.2ds got away. Return to base.")
+			else:
+				_event("%d F.E.2d%s down, %d got away. Return to base." % [_down(), "s" if _down() > 1 else "", _escaped()])
 		return
 	if not wounded:
 		if now() >= last_event + MESSAGE_GAP and distance(p, AERODROME, true) <= return_distance * 0.5:

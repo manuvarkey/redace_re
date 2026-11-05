@@ -98,9 +98,12 @@ def build_maps(game, out):
                 srcf = tex.find_texture(mm.group(1))
                 if srcf:
                     rw2gltf.Image.open(srcf).convert('RGB').save(os.path.join(odir, 'sky_%s.png' % face))
-        for f in os.listdir(mdir):
-            if f.lower() in ('map.jpg', 'map.bmp'):
-                hires(rw2gltf.Image.open(os.path.join(mdir, f)).convert('RGB')).save(os.path.join(odir, 'map.png'))
+        # the minimap: map.bmp, the image the exe loads (RenderWare 3.1 reads BMP; it has no JPEG reader).
+        # trenches also ships a map.jpg of another landscape; taking it gave the wrong minimap there
+        names = {f.lower(): f for f in os.listdir(mdir)}
+        mapimg = names.get('map.bmp') or names.get('map.jpg')
+        if mapimg:
+            hires(rw2gltf.Image.open(os.path.join(mdir, mapimg)).convert('RGB')).save(os.path.join(odir, 'map.png'))
         print('map %s done' % m)
 
 

@@ -355,3 +355,21 @@ Per mission (deviations from the design's INI in **bold**):
   2900 out, about 30 s (was about 20), so the gap is about 30 s (was about 13). Wave 2 is parked hidden on
   flat ground (on the north-east slope a hidden plane crashed at once) and appears at wave 1's starting
   places. Simulated: fighters arrive at about 25 s, bombers over the hangars at about 61 s.
+
+## Playtest 16: Balloon Busting escorts, Scramble wingmen, tempered gunners
+
+- Balloon Busting (not in the design): three Halberstadt CL.II (`halberstadt`, gunners) with 20 bombs
+  each, one over each balloon ring, endurance 250, `bombsight = 1`, bombing the AA guns (target -6).
+  Found and fixed on the mod side:
+  - their own bomb blasts killed them (the engine gives the firer 5 % of a blast; a big bomb is
+    hundreds of points): mod aircraft ignore damage from themselves when AI-flown;
+  - together they collided and caught each other's blasts: now one per ring;
+  - the original bombing run releases on an estimate that lands bombs long, and after a pass pushes a
+    40-radius go-round point that a two-seater circles for ever: `bombsight` aims with the real fall
+    (gravity 60 from the plane's velocity) at 150 above the target and, after overflying, flies on 700
+    and comes back (m06.gd also resets a CL stuck 10 s on a waypoint). Simulated with the Baron away:
+    3 guns at 30 s, 11 at 60 s, all 15 by 105 s.
+- Scramble: Brenner (3002) and a second Jasta 11 pilot (`albatros_red`, 3003) start in the air over the
+  field going for the raiders; the Baron still takes off.
+- Rear gunners tempered (user: "too persistent"): 3 rounds/s (was 5) in bursts of 6, then 1.5 s, out to
+  380 (was 450). `DefensiveGunners.burst/pause` are new optional fields (0 = Britain's behaviour).

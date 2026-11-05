@@ -1,14 +1,12 @@
 extends "res://mods/redbaron/missions/objective.gd"
 ## Mission 4, Scramble: the original rules plus objective.gd's intro, counter and marker.
-## - Brenner waits on the runway behind the Baron and takes off once the Baron is airborne (a plane with
-##   no goals stays parked), then goes for the raiders.
+## - Brenner and a second pilot are already in the air over the field (mission file); the Baron takes off.
 ## - Two waves, each four RE8 bombers (one bomb each, a level run on the hangars) and three S.E.5as flying
 ##   1400 ahead of them at the defenders. Bombers start in the north-east corner, about 4100 out, and
 ##   come round by the east (about 60 s); the fighters about 30 s out. Wave 2 waits hidden and comes in
 ##   from the same places when wave 1 is down, or at WAVE2_AT s. Each bomber has its own dogleg point
 ##   (a shared one made them collide).
 
-const AIRBORNE_HEIGHT := 15.0
 const WAVE1 := [3010, 3011, 3012, 3013, 3014, 3015, 3016]
 const WAVE2 := [3020, 3021, 3022, 3023, 3024, 3025, 3026]
 const WAVE2_AT := 150.0
@@ -16,23 +14,15 @@ const WAVE2_AT := 150.0
 const BOMBER_STARTS := [Vector3(9150, 850, 4850), Vector3(9250, 870, 4980), Vector3(9150, 890, 5110), Vector3(9250, 910, 5240)]
 const FIGHTER_STARTS := [Vector3(9050, 880, 6300), Vector3(9150, 910, 6550), Vector3(9050, 940, 6800)]
 
-var brenner: Aircraft
-var launched := false
 var wave2_sent := false
 
 
 func start() -> void:
 	super.start()
-	brenner = plane(3002)
 
 
 func step(dt: float) -> void:
 	super.step(dt)
-	var p := world.player
-	if not launched and brenner and alive(brenner) and p.state != Aircraft.State.GROUND \
-			and world.height_above_ground(p.global_position) > AIRBORNE_HEIGHT:
-		launched = true
-		set_goals(brenner, [goal(Aircraft.G_TAKEOFF), goal(Aircraft.G_ATTACK, -9)])
 	if not wave2_sent and (now() >= WAVE2_AT or WAVE1.all(func(id): return not plane(id).present())):
 		send_wave2()
 

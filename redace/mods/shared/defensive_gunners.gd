@@ -9,6 +9,9 @@ extends RefCounted
 var max_range := 450.0
 var interval := 0.2  # seconds between rounds: five rounds per second
 var cooldown := 0.0
+var burst := 0  # rounds per burst; 0 = no bursts (Britain). After a burst the gunner pauses for pause s
+var pause := 0.0
+var _fired := 0
 
 
 func _init(range_ := 450.0, interval_ := 0.2) -> void:
@@ -26,6 +29,10 @@ func update(plane: Aircraft, dt: float) -> bool:
 		return false
 	plane.world.spawn_ordnance(plane, 1, shot.origin, plane.velocity, shot.direction)
 	cooldown = interval
+	_fired += 1
+	if burst > 0 and _fired >= burst:
+		_fired = 0
+		cooldown = pause
 	return true
 
 

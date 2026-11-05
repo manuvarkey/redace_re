@@ -611,7 +611,7 @@ func _stock_rule_mission(i: int) -> void:
 		0:
 			world.load_mission(id)
 		1:
-			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m04.gd"), preload("res://mods/redbaron/missions/m05.gd")], "%d: objective script" % id)
+			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m04.gd"), preload("res://mods/redbaron/missions/m05.gd"), preload("res://mods/redbaron/missions/m06.gd")], "%d: objective script" % id)
 			if id == 105:
 				var e: Aircraft = s().plane(3020)
 				check(e.current_goal().type == Aircraft.G_FORMATION, "105: escorts in formation on the recon plane")
@@ -624,13 +624,18 @@ func _stock_rule_mission(i: int) -> void:
 				s()._check = 0.0
 				s().run_step(0.0)
 				check(e.current_goal().type == Aircraft.G_FORMATION and e.current_goal().has("offset"), "105: back in formation when he falls back")
+			if id == 106:
+				var cl := world.planes.filter(func(q): return q.plane_name == "halberstadt")
+				var armed := cl.size() == 3
+				for q in cl:
+					armed = armed and q.ordnance_type == 1 and q.ordnance_left == 20 and q.goals.any(func(g): return g.type == Aircraft.G_BOMB_RUN and g.targetid == -6)
+				check(armed, "106: three Halberstadts bombing the AA guns")
 			if id == 104:
-				var b: Aircraft = s().plane(3002)
-				check(b.goals.is_empty() and b.state == Aircraft.State.GROUND, "104: Brenner waits on the runway")
-				world.player.state = Aircraft.State.FLYING
-				world.player.global_position.y += 40.0
-				s().run_step(0.0)
-				check(b.current_goal().type == Aircraft.G_TAKEOFF and b.goals[1].type == Aircraft.G_ATTACK, "104: Brenner takes off once the Baron is up")
+				for id2 in [3002, 3003]:
+					var b: Aircraft = s().plane(id2)
+					check(b.state != Aircraft.State.GROUND and b.goals.any(func(g): return g.type == Aircraft.G_ATTACK and g.targetid == -9),
+						"104: wingman %d in the air, after the raiders" % id2)
+				check(world.player.state == Aircraft.State.GROUND, "104: the Baron starts on the field")
 				var wave1 := world.planes.filter(func(q): return q.object_id >= 3010 and q.object_id <= 3016)
 				var wave2 := world.planes.filter(func(q): return q.object_id >= 3020 and q.object_id <= 3026)
 				check(wave1.size() == 7 and wave1.filter(func(q): return q.plane_name == "re8").size() == 4, "104: wave of 4 bombers + 3 fighters")

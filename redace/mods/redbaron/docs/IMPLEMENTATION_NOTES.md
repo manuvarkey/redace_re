@@ -99,3 +99,14 @@ Mission 8:
   firerate 25, fireon 1.0, fireoff 0.2 = 20.8 rounds/s. The design gave only firerate 25.
 - Sources: `overrides/redbaron/objects/planes/<folder>/plane.ini`; `tools/build_planes.py` copies the
   stock albertross model in (paint comes later), then `godot --import`.
+
+## Difficulty pass after the first playtest (user: "very hard")
+
+- Comparison: original mission 1 gives the player the DH.2 (23.3 rounds/s) against stock Albatroses
+  (4.4/s), about 5:1. With the sides swapped the British planes kept their strong guns (20.8..25.7/s)
+  against the Baron's 20.8, about 1:1.
+- Mod key `[airN] firerate / fireon / fireoff` (init.gd `configure_aircraft`, no engine change).
+- Starting values: British scouts and the F.E.2d front gun at 8 rounds/s sustained in missions 1-8
+  (Nieuport / S.E.5a firerate 9.6, Bristol Scout 9.33, aircodh2 8.57 with their stock bursts); planned
+  12/s for missions 9-12. F.E.2d observers stay at 2.5/s.
+- Mission 8: F.E.2ds retaliate off (`320` in place of `304`): they hold course, observers shoot back.

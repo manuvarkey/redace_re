@@ -7,6 +7,7 @@ extends Node
 ##   [environment] ambient = r g b                        ambient light, 0..255
 ##   [airN] gunners = 0 / 1                               defensive gunners off / on (aircraft.gd)
 ##   [airN] gunnerrate = N                                gunners' rounds per second (default 5)
+##   [airN] firerate / fireon / fireoff                   the plane's own guns (plane.ini [armaments])
 
 const MissionScript := preload("res://mods/redbaron/mission_script.gd")
 const RedBaronAircraft := preload("res://mods/redbaron/aircraft.gd")
@@ -73,6 +74,13 @@ func create_aircraft() -> Aircraft:
 func configure_aircraft(plane: Aircraft, section: Dictionary) -> void:
 	if section.has("gunners"):
 		plane.set("gunners_enabled", int(Ini.num(section, "gunners", 0)) != 0)
+	# the plane's own guns, as plane.ini [armaments] (the engine reads only endurance and highspeed here)
+	if section.has("firerate"):
+		plane.fire_rate = Ini.num(section, "firerate", plane.fire_rate)
+	if section.has("fireon"):
+		plane.fire_on = Ini.num(section, "fireon", plane.fire_on)
+	if section.has("fireoff"):
+		plane.fire_off = Ini.num(section, "fireoff", plane.fire_off)
 	if section.has("gunnerrate"):
 		plane.call("set_gunner_rate", Ini.num(section, "gunnerrate", 5.0))
 

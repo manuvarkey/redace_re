@@ -285,8 +285,10 @@ func _m02_rejoin() -> void:
 	var nieuport: Aircraft = s().plane(3004)
 	var sustained := func(a: Aircraft) -> float: return a.fire_rate * a.fire_on / (a.fire_on + a.fire_off)
 	check(world.player.plane_name == "albatros_red" and b.plane_name == "albatros_brenner", "tuned Albatros folders")
-	check(is_equal_approx(sustained.call(world.player), sustained.call(nieuport)) and is_equal_approx(world.player.fire_rate, 25.0),
-		"player guns match the British scouts (%.1f rounds/s)" % sustained.call(world.player))
+	check(absf(sustained.call(world.player) - 25.0 / 1.2) < 0.01 and is_equal_approx(world.player.fire_rate, 25.0),
+		"player guns match the stock British scouts (%.1f rounds/s)" % sustained.call(world.player))
+	for id in [3003, 3004, 3005]:
+		check(absf(sustained.call(s().plane(id)) - 8.0) < 0.1, "mission 2 enemy %d fires 8 rounds/s" % id)
 	check(world.player.high_speed == 110.0 and world.player.endurance == 125.0 and b.endurance == 80.0, "design stats")
 	check(b.current_goal().type == Aircraft.G_ATTACK and b.current_goal().targetid == 3003, "Brenner chases the decoy")
 	check(s().plane(3004).hidden and s().plane(3005).hidden, "ambush hidden at start")
@@ -338,6 +340,8 @@ func _m08_wound() -> void:
 	var p := world.player
 	var fe: Aircraft = s().plane(3010)
 	check(fe.get("gunners_enabled") == true, "F.E.2d stand-ins have gunners")
+	check(absf(fe.fire_rate * fe.fire_on / (fe.fire_on + fe.fire_off) - 8.0) < 0.1, "F.E.2d front gun 8 rounds/s")
+	check(not fe.retaliate, "F.E.2ds hold course (retaliate off)")
 	check(s().plane(3020).hidden, "pursuer hidden")
 	check(s().plane(3002).current_goal().type == Aircraft.G_FORMATION, "Brenner in formation (retaliate before 0x30)")
 	fe.global_position = p.global_position + Vector3(100, 0, 0)

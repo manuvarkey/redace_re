@@ -610,7 +610,19 @@ func _stock_rule_mission(i: int) -> void:
 		0:
 			world.load_mission(id)
 		1:
-			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m04.gd")], "%d: objective script" % id)
+			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m04.gd"), preload("res://mods/redbaron/missions/m05.gd")], "%d: objective script" % id)
+			if id == 105:
+				var e: Aircraft = s().plane(3020)
+				check(e.current_goal().type == Aircraft.G_FORMATION, "105: escorts in formation on the recon plane")
+				world.player.global_position = s().recon.global_position + Vector3(0, 0, -500)
+				s()._check = 0.0
+				s().run_step(0.0)
+				check(e.current_goal().type == Aircraft.G_ATTACK and e.current_goal().targetid == 3001
+					and s().plane(3021).current_goal().targetid == 3001, "105: escorts turn on the Baron when he engages")
+				world.player.global_position = s().recon.global_position + Vector3(0, 0, -2000)
+				s()._check = 0.0
+				s().run_step(0.0)
+				check(e.current_goal().type == Aircraft.G_FORMATION and e.current_goal().has("offset"), "105: back in formation when he falls back")
 			if id == 104:
 				var b: Aircraft = s().plane(3002)
 				check(b.goals.is_empty() and b.state == Aircraft.State.GROUND, "104: Brenner waits on the runway")
@@ -626,6 +638,10 @@ func _stock_rule_mission(i: int) -> void:
 			check(groups == spec[2], "%d: rules %s" % [id, groups])
 			check(is_equal_approx(world.time_limit, spec[3]), "%d: time limit %.0f" % [id, spec[3]])
 			check(world.message_label.text != "", "%d: intro line on the HUD" % id)
+			var targets := world.planes.filter(func(p): return p.groups & (1 << 7))
+			for p in targets:
+				check(world.map_markers.any(func(m): return m.icon == "smalltarget" and MS.near(m.pos, p, 20.0)),
+					"%d: target plane %d marked on the minimap" % [id, p.object_id])
 			if spec[5] >= 0:
 				check(s().overlay()._counter != null and s().overlay()._counter.visible, "%d: HUD counter" % id)
 			for r in world.rules:

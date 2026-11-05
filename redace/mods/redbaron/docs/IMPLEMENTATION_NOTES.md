@@ -303,3 +303,12 @@ Per mission (deviations from the design's INI in **bold**):
   fuselage. Bright stock oranges are held to the same dull level.
 - Scramble: Brenner parked on the runway 60 behind the Baron with no goals; `missions/m04.gd` (extends
   objective.gd) sends him off (take off, then the raiders) once the Baron is 15 above the ground.
+
+## Playtest 12: target planes on the minimap; escorts in The Plates
+
+- The minimap draws aircraft only for groups 8 and 9, so Hawker and the recon RE8 (group 4 + 7) were
+  invisible. Script API `track_on_map(plane, icon)` / `track_markers()`: a map marker that follows a
+  plane and goes when it leaves the world. objective.gd gives every plane in a destroy group (other than
+  9) the original target icon; the spotters (group 9 + 7) get it over their enemy icon.
+- The Plates: `missions/m05.gd` (extends objective.gd): the S.E.5a escorts turn on the Baron when he
+  comes within 700 of the recon plane or it is hit, and form up on it again if he falls back past 1500.

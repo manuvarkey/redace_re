@@ -204,6 +204,28 @@ func unmark(m: Dictionary) -> void:
 	world.map_markers.erase(m)
 
 
+## The original target icon on the minimap for a plane, moved with it every step (track_markers) and
+## removed once it is no longer in the world. The minimap draws aircraft only for groups 8 and 9, so
+## a target plane in group 4 + 7 (Hawker, the plates) would otherwise not show.
+var _tracked := {}  # Aircraft -> marker
+
+
+func track_on_map(p: Aircraft, icon := "smalltarget") -> void:
+	if not _tracked.has(p):
+		_tracked[p] = mark_on_map(p.global_position, icon)
+		_tracked[p].size = 1.0
+
+
+func track_markers() -> void:
+	for p in _tracked.keys():
+		var m: Dictionary = _tracked[p]
+		if not is_instance_valid(p) or not p.present():
+			unmark(m)
+			_tracked.erase(p)
+		else:
+			m.pos = p.global_position
+
+
 func set_fog(colour: Color) -> void:
 	mod.set_fog(colour)
 

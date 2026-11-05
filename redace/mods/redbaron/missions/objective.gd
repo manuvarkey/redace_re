@@ -7,6 +7,7 @@ extends "res://mods/redbaron/mission_script.gd"
 ##   escape = id id ...             these planes leaving the map fail the mission at once ...
 ##   escapeline = text              ... with this end-of-flight line (result "escaped"; the mission's
 ##                                  failed_escaped.html follows the defeat page)
+## Every plane in a destroy group gets the target icon on the minimap, following it.
 ## The win and the other losses stay with the original rules.
 
 var _counter_group := -1
@@ -31,9 +32,14 @@ func start() -> void:
 		end_messages["escaped"] = str(m.escapeline)
 	if m.has("intro"):
 		message(str(m.intro), 6.0)
+	for p in world.planes:
+		for r in world.rules:
+			if r.percent < 0.0 and p.groups & (1 << int(r.group)) and r.group != 9:
+				track_on_map(p)
 
 
 func step(_dt: float) -> void:
+	track_markers()
 	for p in _escapers:
 		if p.left_map and alive(p):
 			lose("escaped")

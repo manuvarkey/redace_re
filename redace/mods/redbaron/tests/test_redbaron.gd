@@ -291,7 +291,8 @@ func _m02_rejoin() -> void:
 	for id in [3003, 3004, 3005]:
 		check(absf(sustained.call(s().plane(id)) - 8.0) < 0.1, "mission 2 enemy %d fires 8 rounds/s" % id)
 	check(world.player.high_speed == 110.0 and world.player.endurance == 125.0 and b.endurance == 125.0, "design stats")
-	check(b.current_goal().type == Aircraft.G_ATTACK and b.current_goal().targetid == 3003, "Brenner chases the decoy")
+	check(b.current_goal().type == Aircraft.G_FORMATION and b.current_goal().targetid == 3001, "Brenner starts on the Baron's wing")
+	check(b.high_speed > world.player.high_speed, "Brenner is faster, so he can run away")
 	check(s().plane(3004).hidden and s().plane(3005).hidden, "ambush hidden at start")
 	world._count_rule_members()
 	check(world.rules[0].group == 2 and world.rules[0].lost == 0, "Brenner protected (Group2)")
@@ -303,13 +304,22 @@ func _m02_rejoin() -> void:
 	check(not world.mission_over, "killing the enemies does not win mission 2")
 	for e in enemies:
 		e.state = Aircraft.State.FLYING
-	# Brenner breaks away, the Baron closes on him (over the lines, far from the aerodrome)
+	# Brenner breaks off at 6 s, the Baron closes on him (over the lines, far from the aerodrome)
 	var p := world.player
 	p.global_position = Vector3(8000, 650, 7600)
+	b.global_position = p.global_position + Vector3(100, 0, 0)
+	world.mission_time = 5.0
+	_settle()
+	check(not s().broke_off, "no break before 6 s")
+	world.mission_time = 6.5
+	_settle()
+	check(s().broke_off and b.current_goal().type == Aircraft.G_ATTACK and b.current_goal().targetid == 3003,
+		"Brenner breaks off after the decoy at 6 s")
+	check(world.message_label.text.begins_with("Brenner breaks off"), "HUD says when Brenner breaks off")
+	check(not s().armed and not s().rejoined, "still close: catching him does not count yet")
 	b.global_position = p.global_position + Vector3(500, 0, 0)
 	_settle()
-	check(s().armed and not s().rejoined, "rejoin armed once Brenner is away")
-	check(world.message_label.text.begins_with("Brenner breaks off"), "HUD says when Brenner breaks off")
+	check(s().armed and not s().rejoined, "rejoin armed once Brenner has got 300 away")
 	b.global_position = p.global_position + Vector3(180, 0, 0)
 	_settle()
 	check(s().rejoined and b.current_goal().type == Aircraft.G_FORMATION and b.current_goal().targetid == 3001,

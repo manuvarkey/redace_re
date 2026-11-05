@@ -134,3 +134,13 @@ Mission 8:
 - Path: Goodies → Bonus Missions → Der Rote Kampfflieger → Replay Missions. Page uses the original's
   replay art (`Menus\goodiesreplay.jpg`).
 - **`replayall = 1` in `campaign.ini` while the campaign is built and tested; set it to 0 for release.**
+
+## Playtest 3: Brenner never ran away in mission 2
+
+- Cause: he started beside the Baron, both heading east toward the decoy at the same top speed, so he
+  flew alongside; at 10 s the rejoin rule fired at once and "Brenner joins" replaced the break-off line.
+- Now: the Baron and Brenner start heading north on patrol, Brenner in formation (`48` on the Baron).
+  At 6 s the script sends him after the decoy (east, now starting at 7200, 7700) with the HUD line
+  "Brenner breaks off after a Scout! Catch him to call him back." Brenner flies `highspeed = 118`
+  (the Baron 110) so he really pulls away (about 420 away 4 s after the break with the Baron flying
+  straight on). Catching him (within 200) counts once he has been 300 away, or 15 s after the break.

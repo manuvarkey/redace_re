@@ -15,6 +15,9 @@ const LAST_MISSION := 25
 const SLOTS := 6
 const SAVE_PATH := "user://pilots.cfg"
 const SETTINGS_PATH := "user://settings.cfg"
+const RENDER_HEIGHTS := [360, 480, 540, 720, 1080, 0]
+const RENDER_NAMES := ["Very Low (360p)", "Low (480p)", "Medium (540p)", "Standard (720p)", "High (1080p)", "Native"]
+const WINDOW_HEIGHTS := [480, 540, 720, 900, 1080]
 const MENU_MUSIC := 2  # music.ini entry the exe starts at the title screen (FUN_00456c75)
 
 var view: HtmlView
@@ -62,6 +65,7 @@ func _ready() -> void:
 	_apply_settings()
 	_apply_cursor()
 	get_tree().root.size_changed.connect(_apply_cursor)
+	get_tree().root.size_changed.connect(_update_render_resolution)
 	# debug: --mission=N flies straight away (World handles its own flags)
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--mission="):
@@ -155,6 +159,10 @@ func _load() -> void:
 	settings.effects_detail = s.get_value("graphics", "effects_detail", int(Ini.num(cfg_ini.get("graphics", {}), "effectsdetail", 700) / 100))
 	settings.vsync = s.get_value("video", "vsync", true)
 	settings.fullscreen = s.get_value("video", "fullscreen", false)
+	var height := int(s.get_value("video", "render_height", 0))
+	settings.render_height = height if height in RENDER_HEIGHTS else 0
+	height = int(s.get_value("video", "window_height", 0))
+	settings.window_height = height if height in WINDOW_HEIGHTS else 0
 	for k in ["boost", "infinite", "invulnerable"]:
 		settings["cheat_" + k] = s.get_value("cheats", k, false)
 	settings.game_speed = s.get_value("cheats", "game_speed", 1.0)
@@ -175,7 +183,9 @@ func _save() -> void:
 	s.set_value("graphics", "draw_distance", settings.clip_plane)
 	s.set_value("graphics", "effects_detail", settings.effects_detail)
 	s.set_value("video", "vsync", settings.vsync)
-	s.set_value("video", "fullscreen", settings.fullscreen)
+	# Other saves during a preview must also retain the last confirmed video preferences.
+	for key in ["fullscreen", "render_height", "window_height"]:
+		s.set_value("video", key, _prev_video.get(key, settings[key]))
 	for k in ["boost", "infinite", "invulnerable"]:
 		s.set_value("cheats", k, settings["cheat_" + k])
 	s.set_value("cheats", "game_speed", settings.game_speed)
@@ -197,13 +207,52 @@ func _setup_audio_buses() -> void:
 func _apply_settings() -> void:
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), _vol_db(settings.music_volume))
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Effects"), _vol_db(settings.effects_volume))
+	_apply_video_settings()
+	Engine.time_scale = _base_time_scale()
+
+
+func _apply_video_settings() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if settings.vsync else DisplayServer.VSYNC_DISABLED)
 	if OS.has_feature("android"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)  # hides the system bars
 	elif not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen
 			else DisplayServer.WINDOW_MODE_WINDOWED)
-	Engine.time_scale = _base_time_scale()
+		if not settings.fullscreen and int(settings.window_height) > 0:
+			var target := _window_size(int(settings.window_height))
+			if DisplayServer.window_get_size() != target:
+				DisplayServer.window_set_size(target)
+				var usable := DisplayServer.screen_get_usable_rect(DisplayServer.window_get_current_screen())
+				DisplayServer.window_set_position(usable.position + (usable.size - target) / 2)
+	_update_render_resolution()
+
+
+## Scale only the 3D buffer: canvas_items, camera aspect, UI and input stay at window size.
+## Bilinear scaling is supported by the GLES3 Compatibility renderer used on all platforms.
+func _update_render_resolution() -> void:
+	var viewport := get_tree().root
+	viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	viewport.scaling_3d_scale = render_scale(viewport.size.y, int(settings.get("render_height", 0)))
+	if is_instance_valid(view) and _page.to_lower().ends_with("videooptions.html"):
+		_refresh()
+
+
+static func render_scale(output_height: int, target_height: int) -> float:
+	# A preset is a ceiling, never supersample a smaller window/device. One scale for both axes.
+	return minf(1.0, float(target_height) / maxf(output_height, 1.0)) if target_height > 0 else 1.0
+
+
+func _desktop_video() -> bool:
+	return not OS.has_feature("android") and not OS.has_feature("web")
+
+
+func _window_size(height: int) -> Vector2i:
+	var screen := DisplayServer.window_get_current_screen()
+	var physical := DisplayServer.screen_get_size(screen)
+	var usable := DisplayServer.screen_get_usable_rect(screen).size - Vector2i(64, 64)
+	var aspect := float(maxi(physical.x, 1)) / maxi(physical.y, 1)
+	var h := maxi(1, mini(height, mini(usable.y, int(usable.x / aspect))))
+	return Vector2i(maxi(1, int(round(h * aspect))), h)
 
 
 static func _vol_db(v: int) -> float:
@@ -326,6 +375,8 @@ func _fill(html: String) -> String:
 		"vsync": _check("command:vsync", settings.vsync, false),
 		"renderers": "<b>Godot (OpenGL / WebGL 2)</b><br>",
 		"videomodes": _video_modes(),
+		"renderresolution": _render_resolution_options(),
+		"displayresolution": _display_resolution_options(),
 		"boost": _check("command:cheat:boost", settings.cheat_boost, false),
 		"infinite": _check("command:cheat:infinite", settings.cheat_infinite, false),
 		"invulnerable": _check("command:cheat:invulnerable", settings.cheat_invulnerable, false),
@@ -452,12 +503,35 @@ func _check(cmd: String, on: bool, small: bool) -> String:
 
 
 func _video_modes() -> String:
+	if OS.has_feature("android"):
+		return "<b>Fullscreen (device)</b>"
 	if OS.has_feature("web"):
-		return "<b>Browser window</b><br>"
-	var cur := "Fullscreen" if settings.fullscreen else "Windowed"
-	var out := "<b>%s</b><br>" % cur
-	out += _link("command:videomode:%d" % (0 if settings.fullscreen else 1), "Windowed" if settings.fullscreen
-		else "Fullscreen") + "<br>"
+		return "<b>Browser window</b>"
+	return "<b>%s</b><br>" % ("Fullscreen" if settings.fullscreen else "Windowed") + _link(
+		"command:videomode:%d" % (0 if settings.fullscreen else 1), "Windowed" if settings.fullscreen else "Fullscreen")
+
+
+func _render_resolution_options() -> String:
+	var out := ""
+	for i in RENDER_HEIGHTS.size():
+		var label: String = RENDER_NAMES[i]
+		out += ("<b>[%s]</b>" % label if settings.render_height == RENDER_HEIGHTS[i]
+			else _link("command:renderresolution:%d" % RENDER_HEIGHTS[i], label)) + "<br>"
+	return out
+
+
+func _display_resolution_options() -> String:
+	if not _desktop_video() or settings.fullscreen:
+		return "Display: Native"
+	var out := "Window size:<br>"
+	out += _link("command:windowresolution:0", "Default" if settings.window_height != 0 else "[Default]") + "<br>"
+	for height in WINDOW_HEIGHTS:
+		var target := _window_size(height)
+		if target.y != height:
+			continue
+		var label := "%d x %d" % [target.x, target.y]
+		out += (_link("command:windowresolution:%d" % height, label) if settings.window_height != height
+			else "<b>[%s]</b>" % label) + "<br>"
 	return out
 
 
@@ -621,16 +695,51 @@ func _on_link(href: String) -> void:
 		_command(low.substr(8))
 
 
-var _prev_fullscreen := false
+var _prev_video := {}
+var _prev_window_size := Vector2i.ZERO
+var _prev_window_position := Vector2i.ZERO
 var _screentest_token := 0
 
 
 func _revert_video_mode() -> void:
-	_screentest_token = 0
-	settings.fullscreen = _prev_fullscreen
-	_apply_settings()
+	_screentest_token += 1
+	if _prev_video.is_empty():
+		return
+	var display_changed: bool = settings.fullscreen != _prev_video.fullscreen or settings.window_height != _prev_video.window_height
+	settings.merge(_prev_video, true)
+	if display_changed:
+		_apply_video_settings()
+		if _desktop_video() and not settings.fullscreen:
+			DisplayServer.window_set_size(_prev_window_size)
+			DisplayServer.window_set_position(_prev_window_position)
+	else:
+		_update_render_resolution()
+	_prev_video.clear()
 	_save()
 	open_page("Menus\\videooptions.html")
+
+
+func _preview_video(key: String, value: Variant) -> void:
+	if not _prev_video.is_empty() or settings.get(key) == value:
+		return
+	_prev_video = {"fullscreen": settings.fullscreen, "window_height": settings.window_height,
+		"render_height": settings.render_height}
+	_prev_window_size = DisplayServer.window_get_size()
+	_prev_window_position = DisplayServer.window_get_position()
+	settings[key] = value
+	if key == "render_height":
+		_update_render_resolution()
+	else:
+		_apply_video_settings()
+	if key == "window_height" and int(value) == 0:
+		DisplayServer.window_set_size(_window_size(720))
+	open_page("Menus\\screentest.html")
+	_screentest_token += 1
+	var token := _screentest_token
+	# Ignore cheat/mission time scaling and work while a flight is paused.
+	get_tree().create_timer(5.0, true, false, true).timeout.connect(func() -> void:
+		if _screentest_token == token and not _prev_video.is_empty():
+			_revert_video_mode())
 
 
 func _command(c: String) -> void:
@@ -705,21 +814,19 @@ func _command(c: String) -> void:
 			_save()
 			_refresh()
 		"videomode":
-			# like the exe: switch, then ask on screentest.html to keep it; reverts after 5 s
-			var want := a[1] == "1"
-			if want == bool(settings.get("fullscreen", false)):
-				_refresh()
-				return
-			_prev_fullscreen = bool(settings.get("fullscreen", false))
-			settings.fullscreen = want
-			_apply_settings()
+			if _desktop_video():
+				_preview_video("fullscreen", a[1] == "1")
+		"windowresolution":
+			if _desktop_video() and not settings.fullscreen and (int(a[1]) == 0 or int(a[1]) in WINDOW_HEIGHTS):
+				_preview_video("window_height", int(a[1]))
+		"renderresolution":
+			if int(a[1]) in RENDER_HEIGHTS:
+				_preview_video("render_height", int(a[1]))
+		"keepvideo":
+			_screentest_token += 1
+			_prev_video.clear()
 			_save()
-			open_page("Menus\\screentest.html")
-			var token := Time.get_ticks_msec()
-			_screentest_token = token
-			get_tree().create_timer(5.0, true).timeout.connect(func() -> void:
-				if _screentest_token == token and _page.to_lower().ends_with("screentest.html"):
-					_revert_video_mode())
+			open_page("Menus\\videooptions.html")
 		"cheat":
 			settings["cheat_" + a[1]] = a[2] == "1"
 			_save()

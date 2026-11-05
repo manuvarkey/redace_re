@@ -76,7 +76,7 @@ def build(num):
 
     body = (SPECS / f"m{num:02d}.html").read_text().strip()
     page = BRIEFING.replace("{TITLE}", conf.get("title", f"Mission {num}")).replace("{BODY}", body) \
-        .replace("{PLAY}", f"play:{mission_id}").replace("{BACK}", conf.get("back", "Menus\\bonus.html"))
+        .replace("{PLAY}", f"play:{mission_id}").replace("{BACK}", conf.get("back", "campaign:redbaron"))
     bdir = DATA / "language" / "english" / "missions" / str(mission_id)
     bdir.mkdir(parents=True, exist_ok=True)
     (bdir / "mission.html").write_text(page)

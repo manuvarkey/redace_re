@@ -6,9 +6,10 @@ country and trenches maps. Work in progress; see `docs/IMPLEMENTATION_PLAN.md` f
 
 ## Play
 
-Not yet in the menus (Phase 7 adds the campaign under Goodies → Bonus Missions). Debug launch:
-`godot --path redace -- --mission=<id>` with ids 101–112 (mission N = 100 + N) as they are added.
-Built so far: 102 (First Sortie), 108 (Wounded).
+Main menu → Goodies → Bonus Missions → **Der Rote Kampfflieger**, then Start / Continue Campaign with the
+current pilot (choose one in the roster first). Progress is saved per pilot, apart from the original
+campaign. Built so far: 102 (First Sortie), 108 (Wounded); `campaign.ini` lists the playable missions.
+Debug launch without progress: `godot --path redace -- --mission=<id>` (mission N = id 100 + N).
 
 ## Rebuild missions
 

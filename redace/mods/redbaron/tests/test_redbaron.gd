@@ -22,7 +22,9 @@ var _damaged := []
 class TestGame extends Game:
 	var opened: Array[String] = []
 	func _ready() -> void:
-		settings = {"game_speed": 1.0}
+		_load()  # defaults: the scratch save files do not exist
+		_click = AudioStreamPlayer.new()
+		add_child(_click)
 	func _save() -> void:
 		pass
 	func _play_menu_music() -> void:
@@ -34,6 +36,9 @@ class TestGame extends Game:
 
 
 func _initialize() -> void:
+	# scratch save files: never the player's own pilots, options or bindings
+	Game.save_path = "user://test_pilots.cfg"
+	Game.settings_path = "user://test_settings.cfg"
 	world = World.new()
 	world.standalone = false
 	root.add_child.call_deferred(world)
@@ -77,6 +82,7 @@ func _physics_process(_dt: float) -> bool:
 		12: _m08_land()
 		13: world.load_mission(108)
 		14: _m08_crash()
+		15: _check_campaign_menus()
 		_:
 			print("RED BARON: %d checks, %d failures" % [checks, failures])
 			quit(1 if failures else 0)
@@ -364,3 +370,71 @@ func _m08_crash() -> void:
 	world.player.crash()
 	_settle()
 	check(world.mission_over and world._end_result == "death", "a crash loses mission 8")
+
+
+# ---------------------------------------------------------------- campaign wiring
+
+func _page_text(path: String) -> String:
+	return FileAccess.get_file_as_string(Ini.data_path("language/english/" + path.to_lower().replace("\\", "/")))
+
+
+func _check_campaign_menus() -> void:
+	var list := World.ModLauncher.campaigns()
+	check(list.size() == 1 and list[0].id == "redbaron", "launcher finds the campaign manifest")
+	var c: Dictionary = list[0]
+	check(c.missions.has(102) and c.missions.has(108) and c.ranks[0] == "Leutnant" and c.ranks[2] == "Rittmeister",
+		"manifest missions and ranks")
+	var game := TestGame.new()
+	root.add_child(game)
+	game.strings = {}
+	var stock := {"name": "Hans Pilot", "mission": 7, "score": 2000, "rank": 2}
+	game.pilots.assign([stock.duplicate(), {}, {}, {}, {}, {}])
+	game.current = 0
+	var bonus := game._fill(_page_text("Menus\\bonus.html"))
+	check(bonus.contains("campaign:redbaron") and bonus.contains("Der Rote Kampfflieger"), "Bonus Missions lists the campaign")
+	check(bonus.contains("missions\\26\\mission.html"), "Battle of Britain still listed")
+	game._on_link("campaign:redbaron")
+	check(game._campaign_id == "redbaron" and game.opened.back() == "campaigns\\redbaron\\intro.html", "campaign link opens the intro")
+	game._page = "campaigns\\redbaron\\intro.html"
+	var intro := game._fill(_page_text(game._page))
+	check(intro.contains("Start Campaign") and intro.contains("Leutnant Hans Pilot"), "intro: Start Campaign, campaign rank")
+	game._on_link("command:continue")
+	check(game.opened.back() == "missions\\102\\mission.html" and game._campaign and game._mission == 102, "Start briefs the first mission")
+	game._page = "missions\\102\\mission.html"
+	var brief := game._fill(_page_text(game._page))
+	check(brief.contains("campaign:redbaron") and brief.contains("play:102"), "briefing links")
+	# win mission 2 (score 600): no promotion yet
+	game._flown = 102
+	game._on_finished("won", 600)
+	var prog: Dictionary = game.pilots[0].campaigns.redbaron
+	check(prog.won == [102] and prog.score == 600 and prog.rank == 0, "win recorded in the campaign's own progress")
+	check(game.opened.back() == "Menus\\victory.html", "victory page")
+	check(int(game.pilots[0].mission) == 7 and int(game.pilots[0].score) == 2000 and int(game.pilots[0].rank) == 2,
+		"original campaign progress untouched")
+	game._page = "Menus\\victorybrief.html"
+	game._on_link("command:continue")
+	check(game.opened.back() == "missions\\108\\mission.html", "continue briefs the next mission")
+	# a loss, then a retry from the failed page
+	game._on_finished("death", 0)
+	check(game.opened.back() == "Menus\\defeat.html" and prog.won == [102], "loss records nothing")
+	game._page = "Menus\\faileddeath.html"
+	game._on_link("command:continue")
+	check(game.opened.back() == "missions\\108\\mission.html", "failed page returns to the briefing")
+	# win mission 8 (600 more = 1200): promoted to Oberleutnant, campaign (so far) complete
+	game._on_finished("won", 600)
+	check(prog.rank == 1 and prog.won == [102, 108], "promotion at 1000")
+	check(game.opened.back() == "campaigns\\redbaron\\complete.html", "last mission opens the completion page")
+	game._page = "Menus\\promotionbrief.html"
+	check(game._fill(_page_text(game._page)).contains("Oberleutnant"), "promotion page names the campaign rank")
+	# back in the original menus everything is stock again
+	game._on_link("Menus\\play.html")
+	check(game._campaign_id == "", "original menus leave the mod campaign")
+	game._page = "Menus\\play.html"
+	var play := game._fill(_page_text("Menus\\play.html"))
+	check(play.contains("Sergeant Major") and play.contains("Mission: 7"), "play page shows the original campaign")
+	# a mission added to the manifest later does not move progress
+	c.missions.push_front(101)
+	game._campaign_list()[0].missions.push_front(101)
+	game._campaign_id = "redbaron"
+	check(game._next_campaign_mission(game.pilots[0], game._active_campaign()) == 101, "new earlier mission comes next")
+	game.queue_free()

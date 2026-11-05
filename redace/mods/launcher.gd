@@ -28,6 +28,39 @@ static func for_mission(mission: Dictionary) -> Node:
 	return null
 
 
+## Mod campaigns: every res://mods/<name>/campaign.ini, in folder order. Keys of its [campaign] section:
+##   id (default: folder name), title, missions = comma-separated mission ids in order,
+##   ranks / ranksshort = comma-separated names (first = starting rank),
+##   promotion = comma-separated scores at which rank 1, 2, ... is reached,
+##   intro = menu page with the campaign's Start / Continue link, complete = page after the last mission.
+## Game keeps each pilot's progress per campaign id, apart from the original campaign's.
+static func campaigns() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var root := DirAccess.open("res://mods/")
+	if root == null:
+		return out
+	var folders := root.get_directories()
+	folders.sort()
+	for folder in folders:
+		var path := "res://mods/%s/campaign.ini" % folder
+		if not FileAccess.file_exists(path):
+			continue
+		var c: Dictionary = Ini.load_file(path).get("campaign", {})
+		var missions: Array[int] = []
+		for m in str(c.get("missions", "")).split(",", false):
+			if m.strip_edges().is_valid_int():
+				missions.append(int(m))
+		var ranks := Array(str(c.get("ranks", "")).split(",", false)).map(func(r): return str(r).strip_edges())
+		var short := Array(str(c.get("ranksshort", "")).split(",", false)).map(func(r): return str(r).strip_edges())
+		var promotion := Array(str(c.get("promotion", "")).split(",", false)).map(func(r): return int(r))
+		if missions.is_empty() or ranks.is_empty():
+			continue
+		out.append({"id": str(c.get("id", folder)), "title": str(c.get("title", folder)), "missions": missions,
+			"ranks": ranks, "short": short if short.size() == ranks.size() else ranks, "promotion": promotion,
+			"intro": str(c.get("intro", "")), "complete": str(c.get("complete", "Menus\\congrats.html"))})
+	return out
+
+
 static func mission_sequence(original: Array[int]) -> Array[int]:
 	var sequence: Array[int] = original.duplicate()
 	var root := DirAccess.open(Ini.data_path("missions/"))

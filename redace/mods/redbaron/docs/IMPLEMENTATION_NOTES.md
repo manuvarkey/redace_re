@@ -69,3 +69,22 @@ Mission 8:
   mission; the Baron can take off again at half throttle. Crash: stock "Plane Destroyed".
 - Headless autopilot runs are not representative (the autopilot never attacks); the F.E.2ds'
   retaliation plus gunners make a passive player lose quickly. Tune after playtest.
+
+## Campaign wiring (Phase 7 core, done early at the user's request)
+
+- Generic: `ModLauncher.campaigns()` reads `res://mods/*/campaign.ini`; `Game` keeps a mod campaign's
+  progress in `pilot.campaigns[id] = {won: [mission ids], score, rank}`; the original fields are never
+  written by a mod campaign. Progress is by mission id, so missions added to the manifest later (101,
+  103..) slot in without moving anyone's progress: the next mission is the first of the list not won.
+- `bonus.html` gets `^bonuscampaigns^` (font size 4: size 5 wrapped "Der Rote Kampfflieger" out of the
+  button). New placeholders `^campaigntitle^`, `^campaigncontinue^`, `^campaignstatus^`; `^rank^`,
+  `^mission^`, `^score^` follow the active campaign. Links `campaign:<id>`. Entering the original
+  menus (main, play, roster, goodies, bonus, Intro) leaves the mod campaign.
+- Pages: `game_data/language/english/campaigns/redbaron/intro.html`, `complete.html` (the completion
+  page is a placeholder until Phase 6's epilogue flow). Content kept between y 70 and 420: in a 16:9
+  window the 640x480 page is filled to the width and loses about 60 px top and bottom.
+- Manifest lists only the missions built so far (102, 108).
+- Briefing GO BACK goes to `campaign:redbaron`.
+- Found while testing: stock option tests overwrote the real `user://pilots.cfg` / `settings.cfg`;
+  fixed with `Game.save_path` / `Game.settings_path` (commit db1d2f7). The Red Baron test uses the
+  same scratch paths.

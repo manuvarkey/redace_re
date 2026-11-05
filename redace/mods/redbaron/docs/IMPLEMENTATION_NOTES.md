@@ -292,3 +292,14 @@ Per mission (deviations from the design's INI in **bold**):
   flew at the Scout's pace. He now chases a waypoint on the Scout (renewed every step) at full
   throttle with `highspeed = 125` (was 118), and attacks once he is within 300 of it.
   Measured: 125 against the Baron's 111, 400 away 4 s after the break.
+
+## Playtest 11: paint from a reference model; Scramble take-off
+
+- User reference (a model of the Baron's red Albatros D.III): dull red fuselage and tail, wings in pale
+  green and brown camouflage. Paint now: `DULL_RED (165, 42, 34)` on the Albatros fuselage and tail and
+  on every strong red of the Dr.I atlas (fokker_red, Brenner's and the rookies'); Albatros wing upper
+  surfaces in large green (130, 150, 112) / brown (110, 84, 72) patches across the span (the red wings
+  of playtest 10 are gone); `albatros_player` (mission 1) gets the same camouflaged wings with its stock
+  fuselage. Bright stock oranges are held to the same dull level.
+- Scramble: Brenner parked on the runway 60 behind the Baron with no goals; `missions/m04.gd` (extends
+  objective.gd) sends him off (take off, then the raiders) once the Baron is 15 above the ground.

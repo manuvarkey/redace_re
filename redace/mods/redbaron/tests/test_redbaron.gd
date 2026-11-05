@@ -6,6 +6,7 @@ const FIXTURE := 199
 const RedBaronInit := preload("res://mods/redbaron/init.gd")
 const RedBaronAircraft := preload("res://mods/redbaron/aircraft.gd")
 const MS := preload("res://mods/redbaron/mission_script.gd")
+const ObjectiveScript := preload("res://mods/redbaron/missions/objective.gd")
 
 var world: World
 var ticks := 0
@@ -609,7 +610,14 @@ func _stock_rule_mission(i: int) -> void:
 		0:
 			world.load_mission(id)
 		1:
-			check(world._mod is RedBaronInit and s().get_script().resource_path.ends_with("missions/objective.gd"), "%d: objective script" % id)
+			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m04.gd")], "%d: objective script" % id)
+			if id == 104:
+				var b: Aircraft = s().plane(3002)
+				check(b.goals.is_empty() and b.state == Aircraft.State.GROUND, "104: Brenner waits on the runway")
+				world.player.state = Aircraft.State.FLYING
+				world.player.global_position.y += 40.0
+				s().run_step(0.0)
+				check(b.current_goal().type == Aircraft.G_TAKEOFF and b.goals[1].type == Aircraft.G_ATTACK, "104: Brenner takes off once the Baron is up")
 			check(world.player.plane_name == spec[1], "%d: player flies %s" % [id, spec[1]])
 			var groups := {}
 			for r in world.rules:

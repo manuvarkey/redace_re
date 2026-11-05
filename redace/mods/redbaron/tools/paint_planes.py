@@ -5,8 +5,8 @@ Writes overrides/redbaron/objects/planes/<folder>/<folder>.png, which build_plan
 folder's model and points the model's atlas at. Regions are pixel boxes in the 1024 x 1024 upscaled
 atlases (game_data/objects/planes/textures/*_a.png):
 
-  albatrostemp1_a: wing upper surfaces x 0..140 / 430..575, y 0..655 (green; painted red too, at the
-                   user's request: the design allowed camouflage), fuselage sides x 620..770 / 780..920,
+  albatrostemp1_a: wing upper surfaces x 0..140 / 430..575, y 0..655 (stock plain green; painted in green
+                   and brown camouflage patches, as the Baron's Albatros D.II and D.III), fuselage sides x 620..770 / 780..920,
                    y 0..790 (tail at the top, metal nose at the bottom), wheel covers 0..140 x 665..800,
                    fin and rudder 0..150 x 800..990, tailplane 175..470 x 865..1010.
   fokker_a:        already red (the original game's Red Baron); fuselage sides x 700..1000 (tail at the
@@ -25,7 +25,10 @@ GODOT = Path(__file__).resolve().parents[4]
 TEX = GODOT / "redace" / "game_data" / "objects" / "planes" / "textures"
 OUT = GODOT / "overrides" / "redbaron" / "objects" / "planes"
 
-FOKKER_RED = (186, 42, 0)  # the stock Dr.I's red, so the squadron matches
+FOKKER_RED = (186, 42, 0)  # the stock Dr.I's red
+DULL_RED = (165, 42, 34)  # the red the mod paints with: duller than the stock Dr.I (user, from a reference model)
+CAMO_GREEN = (130, 150, 112)  # Albatros wing camouflage: pale green and brown patches (reference model)
+CAMO_BROWN = (110, 84, 72)
 ALBATROS_PAINT = [(620, 0, 770, 790), (780, 0, 920, 790), (0, 665, 140, 800), (0, 800, 150, 990),
                   (175, 865, 470, 1010)]
 ALBATROS_WINGS = [(0, 0, 140, 655), (430, 0, 575, 655)]  # the green upper surfaces; the cream undersides stay
@@ -48,9 +51,44 @@ def recolour(img, boxes, colour, min_sat=0.22):
                 if a < 8 or s < min_sat or v < 0.08:
                     continue
                 # stock paint sits at value ~0.3-0.45; scale so its brighter parts land on the target's value
-                nv = min(1.0, v / 0.45 * tv)
+                nv = tv * min(max(v / 0.45, 0.4), 1.15)  # bright stock orange parts stay as dull as the rest
                 nr, ng, nb = colorsys.hsv_to_rgb(th, ts, nv)
                 px[x, y] = (int(nr * 255), int(ng * 255), int(nb * 255), a)
+
+
+def camouflage(img, boxes, green, brown, min_sat=0.22):
+    """Coloured paint in boxes -> large green and brown patches across the span (the strips run along y),
+    keeping each pixel's shading; crosses and white borders are left alone."""
+    import math
+    px = img.load()
+    hsv = {c: colorsys.rgb_to_hsv(*(v / 255 for v in c)) for c in (green, brown)}
+    for x0, y0, x1, y1 in boxes:
+        for y in range(y0, y1):
+            for x in range(x0, x1):
+                r, g, b, a = px[x, y]
+                h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+                if a < 8 or s < min_sat or v < 0.08:
+                    continue
+                n = math.sin(y * 0.011 + 1.4 * math.sin((x - x0) * 0.025)) + 0.55 * math.sin(y * 0.029 + (x - x0) * 0.013 + 2.0)
+                th, ts, tv = hsv[brown if n > 0.35 else green]
+                nr, ng, nb = colorsys.hsv_to_rgb(th, ts, min(1.0, v / 0.45 * tv))
+                px[x, y] = (int(nr * 255), int(ng * 255), int(nb * 255), a)
+
+
+def dull_reds(img, colour, min_sat=0.5):
+    """Every strongly red pixel -> colour at its own brightness (the stock Dr.I's bright red, dulled)."""
+    px = img.load()
+    th, ts, tv = colorsys.rgb_to_hsv(*(c / 255 for c in colour))
+    _, _, sv = colorsys.rgb_to_hsv(*(c / 255 for c in FOKKER_RED))
+    w, h = img.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            hh, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+            if a < 8 or s < min_sat or not (hh < 0.07 or hh > 0.95):
+                continue
+            nr, ng, nb = colorsys.hsv_to_rgb(th, ts, min(1.0, v / sv * tv))
+            px[x, y] = (int(nr * 255), int(ng * 255), int(nb * 255), a)
 
 
 def white_fields(img, box, colour, min_value=0.72, max_sat=0.18):
@@ -91,14 +129,17 @@ def save(img, folder):
 
 def main():
     albatros = Image.open(TEX / "albatrostemp1_a.png").convert("RGBA")
+    camouflage(albatros, ALBATROS_WINGS, CAMO_GREEN, CAMO_BROWN)
+    save(albatros, "albatros_player")  # factory finish: stock fuselage, camouflaged wings
     red = albatros.copy()
-    recolour(red, ALBATROS_PAINT + ALBATROS_WINGS, FOKKER_RED)
+    recolour(red, ALBATROS_PAINT, DULL_RED)
     save(red, "albatros_red")
     brenner = red.copy()
     band(brenner, ALBATROS_BAND)
     save(brenner, "albatros_brenner")
 
     fokker = Image.open(TEX / "fokker_a.png").convert("RGBA")
+    dull_reds(fokker, DULL_RED)
     save(fokker.copy(), "fokker_red")
     fb = fokker.copy()
     band(fb, FOKKER_BAND)

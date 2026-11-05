@@ -31,7 +31,19 @@ func links_fit(view: HtmlView) -> void:
 			rects.append(rect)
 
 func _initialize() -> void:
+	# scratch save files: never the player's own pilots, options or bindings
+	Game.save_path = "user://test_pilots.cfg"
+	Game.settings_path = "user://test_settings.cfg"
+	_remove_scratch_files()
 	run.call_deferred()
+
+func _finalize() -> void:
+	_remove_scratch_files()
+
+func _remove_scratch_files() -> void:
+	for path in [Game.save_path, Game.settings_path]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func run() -> void:
 	var game := TestGame.new()
@@ -55,7 +67,7 @@ func run() -> void:
 			"selected mode is marked")
 		links_fit(game.view)
 		var saved := ConfigFile.new()
-		check(saved.load(Game.SETTINGS_PATH) == OK and saved.get_value("extra", "collision_damage", -1) == mode,
+		check(saved.load(Game.settings_path) == OK and saved.get_value("extra", "collision_damage", -1) == mode,
 			"mode persisted to settings file")
 		var loaded := Game.new()
 		loaded._load()

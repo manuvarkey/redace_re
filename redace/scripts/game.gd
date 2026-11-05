@@ -15,6 +15,10 @@ const LAST_MISSION := 25
 const SLOTS := 6
 const SAVE_PATH := "user://pilots.cfg"
 const SETTINGS_PATH := "user://settings.cfg"
+# Files actually used; the defaults above for the game. Tests point them at scratch files so they never
+# overwrite the player's pilots, options or control bindings (Controls, TouchControls and World read these too).
+static var save_path := SAVE_PATH
+static var settings_path := SETTINGS_PATH
 const RENDER_HEIGHTS := [360, 480, 540, 720, 1080, 0]
 const RENDER_NAMES := ["Very Low (360p)", "Low (480p)", "Medium (540p)", "Standard (720p)", "High (1080p)", "Native"]
 const DETAIL_LABELS := ["Low", "Standard"]
@@ -148,13 +152,13 @@ func _upgrade_pilot(p: Dictionary) -> Dictionary:
 
 func _load() -> void:
 	var cfg := ConfigFile.new()
-	cfg.load(SAVE_PATH)
+	cfg.load(save_path)
 	pilots.clear()
 	for i in SLOTS:
 		pilots.append(_upgrade_pilot(cfg.get_value("pilots", str(i), {})))
 	current = cfg.get_value("roster", "current", -1)
 	var s := ConfigFile.new()
-	s.load(SETTINGS_PATH)
+	s.load(settings_path)
 	var cfg_ini := Ini.load_file(Ini.data_path("redace.ini"))
 	controls = Controls.load_saved()
 	settings.music_volume = s.get_value("sound", "music_volume", 8)
@@ -186,9 +190,9 @@ func _save() -> void:
 	for i in SLOTS:
 		cfg.set_value("pilots", str(i), pilots[i])
 	cfg.set_value("roster", "current", current)
-	cfg.save(SAVE_PATH)
+	cfg.save(save_path)
 	var s := ConfigFile.new()
-	s.load(SETTINGS_PATH)
+	s.load(settings_path)
 	s.set_value("sound", "music_volume", settings.music_volume)
 	s.set_value("sound", "effects_volume", settings.effects_volume)
 	s.set_value("graphics", "draw_distance", settings.clip_plane)
@@ -207,7 +211,7 @@ func _save() -> void:
 	s.set_value("cheats", "game_speed", settings.game_speed)
 	s.set_value("cheats", "enemy_endurance", settings.enemy_endurance)
 	s.set_value("extra", "collision_damage", settings.get("collision_damage", 0))
-	s.save(SETTINGS_PATH)
+	s.save(settings_path)
 	controls.save()
 
 

@@ -66,7 +66,7 @@ static func from_file(ini_name: String) -> Controls:
 static func load_saved() -> Controls:
 	var c := from_file("redace.ini")
 	var s := ConfigFile.new()
-	if s.load(SETTINGS_PATH) == OK and s.has_section("bindings"):
+	if s.load(Game.settings_path) == OK and s.has_section("bindings"):
 		for a in c.bind:
 			var saved = s.get_value("bindings", a, null)
 			if saved is Dictionary:
@@ -79,13 +79,13 @@ static func load_saved() -> Controls:
 
 func save() -> void:
 	var s := ConfigFile.new()
-	s.load(SETTINGS_PATH)
+	s.load(Game.settings_path)
 	for a in bind:
 		s.set_value("bindings", a, bind[a])
 	s.set_value("controls", "mouse_response", Aircraft.ref_fps)
 	s.set_value("controls", "joy_gyro", gyro_enabled)
 	s.set_value("controls", "joystick_response_ms", joystick_response_ms)
-	s.save(SETTINGS_PATH)
+	s.save(Game.settings_path)
 
 
 static func key_of(name: String) -> Key:

@@ -147,7 +147,7 @@ func _ready() -> void:
 	_build_ui()
 	if standalone:
 		var settings := ConfigFile.new()
-		settings.load(SETTINGS_PATH)
+		settings.load(Game.settings_path)
 		for key in ["water_detail", "cloud_detail", "scenery_detail"]:
 			var detail := int(settings.get_value("graphics", key, 1))
 			set(key, detail if detail in [0, 1] else 1)

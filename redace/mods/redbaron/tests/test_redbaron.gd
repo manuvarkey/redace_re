@@ -630,6 +630,22 @@ func _stock_rule_mission(i: int) -> void:
 				world.player.global_position.y += 40.0
 				s().run_step(0.0)
 				check(b.current_goal().type == Aircraft.G_TAKEOFF and b.goals[1].type == Aircraft.G_ATTACK, "104: Brenner takes off once the Baron is up")
+				var wave1 := world.planes.filter(func(q): return q.object_id >= 3010 and q.object_id <= 3016)
+				var wave2 := world.planes.filter(func(q): return q.object_id >= 3020 and q.object_id <= 3026)
+				check(wave1.size() == 7 and wave1.filter(func(q): return q.plane_name == "re8").size() == 4, "104: wave of 4 bombers + 3 fighters")
+				check(wave1.filter(func(q): return q.plane_name == "re8").all(func(q): return q.ordnance_left == 1 and q.goals.any(func(g): return g.type == Aircraft.G_BOMB_RUN)),
+					"104: bombers carry a bomb and fly a bombing run")
+				var bx: float = wave1.filter(func(q): return q.plane_name == "re8")[0].global_position.x
+				check(wave1.filter(func(q): return q.plane_name == "se5a").all(func(q): return q.global_position.x < bx - 500.0), "104: fighters well ahead of the bombers")
+				check(bx > 6200.0 + 2800.0, "104: wave starts about 3000 out")
+				check(wave2.all(func(q): return q.hidden), "104: second wave hidden")
+				for q in wave1:
+					q.state = Aircraft.State.DEAD
+				s().run_step(0.0)
+				check(s().wave2_sent and wave2.all(func(q): return not q.hidden), "104: second wave comes when the first is down")
+				for q in wave1:
+					q.state = Aircraft.State.FLYING
+				world._count_rule_members()
 			check(world.player.plane_name == spec[1], "%d: player flies %s" % [id, spec[1]])
 			var groups := {}
 			for r in world.rules:

@@ -329,3 +329,15 @@ Per mission (deviations from the design's INI in **bold**):
   now has `angle = 6.28` (all round). Balloon Busting: five guns per balloon in a ring 450 out (the
   Baron is under fire before he reaches a balloon), range 600, new folder `aagun_rapid` (stock aagun at
   14 rounds/s instead of 10). Simulated loitering autopilot: 117 damage in 25 s near the balloons.
+
+## Playtest 14: Scramble in waves
+
+- User: each wave = 4 bombers flying straight at the target + 3 fighters well ahead engaging the Baron
+  and Brenner, spawned further out. Now two waves (`missions/m04.gd`): wave 1 starts about 3000 east
+  (bombers at x 9150..9270, fighters at x 8450..8550, about 700 ahead); wave 2 waits hidden and comes from
+  the same place when wave 1 is down or at 150 s ("A second wave is coming in from the east!").
+  Bombers: `re8` (placeholder, gunners), one bomb each, retaliate off, `persistent = 1` (no dodge), level
+  run (0x90) on the hangars, then guns on the defenders. Fighters: S.E.5a, 8 rounds/s. 14 raiders
+  in group 9 (counter "Raiders down n / 14").
+- **German AA removed from Scramble** (design had it): AA rounds hit any plane on their path, and the
+  all-round guns at the field shot down Brenner and wore down the Baron.

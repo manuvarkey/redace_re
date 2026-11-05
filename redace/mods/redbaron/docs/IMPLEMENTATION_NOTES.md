@@ -247,3 +247,38 @@ the wound came from an observer during the attack pass.
 - Planned values (for the mission specs): dawn `fogcolour 170 160 175`, `ambient 220 210 215`,
   `light 215 205 210`; dusk `sky = res://game_data/maps/trenches/`, `fogcolour 58 52 66`,
   `ambient 150 140 140`, `light 150 125 120`. To be judged in playtest.
+
+## Phase 4: missions 1, 3, 4, 5, 6, 10 (ids 101, 103, 104, 105, 106, 110)
+
+Common:
+- Trenches map has no aerodromes or ground targets in the stock missions (only viaducts, a church, houses):
+  the mod places what it needs. The river (z about 9300..9800, "the Somme") is the front: German side
+  north, British side south. Trenches scenery template: stock mission 21. Stock trenches houses "outside
+  map" in the audit are the template's (also flagged for missions 21-24).
+- `missions/objective.gd`: for the missions on the original rules, optional `[mod]` keys `intro`,
+  `mark`, `counter = group|label`, `escape = ids`, `escapeline`; the win and other losses stay with the
+  original rules. Brings in the playtest lessons (intro line, HUD counter, aerodrome marker, immediate
+  failure when an escaping plane leaves the map, with its own failure page).
+- Enemy guns: 8 rounds/s in missions 1-8, 12 in 9-12 (Camels firerate 14.4).
+- Placeholders until Phase 5: `re8` = aircodh2 model with RE8 stats (highspeed 92, cruise 88, stall 50,
+  endurance 40, front gun 8/s, gunners on by folder); `balloon` = the tent model (ground.ini points at
+  tent.dff), placed 270 above the ground and scaled 3x by the mission matrix, endurance 20, soft.
+
+Per mission (deviations from the design's INI in **bold**):
+- 1 Hawker: **Hawker endurance 120** (design 60: in simulation a head-on pass ended the duel in under 10 s);
+  **leaving the map fails at once** ("Hawker Got Away"), the 300 s time limit stays as a cap. Hawker starts
+  south-east of the Baron, not head-on.
+- 3 Bloody April: three RE8 spotters circle a 2200 x 600 box over the British side three times (enough
+  for the 240 s limit), two Nieuports attack the player side. Counter "Spotters down".
+- 4 Scramble (country): the Baron parked at a stock parking spot (5966, 7729) heading east; **Brenner
+  beside him** (the stock spot at 6430, 7378 sent him into the trees); `regroup` makes the six hangars
+  and the tent group 3 (Group3 = 60). **Raiders start 2400 east, 350 apart, strafe 12 s (0x130 limit)
+  before attacking the defenders**: a tight formation piled into Brenner, and long strafing flew them
+  into the hangars. Three German AA guns (targetgroup 9). Counter "Raiders down".
+- 5 The Plates: **escape detection instead of a time limit**: the RE8 runs straight for the south edge
+  (about 75 s); leaving the map fails ("The Plates Got Through"). Escorts `304` before `48`.
+- 6 Balloon Busting: dawn (sky, fog, ambient, light from Phase 3). Three balloons over the British side,
+  three AA guns each (range 540); two Nieuports appear after 60 s. Counter "Balloons burned".
+- 10 Cambrai: eight tanks in two rows south of the river (vehicles: turret AI, range 250); four Camels;
+  **the Baron carries 10 rockets** (not in the design; ground attack, as asked for mission 8).
+- Campaign manifest lists 101-106, 108, 110 (built so far).

@@ -85,6 +85,8 @@ func _physics_process(_dt: float) -> bool:
 		15: world.load_mission(108)
 		16: _m08_escape()
 		17: _check_campaign_menus()
+		18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35:
+			_stock_rule_mission(stage - 18)
 		_:
 			print("RED BARON: %d checks, %d failures" % [checks, failures])
 			quit(1 if failures else 0)
@@ -488,6 +490,7 @@ func _check_campaign_menus() -> void:
 	var stock := {"name": "Hans Pilot", "mission": 7, "score": 2000, "rank": 2}
 	game.pilots.assign([stock.duplicate(), {}, {}, {}, {}, {}])
 	game.current = 0
+	game._campaign_list()[0].missions.assign([102, 108])  # the flow below: a two-mission campaign
 	var bonus := game._fill(_page_text("Menus\\bonus.html"))
 	check(bonus.contains("campaign:redbaron") and bonus.contains("Der Rote Kampfflieger"), "Bonus Missions lists the campaign")
 	check(bonus.contains("missions\\26\\mission.html"), "Battle of Britain still listed")
@@ -582,3 +585,79 @@ func _m08_escape() -> void:
 	game._result = "escaped"
 	check(game._fill("^defeaturl^") == "Menus\\faileddeath.html", "original missions have no own failure pages")
 	game.queue_free()
+
+
+# ---------------------------------------------------------------- missions on the original rules (Phase 4)
+
+## [id, player plane, {group: percent}, timelimit, escaping plane id or 0, counter group or -1]
+const STOCK_RULE := [
+	[101, "albatros_player", {7: -100.0}, 300.0, 3002, -1],
+	[103, "albatros_red", {7: -100.0}, 240.0, 0, 7],
+	[104, "albatros_red", {3: 60.0, 9: -100.0}, 0.0, 0, 9],
+	[105, "albatros_red", {7: -100.0}, 0.0, 3010, -1],
+	[106, "albatros_red", {7: -100.0}, 0.0, 0, 7],
+	[110, "fokker_red", {7: -75.0}, 300.0, 0, 7],
+]
+
+
+## Three stages per mission: load; check and win; reload; lose (death, time, defence or escape).
+func _stock_rule_mission(i: int) -> void:
+	var spec: Array = STOCK_RULE[i / 3]
+	var id: int = spec[0]
+	match i % 3:
+		0:
+			world.load_mission(id)
+		1:
+			check(world._mod is RedBaronInit and s().get_script().resource_path.ends_with("missions/objective.gd"), "%d: objective script" % id)
+			check(world.player.plane_name == spec[1], "%d: player flies %s" % [id, spec[1]])
+			var groups := {}
+			for r in world.rules:
+				groups[int(r.group)] = float(r.percent)
+				check(r.total > 0, "%d: rule group %d has members" % [id, r.group])
+			check(groups == spec[2], "%d: rules %s" % [id, groups])
+			check(is_equal_approx(world.time_limit, spec[3]), "%d: time limit %.0f" % [id, spec[3]])
+			check(world.message_label.text != "", "%d: intro line on the HUD" % id)
+			if spec[5] >= 0:
+				check(s().overlay()._counter != null and s().overlay()._counter.visible, "%d: HUD counter" % id)
+			for r in world.rules:
+				check(r.lost == 0, "%d: nothing lost at the start (hidden planes are not lost)" % id)
+			for p in world.planes:
+				if not p.allied and p.groups & (1 << 9):
+					check(absf(p.fire_rate * p.fire_on / (p.fire_on + p.fire_off) - (12.0 if id >= 109 else 8.0)) < 0.05,
+						"%d: %s guns as tuned" % [id, p.plane_name])
+			# win: every member of every destroy group lost
+			for p in world.planes:
+				for r in world.rules:
+					if r.percent < 0.0 and p.groups & (1 << int(r.group)):
+						p.state = Aircraft.State.DEAD
+			for t in world.targets:
+				for r in world.rules:
+					if r.percent < 0.0 and int(t.groups) & (1 << int(r.group)):
+						t.dead = true
+			world._count_rule_members()
+			world._check_rules()
+			check(world.mission_over and world._end_result == "won", "%d: destroying the targets wins" % id)
+		2:
+			world.load_mission(id)
+			await physics_frame
+			await physics_frame
+			if spec[4] > 0:
+				s().plane(spec[4]).left_map = true
+				_settle()
+				check(world.mission_over and world._end_result == "escaped", "%d: escape fails" % id)
+				check(FileAccess.file_exists(Ini.data_path("language/english/missions/%d/failed_escaped.html" % id)), "%d: own failure page" % id)
+			elif spec[3] > 0.0:
+				world.mission_time = spec[3] + 1.0
+				_settle()
+				check(world.mission_over and world._end_result == "time", "%d: out of time fails" % id)
+			elif spec[2].has(3):
+				for t in world.targets:
+					if int(t.groups) & (1 << 3):
+						t.dead = true
+				_settle()
+				check(world.mission_over and world._end_result == "defence", "%d: losing the hangars fails" % id)
+			else:
+				world.player.state = Aircraft.State.DEAD
+				_settle()
+				check(world.mission_over and world._end_result == "death", "%d: plane destroyed fails" % id)
+			check(FileAccess.file_exists(Ini.data_path("language/english/missions/%d/debrief.html" % id)), "%d: debriefing" % id)

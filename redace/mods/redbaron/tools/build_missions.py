@@ -5,7 +5,8 @@ Each mission is a spec in tools/missions/mNN.ini plus a briefing body in tools/m
 The spec's [build] section names the stock mission whose scenery (every [groundN] section, as
 groups = 0 scenery) is copied, so ground objects already sit on the terrain. [build] intact = x z r
 puts the undamaged model in place of each burnt / wrecked one within r of (x, z), e.g. at a home
-aerodrome the stock missions show bombed. Every other spec
+aerodrome the stock missions show bombed. [build] regroup = groups x z [x z ...] gives the template
+objects within 25 of each point that groups value (e.g. the hangars a mission protects). Every other spec
 section is copied as written after the scenery. Usage: python3 build_missions.py [NN ...]
 """
 import re
@@ -63,6 +64,10 @@ def build(num):
     if archetypes:
         emit("archetypes", archetypes)
     intact = [float(v) for v in conf.get("intact", "").split()]
+    regroup = conf.get("regroup", "").split()
+    regroup_value = regroup[0] if regroup else "0"
+    regroup_points = [(float(regroup[i]), float(regroup[i + 1])) for i in range(1, len(regroup) - 1, 2)]
+    regrouped = 0
     n = 0
     restored = 0
     for name, lines in tpl:
@@ -75,7 +80,13 @@ def build(num):
                 if standing and (x - intact[0]) ** 2 + (z - intact[1]) ** 2 <= intact[2] ** 2:
                     kv = [f"name = {standing}" if l.lower().startswith("name") else l for l in kv]
                     restored += 1
-            emit(f"ground{n}", kv[:2] + ["groups = 0"] + kv[2:])
+            groups = "0"
+            if regroup_points:
+                x, _, z = (float(c) for c in keyvals(kv)["pos"].split())
+                if any((x - px) ** 2 + (z - pz) ** 2 <= 25.0 ** 2 for px, pz in regroup_points):
+                    groups = regroup_value
+                    regrouped += 1
+            emit(f"ground{n}", kv[:2] + [f"groups = {groups}"] + kv[2:])
             n += 1
     for name, lines in spec:
         low = name.lower()
@@ -104,7 +115,8 @@ def build(num):
     if debrief.exists():
         (bdir / "debrief.html").write_text(DEBRIEF.replace("{TITLE}", conf.get("title", f"Mission {num}"))
                                            .replace("{BODY}", debrief.read_text().strip()))
-    print(f"mission {mission_id}: {n} ground sections, template {template}, {restored} restored to standing")
+    print(f"mission {mission_id}: {n} ground sections, template {template}, {restored} restored to standing" +
+          (f", {regrouped} regrouped" if regroup_points else ""))
 
 
 # The game's briefing page layout (as missions/26/mission.html): text panel, then Fly Mission / Go Back.

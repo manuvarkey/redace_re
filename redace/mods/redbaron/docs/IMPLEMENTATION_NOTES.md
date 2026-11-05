@@ -161,3 +161,13 @@ Mission 8:
   `[build] intact = x z r` swaps burnt / wrecked scenery for the standing model within r (bighangerburn
   -> bighanger, hangerburned -> hanger, factory_burned -> factory, tree1_burned -> tree1, housestumps
   -> house1). Missions 2 and 8: `intact = 6200 7450 700` (4 objects restored).
+
+## Playtest 6: mission 8, shot down on the way home after the wound
+
+- Cause: the F.E.2ds' waypoint led west over the aerodrome, so they flew home alongside the wounded
+  Baron with their observers firing, and the Nieuport attacked until killed.
+- Now, at the wound: the F.E.2ds turn east off the map (retaliate off, waypoint x 9600); the Nieuport
+  is revealed 450 behind facing the Baron with `0x130` limit 25 s, attacks, then turns east; Brenner
+  holds formation and goes for the Nieuport 12 s after the wound (6 s let him kill it before it ever
+  fired). Simulated (wound 1300 from base, Baron flying straight home): the Nieuport closes to about
+  140 by the aerodrome while Brenner engages it; no damage taken in that straight run.

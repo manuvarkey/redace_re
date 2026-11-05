@@ -1,8 +1,9 @@
 extends "res://mods/redbaron/mission_script.gd"
 ## Mission 8, Wounded: an ordinary attack on four F.E.2ds (aircodh2 stand-ins with observers' guns).
 ## The first observer hit after 30 s, while the player is within 150 of an F.E.2d, wounds him: the view
-## dims and blurs, the throttle is held at half and the guns stop. A Nieuport is then revealed behind
-## him; Brenner fights the F.E.2ds near him. Landing within 300 of the aerodrome wins; a crash loses
+## dims and blurs, the throttle is held at half and the guns stop. The F.E.2ds turn for home; one
+## Nieuport is revealed behind the Baron and attacks for 25 s before breaking off, and Brenner goes for
+## it 12 s after the wound. Landing within 300 of the aerodrome wins; a crash loses
 ## (the original "plane destroyed"). If the player brings all four down unhurt, the last one's parting
 ## burst wounds him (the story needs the wound; see IMPLEMENTATION_NOTES).
 
@@ -11,6 +12,9 @@ const WOUND_AFTER := 30.0
 const WOUND_RANGE := 150.0
 const HOME_RANGE := 300.0
 const THROTTLE_CAP := 0.5
+const BRITISH_EDGE_X := 9600.0  # east of the map box (x up to 9358): planes sent here leave the battle
+const PURSUIT_TIME := 25.0  # the Nieuport that gets through attacks this long, then turns for home
+const BRENNER_DELAY := 12.0  # Brenner turns on the Nieuport this long after the wound
 
 var brenner: Aircraft
 var pursuer: Aircraft
@@ -53,9 +57,19 @@ func wound() -> void:
 	overlay().wound = 1.0
 	message("You are wounded! Land at the aerodrome.", 6.0)
 	var p := world.player
+	# the F.E.2ds have done their work and turn for home (east, off the map); their observers only fire
+	# at what is behind or above them, so they no longer chase the Baron
+	for f in fe2ds:
+		if f.present():
+			set_goals(f, [goal(Aircraft.G_RETALIATE_OFF), goal(Aircraft.G_WAYPOINT, 0,
+				Vector3(BRITISH_EDGE_X, f.global_position.y, f.global_position.z), 200.0)])
+	# one Nieuport gets through: it attacks for PURSUIT_TIME, then breaks off for home
 	var flat := Vector3(p.flight_basis.z.x, 0.0, p.flight_basis.z.z).normalized()
 	if pursuer and pursuer.hidden:
-		reveal(pursuer, p.global_position - flat * 450.0 + Vector3.UP * 60.0, [goal(Aircraft.G_ATTACK, p.object_id)])
+		var at := p.global_position - flat * 450.0 + Vector3.UP * 60.0
+		reveal(pursuer, at, [goal(Aircraft.G_RETALIATE_ON, 0, Vector3.ZERO, PURSUIT_TIME),
+			goal(Aircraft.G_ATTACK, p.object_id),
+			goal(Aircraft.G_WAYPOINT, 0, Vector3(BRITISH_EDGE_X, at.y, at.z), 200.0)], p.global_position - at)
 
 
 func step(dt: float) -> void:
@@ -71,18 +85,17 @@ func step(dt: float) -> void:
 			win()
 
 
-## Brenner takes on the F.E.2ds that come near the wounded Baron, else holds formation on him.
+## Brenner holds formation on the wounded Baron; BRENNER_DELAY after the wound he goes for the
+## Nieuport while it is near the Baron, then forms up again.
 func _escort(dt: float) -> void:
 	_escort_check -= dt
 	if brenner == null or not alive(brenner) or _escort_check > 0.0:
 		return
-	_escort_check = 2.0
+	_escort_check = 1.0
 	var p := world.player
-	var threat: Aircraft = null
-	for f in fe2ds:
-		if f.present() and near(f, p, 800.0) and (threat == null or distance(f, p) < distance(threat, p)):
-			threat = f
 	var g := brenner.current_goal()
+	var threat := pursuer if pursuer and pursuer.present() and near(pursuer, p, 900.0) \
+		and now() >= wound_time + BRENNER_DELAY else null
 	if threat:
 		if int(g.get("type", 0)) != Aircraft.G_ATTACK or int(g.get("targetid", 0)) != threat.object_id:
 			attack(brenner, threat)

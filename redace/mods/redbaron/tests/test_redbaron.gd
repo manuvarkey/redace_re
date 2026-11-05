@@ -397,6 +397,19 @@ func _m08_wound() -> void:
 	p.take_damage(1.0, fe)
 	check(s().wounded and s().overlay().wound == 1.0, "observer hit after 30 s within 150 wounds")
 	check(s().plane(3020).present() and s().plane(3020).current_goal().type == Aircraft.G_APPEAR, "pursuer revealed")
+	var pursuer: Aircraft = s().plane(3020)
+	check(pursuer.goals[1].type == Aircraft.G_RETALIATE_ON and pursuer.goals[1].radius == 25.0
+		and pursuer.goals[2].type == Aircraft.G_ATTACK and pursuer.goals[3].type == Aircraft.G_WAYPOINT,
+		"pursuer attacks 25 s, then turns for home")
+	check(fe.current_goal().type == Aircraft.G_RETALIATE_OFF and fe.goals[1].pos.x > 9358.0, "F.E.2ds turn for home after the wound")
+	s().run_step(0.0)
+	check(s().plane(3002).current_goal().type != Aircraft.G_ATTACK, "Brenner waits before going for the Nieuport")
+	world.mission_time += 13.0
+	pursuer.global_position = p.global_position + Vector3(0, 0, -200)
+	s()._escort_check = 0.0
+	s().run_step(0.0)
+	check(s().plane(3002).current_goal().type == Aircraft.G_ATTACK and s().plane(3002).current_goal().targetid == 3020,
+		"Brenner goes for the Nieuport")
 	p.throttle = 1.0
 	p.fire_input = true
 	s().run_step(0.0)

@@ -6,6 +6,7 @@ extends Node
 ##   [environment] sky = res://mods/redbaron/skies/<name>/  folder with sky_front/back/left/right/up.png
 ##   [environment] ambient = r g b                        ambient light, 0..255
 ##   [airN] gunners = 0 / 1                               defensive gunners off / on (aircraft.gd)
+##   [airN] gunnerrate = N                                gunners' rounds per second (default 5)
 
 const MissionScript := preload("res://mods/redbaron/mission_script.gd")
 const RedBaronAircraft := preload("res://mods/redbaron/aircraft.gd")
@@ -15,6 +16,7 @@ var world: World
 var environment: Environment
 var mission := {}  # the mission.ini sections
 var mission_script: MissionScript
+var overlay: CanvasLayer  # overlay.gd, made by the mission script on first use
 
 
 func setup_map(world_: World, env: Environment, _level: Node3D) -> void:
@@ -71,6 +73,8 @@ func create_aircraft() -> Aircraft:
 func configure_aircraft(plane: Aircraft, section: Dictionary) -> void:
 	if section.has("gunners"):
 		plane.set("gunners_enabled", int(Ini.num(section, "gunners", 0)) != 0)
+	if section.has("gunnerrate"):
+		plane.call("set_gunner_rate", Ini.num(section, "gunnerrate", 5.0))
 
 
 ## A plane is lost when destroyed, or when it is an enemy (group 9) that flew off the map (stock 0x439046).

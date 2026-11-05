@@ -176,6 +176,14 @@ static func damage(p: Aircraft, amount: float, attacker: Variant = null) -> void
 
 # ---------------------------------------------------------------- HUD, environment, results
 
+## The mod's screen overlay (wound effect, counter line), made on first use.
+func overlay() -> CanvasLayer:
+	if mod.get("overlay") == null:
+		mod.overlay = load("res://mods/redbaron/overlay.gd").new()
+		mod.add_child(mod.overlay)
+	return mod.overlay
+
+
 func message(text: String, seconds := 3.0) -> void:
 	world.show_message(text, seconds)
 

@@ -21,6 +21,10 @@ func setup(name_: String, main: World) -> void:
 	gunners_enabled = plane_name in GUNNER_PLANES
 
 
+func set_gunner_rate(rounds_per_second: float) -> void:
+	_gunners.interval = 1.0 / maxf(rounds_per_second, 0.01)
+
+
 func _guns(dt: float) -> void:
 	super._guns(dt)
 	if not gunners_enabled or is_player or state == State.DEAD or hidden:

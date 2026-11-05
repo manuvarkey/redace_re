@@ -69,6 +69,14 @@ func _physics_process(_dt: float) -> bool:
 		4: _check_scripted_loss()
 		5: _check_stock_isolation()
 		6: _check_game_hooks()
+		7: world.load_mission(102)
+		8: _m02_rejoin()
+		9: _m02_win_and_loss()
+		10: world.load_mission(108)
+		11: _m08_wound()
+		12: _m08_land()
+		13: world.load_mission(108)
+		14: _m08_crash()
 		_:
 			print("RED BARON: %d checks, %d failures" % [checks, failures])
 			quit(1 if failures else 0)
@@ -254,3 +262,105 @@ func _check_game_hooks() -> void:
 	game._on_finished("death", 0)
 	check(game.opened.back() == "Menus\\defeat.html", "stock defeat page")
 	game.queue_free()
+
+
+# ---------------------------------------------------------------- mission 2: First Sortie
+
+func _settle() -> void:
+	## Script and rules evaluated now, as in a physics step.
+	s().run_step(0.0)
+	world._count_rule_members()
+	world._check_rules()
+
+
+func _m02_rejoin() -> void:
+	check(world._mod is RedBaronInit and s().get_script().resource_path.ends_with("missions/m02.gd"), "102 loads m02.gd")
+	var b: Aircraft = s().plane(3002)
+	check(b.current_goal().type == Aircraft.G_ATTACK and b.current_goal().targetid == 3003, "Brenner chases the decoy")
+	check(s().plane(3004).hidden and s().plane(3005).hidden, "ambush hidden at start")
+	world._count_rule_members()
+	check(world.rules[0].group == 2 and world.rules[0].lost == 0, "Brenner protected (Group2)")
+	# all enemies down (the hidden ambush too): the stock rules would win, the script does not
+	var enemies := world.planes.filter(func(p): return not p.allied)
+	for e in enemies:
+		e.state = Aircraft.State.DEAD
+	_settle()
+	check(not world.mission_over, "killing the enemies does not win mission 2")
+	for e in enemies:
+		e.state = Aircraft.State.FLYING
+	# Brenner breaks away, the Baron closes on him (over the lines, far from the aerodrome)
+	var p := world.player
+	p.global_position = Vector3(8000, 650, 7600)
+	b.global_position = p.global_position + Vector3(500, 0, 0)
+	_settle()
+	check(s().armed and not s().rejoined, "rejoin armed once Brenner is away")
+	b.global_position = p.global_position + Vector3(100, 0, 0)
+	_settle()
+	check(s().rejoined and b.current_goal().type == Aircraft.G_FORMATION and b.current_goal().targetid == 3001,
+		"Brenner rejoins in formation within 150")
+	check(world.message_label.text == "Brenner rejoins", "HUD says Brenner rejoins")
+
+
+func _m02_win_and_loss() -> void:
+	var p := world.player
+	var b: Aircraft = s().plane(3002)
+	var home := Vector3(6200, 650, 7450)
+	p.global_position = home
+	b.global_position = home + Vector3(800, 0, 0)
+	_settle()
+	check(not world.mission_over, "no win until Brenner is home too")
+	b.global_position = home + Vector3(150, 0, 100)
+	_settle()
+	check(world.mission_over and world._end_result == "won", "both near the aerodrome wins")
+	world.load_mission(102)
+	await physics_frame
+	await physics_frame
+	s().plane(3002).state = Aircraft.State.DEAD
+	_settle()
+	check(world.mission_over and world._end_result == "defence", "Brenner lost fails mission 2")
+
+
+# ---------------------------------------------------------------- mission 8: Wounded
+
+func _m08_wound() -> void:
+	var p := world.player
+	var fe: Aircraft = s().plane(3010)
+	check(fe.get("gunners_enabled") == true, "F.E.2d stand-ins have gunners")
+	check(s().plane(3020).hidden, "pursuer hidden")
+	check(s().plane(3002).current_goal().type == Aircraft.G_FORMATION, "Brenner in formation (retaliate before 0x30)")
+	fe.global_position = p.global_position + Vector3(100, 0, 0)
+	p.take_damage(1.0, fe)
+	check(not s().wounded, "no wound in the first 30 s")
+	world.mission_time = 31.0
+	p.take_damage(1.0, s().plane(3002))
+	check(not s().wounded, "only an F.E.2d observer wounds")
+	fe.global_position = p.global_position + Vector3(400, 0, 0)
+	p.take_damage(1.0, fe)
+	check(not s().wounded, "observer must be within 150")
+	fe.global_position = p.global_position + Vector3(100, 0, 0)
+	p.take_damage(1.0, fe)
+	check(s().wounded and s().overlay().wound == 1.0, "observer hit after 30 s within 150 wounds")
+	check(s().plane(3020).present() and s().plane(3020).current_goal().type == Aircraft.G_APPEAR, "pursuer revealed")
+	p.throttle = 1.0
+	p.fire_input = true
+	s().run_step(0.0)
+	check(p.throttle <= 0.5 and not p.fire_input, "wound: half throttle, no guns")
+
+
+func _m08_land() -> void:
+	var p := world.player
+	check(not world.mission_over, "still flying after the wound")
+	p.global_position = Vector3(6900, 380, 7450)
+	p.state = Aircraft.State.GROUND
+	_settle()
+	check(not world.mission_over, "landing away from the aerodrome does not win")
+	p.global_position = Vector3(6250, 380, 7400)
+	_settle()
+	check(world.mission_over and world._end_result == "won", "landing at the aerodrome wins")
+
+
+func _m08_crash() -> void:
+	s().wound()
+	world.player.crash()
+	_settle()
+	check(world.mission_over and world._end_result == "death", "a crash loses mission 8")

@@ -380,3 +380,22 @@ Per mission (deviations from the design's INI in **bold**):
   mission runs on objective.gd again.
 - Cambrai: Brenner (`fokker_brenner`) and a rookie (`fokker_rookie_blue`) fly with the Baron and attack
   the Camels (not in the design: alone it was impossible); the Baron carries 30 rockets.
+
+## Phase 5: models (RE8, Handley Page O/100, Caquot balloon)
+
+- `tools/redbaron_textures.py` (procedural fabric, scorched fabric, wicker), `tools/blender_redbaron.py`
+  (run `blender --background --factory-startup --python ...`; also works through the MCP bridge, in a
+  scene of its own). Background Blender chosen so the build never touches the user's open Blender
+  session; the .blend is saved to `overrides/redbaron/redbaron.blend`. Then `tools/build_planes.py`
+  copies the folders into game_data, then `godot --import`. `tools/test_redbaron_assets.py` checks them.
+- Scale 2.5 units per metre (stock Albatros 22.5 for 9.0 m, Camel 21.3 for 8.5 m). RE8 span 32.5,
+  O/100 span 76 (He 111 is 40), balloon 70 long. Lineup screenshot next to the DH.2, Camel and He 111.
+- Triangles: RE8 756, O/100 1180, balloon 524 (stock planes 132..210; Britain's 10..18 k): low poly
+  with flat colours on a fabric texture, roundels and rudder stripes as geometry like the stock planes.
+- Propellers: separate objects pivoting at the hub, material `soppropeller_rb` (the first build named it
+  `RB_soppropeller_rb` and the game would not have spun it; the asset test caught it).
+- Planes: damaged1 / damaged2 / wreck (scorched paint, rigid airframe) and a flat shadow clump; the mod
+  aircraft now swaps damage stages like the Britain aircraft (35 %, 70 %, shot down). Balloon: scorched
+  and sagging stage, then a wreck of tatters on the rigging; a tether cable hangs 110 m.
+- The RE8 and balloon placeholders are replaced (missions 3, 4, 5 and 6 pick them up by folder). The
+  O/100 is ready for mission 9.

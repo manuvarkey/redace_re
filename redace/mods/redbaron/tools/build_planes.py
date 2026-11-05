@@ -14,15 +14,21 @@ GODOT = Path(__file__).resolve().parents[4]
 SRC = GODOT / "overrides" / "redbaron" / "objects" / "planes"
 DST = GODOT / "redace" / "game_data" / "objects" / "planes"
 # folder prefix -> (stock folder, stock atlas that the paint replaces)
-BASE = {"albatros_": ("albertross", "albatrostemp1_a.png"), "fokker_": ("fokkertriplane", "fokker_a.png"),
-        "re8": ("aircodh2", "")}  # re8: placeholder model until the Phase 5 build
+BASE = {"albatros_": ("albertross", "albatrostemp1_a.png"), "fokker_": ("fokkertriplane", "fokker_a.png")}
+# folders with their own model (blender_redbaron.py writes it into the source folder) are copied as they are
 GROUND_SRC = GODOT / "overrides" / "redbaron" / "objects" / "ground"
 GROUND_DST = GODOT / "redace" / "game_data" / "objects" / "ground"
 
 
 def build(name):
-    stock, atlas = next(v for k, v in BASE.items() if name.startswith(k))
     out = DST / name
+    if any((SRC / name).glob("*.gltf")):
+        if out.exists():
+            shutil.rmtree(out)
+        shutil.copytree(SRC / name, out)
+        print(f"{name}: own model")
+        return
+    stock, atlas = next(v for k, v in BASE.items() if name.startswith(k))
     out.mkdir(parents=True, exist_ok=True)
     paint = SRC / name / f"{name}.png"
     for f in (DST / stock).iterdir():
@@ -44,6 +50,8 @@ def build(name):
 def build_ground(name):
     """Ground objects: the folder's files as they are (models may live in another object's folder)."""
     out = GROUND_DST / name
+    if out.exists():
+        shutil.rmtree(out)
     out.mkdir(parents=True, exist_ok=True)
     for f in (GROUND_SRC / name).iterdir():
         if f.is_file():

@@ -624,7 +624,16 @@ func _stock_rule_mission(i: int) -> void:
 				s()._check = 0.0
 				s().run_step(0.0)
 				check(e.current_goal().type == Aircraft.G_FORMATION and e.current_goal().has("offset"), "105: back in formation when he falls back")
+			if id == 103:
+				var sp: Aircraft = s().plane(3010)
+				check(sp.get("_damage_paths").size() == 3, "103: RE8 has damage stages")
+				sp.take_damage(sp.endurance * 0.4, world.player)
+				check(sp.get("_damage_stage") == 1, "103: RE8 shows its first damage stage at 40 %")
+				sp.health = sp.endurance
 			if id == 106:
+				var bal: Array = world.targets.filter(func(x): return x.name == "balloon")
+				check(bal.size() == 3 and bal.all(func(x): return x.models.size() == 3), "106: balloons with two damage stages")
+
 				var cl := world.planes.filter(func(q): return q.plane_name == "halberstadt")
 				var armed := cl.size() == 3
 				for q in cl:

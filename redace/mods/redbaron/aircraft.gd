@@ -32,8 +32,25 @@ const BOMB_HEIGHT := 150.0
 var _gunners := DefensiveGunners.new(GUNNER_RANGE, GUNNER_INTERVAL)
 
 
+## Damage stages (as the Battle of Britain aircraft): plane.ini damagedff1 / damagedff2 / deaddff swap in at
+## 35 % and 70 % damage and when shot down; the airframe stays rigid, the paint scorches. Folders without
+## them (all the stock models) keep the one model.
+var _damage_paths: Array[String] = []
+var _damage_stage := 0
+var _visual_ambient := 0.4
+var _visual_diffuse := 1.0
+
+
 func setup(name_: String, main: World) -> void:
 	super.setup(name_, main)
+	var dir := "objects/planes/%s/" % plane_name
+	var app: Dictionary = Ini.load_file(Ini.data_path(dir + "plane.ini")).get("appearance", {})
+	_visual_ambient = Ini.num(app, "ambient", 0.4)
+	_visual_diffuse = Ini.num(app, "diffuse", 1.0)
+	_damage_paths.clear()
+	for key in ["damagedff1", "damagedff2", "deaddff"]:
+		var dff := str(app.get(key, ""))
+		_damage_paths.append(dir + dff.get_basename().to_lower() + ".gltf" if not dff.is_empty() else "")
 	_gunners.burst = GUNNER_BURST
 	_gunners.pause = GUNNER_PAUSE
 	gunners_enabled = plane_name in GUNNER_PLANES
@@ -99,4 +116,37 @@ func take_damage(amount: float, attacker = null) -> void:
 		return  # an AI plane's own bomb or rocket blast (the engine gives the firer 5 %): it killed bombers
 	amount *= damage_scale
 	super.take_damage(amount, attacker)
+	_update_damage_model()
 	damaged.emit(self, amount, attacker)
+
+
+func _shot_down() -> void:
+	super._shot_down()
+	_update_damage_model()
+
+
+func _update_damage_model() -> void:
+	if _damage_paths.is_empty() or _damage_paths.all(func(p): return p.is_empty()):
+		return
+	var damage := 1.0 - health / maxf(endurance, 0.001)
+	var stage := 3 if state == State.DEAD else (2 if damage >= 0.7 else (1 if damage >= 0.35 else 0))
+	if stage <= _damage_stage:
+		return
+	_damage_stage = stage
+	var path := _damage_paths[stage - 1]
+	if path.is_empty() or not ResourceLoader.exists(Ini.data_path(path)):
+		return
+	var replacement := World.load_model(path)
+	if replacement == null:
+		return
+	World.apply_lighting(replacement, _visual_ambient, _visual_diffuse)
+	var show_model := _model == null or _model.visible
+	if _model:
+		_model.visible = false
+		_model.queue_free()
+	_propellers.clear()
+	_faces.clear()
+	_model = replacement
+	add_child(_model)
+	_model.visible = show_model
+	_find_propellers(_model)

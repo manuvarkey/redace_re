@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://di8ei33g5bd7p"
-path="res://.godot/imported/aircodh2shadow.gltf-206131e0d4ac397958681027822f796f.scn"
+uid="uid://bk6v87ilxwoin"
+path="res://.godot/imported/damaged1.gltf-7d5bf22b7def970f9af229419ac76af4.scn"
 
 [deps]
 
-source_file="res://game_data/objects/planes/re8/aircodh2shadow.gltf"
-dest_files=["res://.godot/imported/aircodh2shadow.gltf-206131e0d4ac397958681027822f796f.scn"]
+source_file="res://game_data/objects/planes/handleypage/damaged1.gltf"
+dest_files=["res://.godot/imported/damaged1.gltf-7d5bf22b7def970f9af229419ac76af4.scn"]
 
 [params]
 

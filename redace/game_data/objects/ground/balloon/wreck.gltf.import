@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dugrn08pkpvif"
-path="res://.godot/imported/aircodh2.gltf-5391927db7c07cb86782d17a1b9f4ece.scn"
+uid="uid://q1jbqh143wo1"
+path="res://.godot/imported/wreck.gltf-0a480f2be9b9e4341a1fe5eb2b817131.scn"
 
 [deps]
 
-source_file="res://game_data/objects/planes/re8/aircodh2.gltf"
-dest_files=["res://.godot/imported/aircodh2.gltf-5391927db7c07cb86782d17a1b9f4ece.scn"]
+source_file="res://game_data/objects/ground/balloon/wreck.gltf"
+dest_files=["res://.godot/imported/wreck.gltf-0a480f2be9b9e4341a1fe5eb2b817131.scn"]
 
 [params]
 

@@ -43,6 +43,19 @@ INTACT = {"bighangerburn": "bighanger", "hangerburned": "hanger", "factory_burne
           "tree1_burned": "tree1", "housestumps": "house1", "bridgewreck": "bridge", "aagunruin": "aagun"}
 
 
+IMG = DATA / "language" / "english" / "campaigns" / "redbaron" / "img"
+
+
+def art(name):
+    """A briefing picture (docs/images_required.md): the original pages' <img> when the image exists, else
+    nothing (the slot stays empty, as now). Names without a / are the mod's images, else a page path."""
+    if not name:
+        return ""
+    if "\\" in name:  # an original menu picture, e.g. Menus\\aircodh2bck.jpg
+        return f'<img src="{name}">'
+    return f'<img src="campaigns\\redbaron\\img\\{name}.jpg">' if (IMG / f"{name}.png").exists() else ""
+
+
 def build(num):
     spec = sections((SPECS / f"m{num:02d}.ini").read_text())
     conf = keyvals(dict(spec).get("build", []))
@@ -103,7 +116,8 @@ def build(num):
 
     body = (SPECS / f"m{num:02d}.html").read_text().strip()
     page = BRIEFING.replace("{TITLE}", conf.get("title", f"Mission {num}")).replace("{BODY}", body) \
-        .replace("{PLAY}", f"play:{mission_id}").replace("{BACK}", conf.get("back", "campaign:redbaron"))
+        .replace("{PLAY}", f"play:{mission_id}").replace("{BACK}", conf.get("back", "campaign:redbaron")) \
+        .replace("{PHOTO}", art(conf.get("photo", ""))).replace("{TARGET}", art(conf.get("target", "")))
     bdir = DATA / "language" / "english" / "missions" / str(mission_id)
     bdir.mkdir(parents=True, exist_ok=True)
     (bdir / "mission.html").write_text(page)
@@ -113,8 +127,10 @@ def build(num):
                                                      .replace("{BODY}", failed.read_text().strip()))
     debrief = SPECS / f"m{num:02d}_debrief.html"
     if debrief.exists():
+        bg = conf.get("debrief_background", "")  # e.g. the letter's paper for mission 11, when the image exists
+        bg = f"campaigns\\redbaron\\img\\{bg}.jpg" if bg and (IMG / f"{bg}.png").exists() else "Menus\\blackboard.jpg"
         (bdir / "debrief.html").write_text(DEBRIEF.replace("{TITLE}", conf.get("title", f"Mission {num}"))
-                                           .replace("{BODY}", debrief.read_text().strip()))
+                                           .replace("{BODY}", debrief.read_text().strip()).replace("{BACKGROUND}", bg))
     print(f"mission {mission_id}: {n} ground sections, template {template}, {restored} restored to standing" +
           (f", {regrouped} regrouped" if regroup_points else ""))
 
@@ -142,7 +158,7 @@ BRIEFING = """<html>
 				<tr> <td width=11 height=39></td><td width=128 height=39></td><td width=365 height=39></td><td width=128 height=39></td><td width=8 height=39></td> </tr>
 				<tr> <td width=11 height=128></td>
 				<td width=128 height=128>
-
+					{PHOTO}
 				</td><td width=365 height=128>
 					<table  width=365 height=128>
 						<tr> <td width=50 height=128></td>
@@ -169,7 +185,7 @@ BRIEFING = """<html>
 						<td width=160 height=128></td></tr>
 					</table>
 				</td><td width=128 height=128>
-
+					{TARGET}
 				</td><td width=8 height=128></td> </tr>
 				<tr> <td width=11 height=13></td><td width=128 height=13></td><td width=365 height=13></td><td width=128 height=13></td><td width=8 height=13></td> </tr>
 			</table>
@@ -186,7 +202,7 @@ DEBRIEF = """<html>
 			{TITLE} - Debriefing
 		</title>
 	</head>
-	<body background = "Menus\\blackboard.jpg" bgcolor=#000000 link=#ff8800 alink=#ffffff vlink=#ffffff>
+	<body background = "{BACKGROUND}" bgcolor=#000000 link=#ff8800 alink=#ffffff vlink=#ffffff>
 		<font face = "courier new" size=3, color=#ffffff>
 		<table width=640 height=424>
 		<tr><td width=70 height=120></td><td width=500></td><td width=70></td></tr>

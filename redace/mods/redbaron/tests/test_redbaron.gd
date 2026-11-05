@@ -321,8 +321,8 @@ func _m02_rejoin() -> void:
 	check(not s().broke_off, "no break before 6 s")
 	world.mission_time = 6.5
 	_settle()
-	check(s().broke_off and b.current_goal().type == Aircraft.G_ATTACK and b.current_goal().targetid == 3003,
-		"Brenner breaks off after the decoy at 6 s")
+	check(s().broke_off and b.current_goal().type == Aircraft.G_WAYPOINT and b.current_goal().pos.is_equal_approx(s().decoy.global_position),
+		"Brenner breaks off after the decoy at 6 s, flat out (waypoint on the Scout)")
 	check(world.message_label.text.begins_with("Brenner breaks off"), "HUD says when Brenner breaks off")
 	check(not s().armed and not s().rejoined, "catching him does not count yet")
 	b.global_position = p.global_position + Vector3(150, 0, 0)
@@ -334,6 +334,7 @@ func _m02_rejoin() -> void:
 	p.global_position = b.global_position + Vector3(150, 0, 0)
 	_settle()
 	check(s().armed and not s().rejoined, "Brenner near the Scout: intermediate event")
+	check(b.current_goal().type == Aircraft.G_ATTACK and b.current_goal().targetid == 3003, "on the Scout he attacks it")
 	check(world.message_label.text.begins_with("Brenner is over the British guns"), "HUD says Brenner is in danger")
 	_settle()
 	check(not s().rejoined, "no rejoin in the same moment as the previous event")

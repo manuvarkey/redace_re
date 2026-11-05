@@ -282,3 +282,13 @@ Per mission (deviations from the design's INI in **bold**):
 - 10 Cambrai: eight tanks in two rows south of the river (vehicles: turret AI, range 250); four Camels;
   **the Baron carries 10 rockets** (not in the design; ground attack, as asked for mission 8).
 - Campaign manifest lists 101-106, 108, 110 (built so far).
+
+## Playtest 10
+
+- Mission 1 debriefing rewritten to fit the mission (the old text claimed a half-hour fight ending when
+  Hawker's fuel ran out; the flight is five minutes and he may fall during the duel).
+- Albatros wings red too (user; the design allowed camouflage): upper surfaces painted, undersides cream.
+- Mission 2: Brenner still looked as fast as the Baron: a gun attack matches the target's speed, so he
+  flew at the Scout's pace. He now chases a waypoint on the Scout (renewed every step) at full
+  throttle with `highspeed = 125` (was 118), and attacks once he is within 300 of it.
+  Measured: 125 against the Baron's 111, 400 away 4 s after the break.

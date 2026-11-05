@@ -1,7 +1,8 @@
 extends "res://mods/redbaron/mission_script.gd"
 ## Mission 2, First Sortie. Each step of the story has its own HUD line, at least MESSAGE_GAP apart:
 ##   1. 6 s: Brenner breaks off from the Baron's wing after a decoy Bristol Scout flying east toward the
-##      British AA ("Brenner breaks off after a Scout!"). He is faster than the Baron (118 against 110).
+##      British AA ("Brenner breaks off after a Scout!"). He is faster than the Baron (125 against 110)
+##      and flies at it flat out (a waypoint on the Scout, not a gun attack, which matches its speed).
 ##   2. Brenner closes within 300 of the Scout, or the Scout goes down: "Brenner is over the British
 ##      guns! Get him out of there." Only from here does catching him count.
 ##   3. The Baron within 200 of Brenner: he forms up ("Brenner joins. Return to base.").
@@ -49,11 +50,13 @@ func step(_dt: float) -> void:
 	if not broke_off:
 		if now() >= BREAK_AT:
 			broke_off = true
-			attack(brenner, decoy if alive(decoy) else -9)
+			_chase()
 			_event("Brenner breaks off after a Scout! Catch him to call him back.")
 	elif not armed:
+		_chase()
 		if ready and (not alive(decoy) or near(brenner, decoy, SCOUT_RANGE)):
 			armed = true
+			attack(brenner, decoy if alive(decoy) else -9)
 			_event("Brenner is over the British guns! Get him out of there.")
 	elif not rejoined:
 		if ready and near(p, brenner, REJOIN_RANGE):
@@ -67,6 +70,19 @@ func step(_dt: float) -> void:
 			_intercept(p)
 		if near(p, AERODROME, HOME_RANGE, true) and near(brenner, AERODROME, HOME_RANGE, true):
 			win()
+
+
+## Brenner runs for the Scout flat out: a waypoint on it, renewed every step (a gun attack would match the
+## Scout's speed and keep him level with the Baron). He attacks once he is on it.
+func _chase() -> void:
+	if not alive(decoy):
+		return
+	var g := brenner.current_goal()
+	if int(g.get("type", 0)) == Aircraft.G_WAYPOINT:
+		g.pos = decoy.global_position
+	else:
+		fly_to(brenner, decoy.global_position, [], 50.0)
+	brenner.throttle = 1.0
 
 
 ## Two Nieuports dive in from ahead and to the right of the way home, one on the Baron, one on Brenner.

@@ -5,7 +5,8 @@ Writes overrides/redbaron/objects/planes/<folder>/<folder>.png, which build_plan
 folder's model and points the model's atlas at. Regions are pixel boxes in the 1024 x 1024 upscaled
 atlases (game_data/objects/planes/textures/*_a.png):
 
-  albatrostemp1_a: wings x 0..140 / 430..575 (kept: camouflage), fuselage sides x 620..770 / 780..920,
+  albatrostemp1_a: wing upper surfaces x 0..140 / 430..575, y 0..655 (green; painted red too, at the
+                   user's request: the design allowed camouflage), fuselage sides x 620..770 / 780..920,
                    y 0..790 (tail at the top, metal nose at the bottom), wheel covers 0..140 x 665..800,
                    fin and rudder 0..150 x 800..990, tailplane 175..470 x 865..1010.
   fokker_a:        already red (the original game's Red Baron); fuselage sides x 700..1000 (tail at the
@@ -27,6 +28,7 @@ OUT = GODOT / "overrides" / "redbaron" / "objects" / "planes"
 FOKKER_RED = (186, 42, 0)  # the stock Dr.I's red, so the squadron matches
 ALBATROS_PAINT = [(620, 0, 770, 790), (780, 0, 920, 790), (0, 665, 140, 800), (0, 800, 150, 990),
                   (175, 865, 470, 1010)]
+ALBATROS_WINGS = [(0, 0, 140, 655), (430, 0, 575, 655)]  # the green upper surfaces; the cream undersides stay
 ALBATROS_BAND = [(620, 150, 770, 200), (780, 150, 920, 200)]  # behind the fuselage cross, ahead of the tail
 FOKKER_BAND = [(700, 150, 830, 200), (840, 150, 1000, 200)]
 FOKKER_RUDDER = (285, 855, 460, 1010)
@@ -90,7 +92,7 @@ def save(img, folder):
 def main():
     albatros = Image.open(TEX / "albatrostemp1_a.png").convert("RGBA")
     red = albatros.copy()
-    recolour(red, ALBATROS_PAINT, FOKKER_RED)
+    recolour(red, ALBATROS_PAINT + ALBATROS_WINGS, FOKKER_RED)
     save(red, "albatros_red")
     brenner = red.copy()
     band(brenner, ALBATROS_BAND)

@@ -611,7 +611,7 @@ func _stock_rule_mission(i: int) -> void:
 		0:
 			world.load_mission(id)
 		1:
-			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m04.gd"), preload("res://mods/redbaron/missions/m05.gd"), preload("res://mods/redbaron/missions/m06.gd")], "%d: objective script" % id)
+			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m05.gd"), preload("res://mods/redbaron/missions/m06.gd")], "%d: objective script" % id)
 			if id == 105:
 				var e: Aircraft = s().plane(3020)
 				check(e.current_goal().type == Aircraft.G_FORMATION, "105: escorts in formation on the recon plane")
@@ -651,17 +651,15 @@ func _stock_rule_mission(i: int) -> void:
 						var d := MS.distance(q, home, true)
 						ahead = ahead and d < route - 2000.0 and d > 2500.0
 				check(ahead, "104: fighters well ahead, about 30 s out")
-				check(wave2.all(func(q): return q.hidden), "104: second wave hidden")
-				for q in wave1:
-					q.state = Aircraft.State.DEAD
-				s().run_step(0.0)
-				check(s().wave2_sent and wave2.all(func(q): return not q.hidden), "104: second wave comes when the first is down")
-				for q in wave1:
-					q.state = Aircraft.State.FLYING
-				world._count_rule_members()
+				check(wave2.is_empty() and world.planes.filter(func(q): return q.groups & (1 << 9)).size() == 7, "104: one wave of seven raiders")
 			check(world.player.plane_name == spec[1], "%d: player flies %s" % [id, spec[1]])
 			if id != 101 and id != 103:
-				check(world.player.ordnance_type == 2 and world.player.ordnance_left == 10, "%d: 10 rockets" % id)
+				var rockets := 30 if id == 110 else 10
+				check(world.player.ordnance_type == 2 and world.player.ordnance_left == rockets, "%d: %d rockets" % [id, rockets])
+			if id == 110:
+				for id2 in [3002, 3003]:
+					var wing: Aircraft = s().plane(id2)
+					check(wing and wing.allied and wing.goals.any(func(g): return g.type == Aircraft.G_ATTACK and g.targetid == -9), "110: wingman %d after the Camels" % id2)
 			check(world.planes.filter(func(q): return q.call("is_persistent")).all(func(q): return id == 104 and q.plane_name == "re8"),
 				"%d: original AI behaviour (only Scramble's bombers persistent)" % id)
 			var groups := {}

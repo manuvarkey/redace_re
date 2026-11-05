@@ -373,3 +373,10 @@ Per mission (deviations from the design's INI in **bold**):
   field going for the raiders; the Baron still takes off.
 - Rear gunners tempered (user: "too persistent"): 3 rounds/s (was 5) in bursts of 6, then 1.5 s, out to
   380 (was 450). `DefensiveGunners.burst/pause` are new optional fields (0 = Britain's behaviour).
+
+## Playtest 17
+
+- Scramble: one wave only (4 bombers + 3 fighters, counter "Raiders down n / 7"); m04.gd removed, the
+  mission runs on objective.gd again.
+- Cambrai: Brenner (`fokker_brenner`) and a rookie (`fokker_rookie_blue`) fly with the Baron and attack
+  the Camels (not in the design: alone it was impossible); the Baron carries 30 rockets.

@@ -140,20 +140,10 @@ collide with stock (−3…25), Britain (26) or later bonus missions, and keep t
 6. Missions 107, 109, 111, 112, letter and epilogue.
 7. Campaign manifest, menus, ranks, builds.
 
-## Open questions
+## Decisions (user, 2026-11-05)
 
-1. **Gunners.** Britain's gunner code sits inside `mods/britain/aircraft.gd` and is tied to `he111`.
-   Extending that class would also pull in Britain's `require_shot_down` edge behaviour and free-goal
-   changes for every plane. Proposal: move the gunner targeting (`_gunner_shot`, same algorithm) into a
-   shared helper `redace/mods/shared/defensive_gunners.gd`, used by the Red Baron aircraft; Britain keeps
-   its own copy untouched for now (switching it over later is a pure refactor checked by
-   `test_britain_aircraft`). Alternative: switch Britain to the helper now. Which do you prefer?
-2. **Epilogue art.** The design asks for a single funeral illustration; the prompt says a black page with
-   the text only. Plan: text-only black page now. Do you want an illustration (it would have to be
-   original art; nothing downloaded)?
-3. **Promotion timing.** Oberleutnant after mission 2 and Rittmeister after mission 3 (historical), so
-   the promotion page shows only twice. OK, or spread the ranks over the campaign?
-4. **Bonus Missions page.** Adding a `^bonuscampaigns^` placeholder to `bonus.html` (remake-only page) is
-   the only edit to an existing page. OK?
-5. **counts_as_lost rule** (table above): dead, or group 9 that left the map. The prompt says "dead only
-   like Britain"; this keeps destroy-all missions from hanging on a fleeing raider. OK?
+1. Gunners: shared helper `redace/mods/shared/defensive_gunners.gd`, and Britain switched to it too.
+2. Epilogue: black page, text only.
+3. Promotions: Oberleutnant after mission 2, Rittmeister after mission 3 (thresholds 1000 / 1500).
+4. `bonus.html` gets a `^bonuscampaigns^` placeholder.
+5. `counts_as_lost`: dead, or group 9 that left the map.

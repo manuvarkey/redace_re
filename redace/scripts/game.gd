@@ -1095,6 +1095,7 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	controls.recentre_gyro()
 	world.finished.connect(_on_finished)
 	world.pause_requested.connect(_pause)
+	world.progress_secured.connect(_on_progress_secured)
 	add_child(world)
 	_apply_graphics_settings()
 	world.view_distance = float(settings.clip_plane)
@@ -1178,6 +1179,9 @@ func _resume() -> void:
 ## promote when the score reaches the next rank's threshold; finishing mission 25 shows congrats.
 func _on_finished(result: String, score: int) -> void:
 	_result = result
+	# mod hook (World.result_page): a mission script may name its own page for this result
+	var custom := world.result_page(result, _campaign) if is_instance_valid(world) else ""
+	var secured := is_instance_valid(world) and world.progress_was_secured
 	_end_flight()
 	# games counts every finished flight; kills and deaths are saved but the exe never adds to them (0x45d796)
 	if not _pilot().is_empty():
@@ -1185,14 +1189,14 @@ func _on_finished(result: String, score: int) -> void:
 		_save()
 	_play_menu_music()
 	if result != "won":
-		open_page("Menus\\defeat.html")
+		open_page(custom if custom != "" else "Menus\\defeat.html")
 		return
 	var p := _pilot()
 	if not p.is_empty():
 		p.lastnum = 0
 		_save()
 	if not _campaign or p.is_empty() or _mission < 1:
-		open_page("Menus\\victory.html")
+		open_page(custom if custom != "" else "Menus\\victory.html")
 		return
 	var was_last := _mission == LAST_MISSION
 	if int(p.mission) == _mission:
@@ -1205,6 +1209,29 @@ func _on_finished(result: String, score: int) -> void:
 		page = "Menus\\promotion.html"
 	if was_last:
 		page = "Menus\\congrats.html"
+	if secured and page == "Menus\\victory.html" and _promoted_by_secure:
+		page = "Menus\\promotion.html"
+	if custom != "":
+		page = custom
 	_save()
 	_mission = int(pilots[current].mission)
 	open_page(page)
+
+
+var _promoted_by_secure := false
+
+
+## World.secure_progress (mod mission scripts): the campaign bookkeeping of a win, applied mid-flight so
+## that it stands however the flight ends. _on_finished then finds the mission already advanced.
+func _on_progress_secured() -> void:
+	_promoted_by_secure = false
+	var p := _pilot()
+	if not _campaign or p.is_empty() or _mission < 1 or int(p.mission) != _mission or world == null:
+		return
+	pilots[current].mission = _mission + 1
+	pilots[current].score = int(p.score) + world.mission_score(true)
+	var rank := int(pilots[current].rank)
+	if rank < RANKS.size() - 1 and pilots[current].score >= PROMOTION_SCORE[rank]:
+		pilots[current].rank = rank + 1
+		_promoted_by_secure = true
+	_save()

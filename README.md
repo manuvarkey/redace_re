@@ -454,3 +454,8 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 
 A Spitfire mission over a new Dover-inspired coastal map (**Goodies → Bonus Missions**, or `--mission=26`).
 How to play, what it contains, rebuild and test: [`redace/mods/britain/README.md`](redace/mods/britain/README.md).
+
+### Der Rote Kampfflieger (Red Baron campaign mod)
+
+A 12-mission campaign flown as Manfred von Richthofen, 1916-1918 (**Goodies → Bonus Missions → Der Rote
+Kampfflieger**). How to play, rebuild and test: [`redace/mods/redbaron/README.md`](redace/mods/redbaron/README.md).

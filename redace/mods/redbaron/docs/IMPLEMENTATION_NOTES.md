@@ -431,3 +431,15 @@ hangar), marked on the minimap.
   the Baron low over the ridge (the AI cannot be told where to herd the player).
 - Failure pages for scripts' results: 7 / 9 / 11 / 12 `failed_defence.html`.
 - Campaign manifest: all twelve missions, 101-112.
+
+## Phase 7: wiring check and builds
+
+- Campaign wiring was done early (see above); ranks, briefings, Replay Missions, debriefings, the letter,
+  the epilogue and the completion page are in place. No in-game text says "Axis" (grep of the missions,
+  campaign pages and scripts).
+- `./build.sh` (Web, Linux, Windows) succeeds; the pck holds `mods/redbaron/campaign.ini`, the mod's
+  compiled scripts and missions 101-112, and leaves out `docs/`, `tools/`, `tests/` and fixture mission
+  199. The exported Linux build runs missions 102 and 112 headless without script errors. Android was not
+  built here (no SDK set up in this session).
+- Before release: `replayall = 0` in `campaign.ini`; confirm the wreath inscription (the design marks it
+  "secondary source only").

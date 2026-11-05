@@ -687,6 +687,9 @@ func _stock_rule_mission(i: int) -> void:
 			check(groups == spec[2], "%d: rules %s" % [id, groups])
 			check(is_equal_approx(world.time_limit, spec[3]), "%d: time limit %.0f" % [id, spec[3]])
 			check(world.message_label.text != "", "%d: intro line on the HUD" % id)
+			if world.map_bounds.size.x < 5000.0:  # country: behind German lines, nothing bombed
+				check(world.targets.all(func(x): return not ("burn" in x.name or "wreck" in x.name or "ruin" in x.name)),
+					"%d: no bombed buildings or burnt trees on the country map" % id)
 			var targets := world.planes.filter(func(p): return p.groups & (1 << 7))
 			for p in targets:
 				check(world.map_markers.any(func(m): return m.icon == "smalltarget" and MS.near(m.pos, p, 20.0)),

@@ -40,7 +40,7 @@ def keyvals(lines):
 
 # burnt or wrecked scenery -> the standing original (same footprint in the stock missions)
 INTACT = {"bighangerburn": "bighanger", "hangerburned": "hanger", "factory_burned": "factory",
-          "tree1_burned": "tree1", "housestumps": "house1"}
+          "tree1_burned": "tree1", "housestumps": "house1", "bridgewreck": "bridge", "aagunruin": "aagun"}
 
 
 def build(num):

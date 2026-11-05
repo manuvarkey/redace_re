@@ -443,3 +443,16 @@ hangar), marked on the minimap.
   built here (no SDK set up in this session).
 - Before release: `replayall = 0` in `campaign.ini`; confirm the wreath inscription (the design marks it
   "secondary source only").
+
+## Playtest 18: trenches minimap, bombed scenery
+
+- The trenches minimap was the wrong image (build_assets took `map.jpg`, another landscape with a river
+  and a coast, over `map.bmp`, which matches the terrain and is what the exe loads). Fixed in
+  tools/build_assets.py and game_data (also corrects stock missions 21-25). **The real trenches layout:**
+  trench systems in the north (z < about 9100, the mod's German side), a muddy no man's land band from
+  z about 9200 to 11700 (two trench lines in it), open country south (British side). Earlier notes
+  calling a "river at z 9300..9800" the front came from the wrong image; the placements still fit
+  except the balloons, now moved behind the British lines (z 12150..12450) with their AA rings.
+- Country missions (2, 4, 8, 9): `intact` now covers the whole map: every bombed hangar, factory, burnt
+  tree, wrecked bridge and AA ruin of the template stands (30 objects; the country map is behind German
+  lines). Test: no burn / wreck / ruin scenery in the country missions.

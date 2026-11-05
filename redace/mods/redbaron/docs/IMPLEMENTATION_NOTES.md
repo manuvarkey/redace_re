@@ -341,3 +341,17 @@ Per mission (deviations from the design's INI in **bold**):
   in group 9 (counter "Raiders down n / 14").
 - **German AA removed from Scramble** (design had it): AA rounds hit any plane on their path, and the
   all-round guns at the field shot down Brenner and wore down the Baron.
+
+## Playtest 15
+
+- 10 rockets for the Baron also in missions 2, 4, 5, 6 (with 8 and 10: every Albatros/Dr.I mission but
+  1 and 3).
+- Persistent pilots are **off by default** again (original AI); only Scramble's bombers set
+  `persistent = 1`. Massed, never-dodging attackers caused trouble.
+- Scramble: the map ends 3150 east of the aerodrome, so the waves cannot start twice as far out in a
+  straight line. Bombers now start in the north-east corner (about 4100 out, 850 high: the ground there
+  is about 550) and come round by the east, each through its own dogleg point near (9100, 7250..7700)
+  (a shared point made them collide): about 60 s to the hangars (was about 33). Fighters start about
+  2900 out, about 30 s (was about 20), so the gap is about 30 s (was about 13). Wave 2 is parked hidden on
+  flat ground (on the north-east slope a hidden plane crashed at once) and appears at wave 1's starting
+  places. Simulated: fighters arrive at about 25 s, bombers over the hangars at about 61 s.

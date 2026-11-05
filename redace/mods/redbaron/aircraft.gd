@@ -16,7 +16,7 @@ var gunners_enabled := false
 var damage_scale := 1.0  # mission scripts: fraction of incoming damage taken (e.g. a wounded Baron)
 ## Persistent pilots (not in the original): a hit no longer makes them dodge for half a second (the
 ## original evade, FUN_00437af6), so attackers keep at it; with retaliation on they still turn on whoever
-## hit them. Default: enemy (group 9) single-seaters; [airN] persistent = 0 / 1 overrides.
+## hit them. Off by default (the original behaviour); [airN] persistent = 1 turns it on (Scramble's bombers).
 var persistent := -1  # -1 default, 0 off, 1 on
 var _gunners := DefensiveGunners.new(GUNNER_RANGE, GUNNER_INTERVAL)
 
@@ -41,7 +41,7 @@ func _guns(dt: float) -> void:
 func is_persistent() -> bool:
 	if persistent >= 0:
 		return persistent == 1
-	return groups & (1 << 9) != 0 and not gunners_enabled
+	return false  # original behaviour unless a mission asks (user: massed persistent attackers caused trouble)
 
 
 func on_hit(attacker) -> void:

@@ -9,7 +9,7 @@ extends Node
 ##   [airN] gunners = 0 / 1                               defensive gunners off / on (aircraft.gd)
 ##   [airN] gunnerrate = N                                gunners' rounds per second (default 5)
 ##   [airN] firerate / fireon / fireoff                   the plane's own guns (plane.ini [armaments])
-##   [airN] persistent = 0 / 1                            no dodging when hit (default: group 9 fighters)
+##   [airN] persistent = 0 / 1                            no dodging when hit (default 0, the original)
 
 const MissionScript := preload("res://mods/redbaron/mission_script.gd")
 const RedBaronAircraft := preload("res://mods/redbaron/aircraft.gd")

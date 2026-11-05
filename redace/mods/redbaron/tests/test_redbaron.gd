@@ -302,6 +302,7 @@ func _m02_rejoin() -> void:
 	check(world.player.high_speed == 110.0 and world.player.endurance == 125.0 and b.endurance == 125.0, "design stats")
 	check(b.current_goal().type == Aircraft.G_FORMATION and b.current_goal().targetid == 3001, "Brenner starts on the Baron's wing")
 	check(b.high_speed > world.player.high_speed, "Brenner is faster, so he can run away")
+	check(world.player.ordnance_type == 2 and world.player.ordnance_left == 10, "102: 10 rockets")
 	check(s().plane(3004).hidden and s().plane(3005).hidden, "ambush hidden at start")
 	world._count_rule_members()
 	check(world.rules[0].group == 2 and world.rules[0].lost == 0, "Brenner protected (Group2)")
@@ -635,9 +636,16 @@ func _stock_rule_mission(i: int) -> void:
 				check(wave1.size() == 7 and wave1.filter(func(q): return q.plane_name == "re8").size() == 4, "104: wave of 4 bombers + 3 fighters")
 				check(wave1.filter(func(q): return q.plane_name == "re8").all(func(q): return q.ordnance_left == 1 and q.goals.any(func(g): return g.type == Aircraft.G_BOMB_RUN)),
 					"104: bombers carry a bomb and fly a bombing run")
-				var bx: float = wave1.filter(func(q): return q.plane_name == "re8")[0].global_position.x
-				check(wave1.filter(func(q): return q.plane_name == "se5a").all(func(q): return q.global_position.x < bx - 500.0), "104: fighters well ahead of the bombers")
-				check(bx > 6200.0 + 2800.0, "104: wave starts about 3000 out")
+				var home := Vector3(6200, 0, 7450)
+				var bombers := wave1.filter(func(q): return q.plane_name == "re8")
+				var route: float = MS.distance(bombers[0], Vector3(9100, 0, 7250), true) + MS.distance(Vector3(9100, 0, 7250), home, true)
+				check(route > 5000.0, "104: bombers about 60 s out (route %.0f)" % route)
+				var ahead := true
+				for q in wave1:
+					if q.plane_name == "se5a":
+						var d := MS.distance(q, home, true)
+						ahead = ahead and d < route - 2000.0 and d > 2500.0
+				check(ahead, "104: fighters well ahead, about 30 s out")
 				check(wave2.all(func(q): return q.hidden), "104: second wave hidden")
 				for q in wave1:
 					q.state = Aircraft.State.DEAD
@@ -647,6 +655,10 @@ func _stock_rule_mission(i: int) -> void:
 					q.state = Aircraft.State.FLYING
 				world._count_rule_members()
 			check(world.player.plane_name == spec[1], "%d: player flies %s" % [id, spec[1]])
+			if id != 101 and id != 103:
+				check(world.player.ordnance_type == 2 and world.player.ordnance_left == 10, "%d: 10 rockets" % id)
+			check(world.planes.filter(func(q): return q.call("is_persistent")).all(func(q): return id == 104 and q.plane_name == "re8"),
+				"%d: original AI behaviour (only Scramble's bombers persistent)" % id)
 			var groups := {}
 			for r in world.rules:
 				groups[int(r.group)] = float(r.percent)

@@ -89,6 +89,17 @@ var _last_damage_source := ""
 
 
 var _perf := false
+var _perf_bullet_ticks := 0
+var _perf_bullet_update_us := 0
+var _perf_bullet_draw_us := 0
+
+# Rebuilt for each synchronous bullet pass. Aircraft movement and scenery placement
+# happen outside that pass; damage can change presence/models, so narrow phase stays live.
+var _bullet_collision_prepared := false
+var _bullet_plane_grid := {}
+var _bullet_target_cells := {}
+const BULLET_UVS := [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+const BULLET_INDICES := [0, 1, 2, 0, 2, 3]
 
 
 func _ready() -> void:
@@ -292,6 +303,9 @@ func load_mission(id: int) -> void:
 	targets.clear()
 	objects_by_id.clear()
 	bullets.clear()
+	_bullet_plane_grid.clear()
+	_bullet_target_cells.clear()
+	_bullet_collision_prepared = false
 	shells.clear()
 	rules.clear()
 	player = null
@@ -396,6 +410,7 @@ func _draw_bullets() -> void:
 	var eye := camera.global_position
 	var col := Color(1, 1, 1, 0xc4 / 255.0)
 	_bullets_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	_bullets_mesh.surface_set_color(col)
 	for b in bullets:
 		var p: Vector3 = b.pos
 		var d: Vector3 = (b.vel as Vector3).normalized()
@@ -405,10 +420,8 @@ func _draw_bullets() -> void:
 			continue
 		side = side.normalized() * (0.5 if b.aa else 0.3)
 		var q := [p + side, tip + side, tip - side, p - side]
-		var uv := [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
-		for k in [0, 1, 2, 0, 2, 3]:
-			_bullets_mesh.surface_set_color(col)
-			_bullets_mesh.surface_set_uv(uv[k])
+		for k in BULLET_INDICES:
+			_bullets_mesh.surface_set_uv(BULLET_UVS[k])
 			_bullets_mesh.surface_add_vertex(q[k])
 	_bullets_mesh.surface_end()
 
@@ -713,6 +726,13 @@ func _perf_line() -> String:
 		mission_time, Engine.get_frames_per_second(),
 		Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
 		Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, bullets.size(), shells.size()]
+	if _perf_bullet_ticks > 0:
+		line += " bullet_update=%.3fms bullet_draw=%.3fms" % [
+			float(_perf_bullet_update_us) / _perf_bullet_ticks / 1000.0,
+			float(_perf_bullet_draw_us) / _perf_bullet_ticks / 1000.0]
+		_perf_bullet_ticks = 0
+		_perf_bullet_update_us = 0
+		_perf_bullet_draw_us = 0
 	if player:
 		var o := nearest_objective(player.global_position)
 		var od: float = o.node.global_position.distance_to(player.global_position) if not o.is_empty() else -1.0
@@ -926,6 +946,22 @@ func _physics_process(dt: float) -> void:
 		mission_time += dt
 	_update_turrets(dt)
 	var space := get_world_3d().direct_space_state
+	var started := Time.get_ticks_usec() if _perf else 0
+	_update_bullets(dt, space)
+	var simulated := Time.get_ticks_usec() if _perf else 0
+	_draw_bullets()
+	if _perf:
+		_perf_bullet_ticks += 1
+		_perf_bullet_update_us += simulated - started
+		_perf_bullet_draw_us += Time.get_ticks_usec() - simulated
+	_update_shells(dt, space)
+	_check_rules()
+
+
+func _update_bullets(dt: float, space: PhysicsDirectSpaceState3D) -> void:
+	if bullets.is_empty():
+		return
+	_prepare_bullet_collision()
 	var i := bullets.size() - 1
 	while i >= 0:
 		var b: Dictionary = bullets[i]
@@ -938,9 +974,7 @@ func _physics_process(dt: float) -> void:
 		else:
 			b.pos = to
 		i -= 1
-	_draw_bullets()
-	_update_shells(dt, space)
-	_check_rules()
+	_bullet_collision_prepared = false
 
 
 func _update_shells(dt: float, space: PhysicsDirectSpaceState3D) -> void:
@@ -1053,7 +1087,8 @@ func _blast_amount(center: Vector3, atom_radius: float, at: Vector3, radius: flo
 func _bullet_hits(b: Dictionary, from: Vector3, to: Vector3, space: PhysicsDirectSpaceState3D) -> bool:
 	if not b.aa and _bullet_hits_scenery(b, from, to, space):
 		return true
-	for p in planes:
+	var candidates: Array = _bullet_plane_grid.get(_bullet_cell(to), []) if _bullet_collision_prepared else planes
+	for p: Aircraft in candidates:
 		if p.proximity_groups == 0 or is_same(p, b.owner) or not p.present():
 			continue
 		if p.global_position.distance_squared_to(to) < p.hit_radius_sq:
@@ -1063,7 +1098,7 @@ func _bullet_hits(b: Dictionary, from: Vector3, to: Vector3, space: PhysicsDirec
 
 
 func _bullet_hits_scenery(b: Dictionary, from: Vector3, to: Vector3, space: PhysicsDirectSpaceState3D) -> bool:
-	for t in _targets_near(to):
+	for t in _bullet_targets_near(from, to):
 		var inv: Transform3D = t.node.global_transform.affine_inverse()
 		var a: Vector3 = inv * from
 		var c: Vector3 = inv * to
@@ -1084,6 +1119,47 @@ func _bullet_hits_scenery(b: Dictionary, from: Vector3, to: Vector3, space: Phys
 		_bullet_sound_time = mission_time
 		play_at(hit.position, _bullet_ground_sound)
 	return true
+
+
+static func _bullet_cell(pos: Vector3) -> Vector3i:
+	return Vector3i(floori(pos.x / GRID), floori(pos.y / GRID), floori(pos.z / GRID))
+
+
+func _prepare_bullet_collision() -> void:
+	_bullet_plane_grid.clear()
+	_bullet_target_cells.clear()
+	# Insert each sphere's enclosing box into every touched cell, in original plane order.
+	# A bullet tests its endpoint, just like the original; this is NOT a swept aircraft test.
+	for p in planes:
+		var radius := Vector3.ONE * (sqrt(p.hit_radius_sq) + 0.001)
+		var lo := _bullet_cell(p.global_position - radius)
+		var hi := _bullet_cell(p.global_position + radius)
+		for x in range(lo.x, hi.x + 1):
+			for y in range(lo.y, hi.y + 1):
+				for z in range(lo.z, hi.z + 1):
+					var key := Vector3i(x, y, z)
+					if not _bullet_plane_grid.has(key):
+						_bullet_plane_grid[key] = []
+					_bullet_plane_grid[key].append(p)
+	_bullet_collision_prepared = true
+
+
+func _bullet_targets_near(from: Vector3, to: Vector3) -> Array:
+	if not _bullet_collision_prepared:
+		return _targets_near(to)
+	var key := _grid_key(to.x, to.z)
+	if not _bullet_target_cells.has(key):
+		var nearby := _targets_near(to)
+		var top := -INF
+		for t in nearby:
+			# Enclose the SAME local AABB used below; retain dead scenery and candidate order.
+			var box: AABB = t.node.global_transform * (t.aabb as AABB)
+			top = maxf(top, box.end.y)
+		_bullet_target_cells[key] = {"targets": nearby, "top": top}
+	var cell: Dictionary = _bullet_target_cells[key]
+	# Both endpoints above every candidate's box cannot intersect any of those boxes.
+	# A small margin keeps roundoff at transformed box faces conservative.
+	return [] if minf(from.y, to.y) > float(cell.top) + 0.001 else cell.targets
 
 
 ## Basis whose +Z (RenderWare forward) points along dir; safe for vertical directions.

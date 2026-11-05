@@ -126,3 +126,10 @@ across engines.
 ```sh
 godot --headless --path redace --log-file /tmp/britain-loss-audit.log -s tools/audit_britain_collisions.gd
 ```
+
+## Bullet performance parity
+
+Bullet broad-phase and ribbon optimizations retain the repeated-hit rules: an aircraft
+hit does not consume the round, and every qualifying physics tick and proximity group
+still applies damage. See [bullet-performance.md](bullet-performance.md) for paired
+reference tests, measured costs and cache invariants.

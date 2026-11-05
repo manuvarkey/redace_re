@@ -452,20 +452,5 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 
 ### Battle of Britain bonus mission
 
-Open **Game menu → Goodies → Bonus Missions → Battle of Britain**, or launch with
-`--mission=26`. Fly a Spitfire alongside three squadron mates over a new coastal
-map. Destroy three raids of Bf 109 fighters and He 111 bombers while keeping the
-aircraft factory intact. The raids arrive at 12, 97 and 182 seconds; future raids
-remain part of the victory objective while hidden. Factory destruction loses the
-mission, including when the final enemy is destroyed at the same time.
-
-The detailed aircraft and port buildings were authored through Blender MCP, with
-camouflage, panel seams, brick and slate textures. The Dover-inspired landscape
-has coastal hills, an irregular shoreline, and 49.5% water. Britain-only runtime
-scripts add translucent waves, clouds, sea-crash debris, bomber circuits, escort
-formations, defensive gunners, and staged damage. AA batteries defend the port,
-with five freighters and sixteen fishing boats offshore. Aircraft match the
-original game's screen scale; bombers use a distinct radar icon. See
-`overrides/britain/README.md` for references and tuning. Rebuild with
-`python3 tools/build_britain.py` (Pillow, NumPy, and a running Blender MCP addon). Validate the mission with Godot:
-`godot --headless --path redace -s tools/test_britain.gd`.
+A Spitfire mission over a new Dover-inspired coastal map (**Goodies → Bonus Missions**, or `--mission=26`).
+How to play, what it contains, rebuild and test: [`redace/mods/britain/README.md`](redace/mods/britain/README.md).

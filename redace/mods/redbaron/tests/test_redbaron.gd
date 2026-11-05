@@ -316,15 +316,41 @@ func _m02_rejoin() -> void:
 	check(s().broke_off and b.current_goal().type == Aircraft.G_ATTACK and b.current_goal().targetid == 3003,
 		"Brenner breaks off after the decoy at 6 s")
 	check(world.message_label.text.begins_with("Brenner breaks off"), "HUD says when Brenner breaks off")
-	check(not s().armed and not s().rejoined, "still close: catching him does not count yet")
-	b.global_position = p.global_position + Vector3(500, 0, 0)
+	check(not s().armed and not s().rejoined, "catching him does not count yet")
+	b.global_position = p.global_position + Vector3(150, 0, 0)
+	world.mission_time = 30.0
 	_settle()
-	check(s().armed and not s().rejoined, "rejoin armed once Brenner has got 300 away")
+	check(not s().armed and not s().rejoined, "no time fallback: catching him counts only after he reaches the Scout")
+	var decoy: Aircraft = s().plane(3003)
+	b.global_position = decoy.global_position + Vector3(200, 0, 0)
+	p.global_position = b.global_position + Vector3(150, 0, 0)
+	_settle()
+	check(s().armed and not s().rejoined, "Brenner near the Scout: intermediate event")
+	check(world.message_label.text.begins_with("Brenner is over the British guns"), "HUD says Brenner is in danger")
+	_settle()
+	check(not s().rejoined, "no rejoin in the same moment as the previous event")
+	world.mission_time = 35.0
 	b.global_position = p.global_position + Vector3(180, 0, 0)
 	_settle()
 	check(s().rejoined and b.current_goal().type == Aircraft.G_FORMATION and b.current_goal().targetid == 3001,
 		"Brenner rejoins in formation within 200")
 	check(world.message_label.text == "Brenner joins. Return to base.", "HUD says Brenner joins, return to base")
+	# halfway home the interceptors come in
+	var inter: Array = [s().plane(3006), s().plane(3007)]
+	check(inter[0].hidden and inter[1].hidden, "interceptors hidden until halfway home")
+	var home := Vector3(6200, 650, 7450)
+	var start: Vector3 = p.global_position
+	world.mission_time = 40.0
+	p.global_position = start.lerp(home, 0.3)
+	b.global_position = p.global_position + Vector3(30, 0, 30)
+	_settle()
+	check(not s().intercepted, "not yet halfway")
+	p.global_position = start.lerp(home, 0.6)
+	b.global_position = p.global_position + Vector3(30, 0, 30)
+	_settle()
+	check(s().intercepted and inter[0].current_goal().type == Aircraft.G_APPEAR and not inter[0].hidden,
+		"two Nieuports revealed halfway home")
+	check(inter[0].goals[1].targetid == 3001 and inter[1].goals[1].targetid == 3002, "one on the Baron, one on Brenner")
 	check(world.map_markers.size() == 1 and MS.near(world.map_markers[0].pos, Vector3(6200, 0, 7450), 1.0),
 		"aerodrome marked on the minimap")
 

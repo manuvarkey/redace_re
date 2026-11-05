@@ -144,3 +144,13 @@ Mission 8:
   "Brenner breaks off after a Scout! Catch him to call him back." Brenner flies `highspeed = 118`
   (the Baron 110) so he really pulls away (about 420 away 4 s after the break with the Baron flying
   straight on). Catching him (within 200) counts once he has been 300 away, or 15 s after the break.
+
+## Playtest 4: story steps could fire together in mission 2; return interception
+
+- Steps now each have a HUD line and at least 4 s between them: break-off (6 s) → "Brenner is over the
+  British guns! Get him out of there." when Brenner is within 300 of the Scout or the Scout is down
+  (new intermediate step; the 300-away / 15 s rule is gone) → rejoin within 200.
+- Not in the design: two more Nieuports (ids 3006, 3007, 8 rounds/s), hidden until the flat distance to
+  the aerodrome is half what it was at the rejoin; they appear 500 ahead and 350 to the side, facing
+  their targets, one attacking the Baron and one Brenner ("Enemy scouts ahead! Protect Brenner.").
+- Script API: `reveal(plane, pos, then, face)` can set the heading.

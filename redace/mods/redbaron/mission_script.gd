@@ -159,7 +159,11 @@ static func _target_id(target: Variant) -> int:
 
 
 ## Brings a hidden plane into the world at pos, flying at full speed (0x100), then the goals after.
-static func reveal(p: Aircraft, pos: Vector3, then := []) -> void:
+## face: direction to head (flattened); zero keeps the heading it was placed with.
+static func reveal(p: Aircraft, pos: Vector3, then := [], face := Vector3.ZERO) -> void:
+	var flat := Vector3(face.x, 0.0, face.z)
+	if flat.length_squared() > 0.01:
+		p.flight_basis = Basis.looking_at(-flat.normalized(), Vector3.UP)
 	set_goals(p, [goal(Aircraft.G_APPEAR, 0, pos)] + then)
 	p._set_hidden(false)
 

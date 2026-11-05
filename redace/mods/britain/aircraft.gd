@@ -11,13 +11,14 @@ const BOMB_HEIGHT := 350.0
 const ESCORT_RANGE := 650.0
 const GUNNER_RANGE := 450.0
 const GUNNER_INTERVAL := 0.2
+const DefensiveGunners := preload("res://mods/shared/defensive_gunners.gd")
 
 var radar_icon := ""
 var escort_leader_id := 0  # Mission object ID, not Godot's instance ID.
 var escort_offset := Vector3(100.0, 45.0, -140.0)  # Leader's flight_basis coordinates.
 var _escort_attack: Dictionary = {}
 var _escort_rest := 0.0
-var _gunner_cooldown := 0.0
+var _gunners := DefensiveGunners.new(GUNNER_RANGE, GUNNER_INTERVAL)
 var _bomb_target: Variant = null
 var _bomb_bearing := Vector3.ZERO
 var _bomb_circuit: Array[Vector3] = []
@@ -310,53 +311,12 @@ func _guns(dt: float) -> void:
 		return
 	fire_input = false  # There are no pilot-operated forward guns, even for inherited attack goals.
 	super._guns(dt)  # Bomb ammunition, cooldown and sound remain owned by Aircraft.
-	_gunner_cooldown = maxf(0.0, _gunner_cooldown - dt)
-	if state == State.GROUND or _gunner_cooldown > 0.0:
-		return
-	var shot := _gunner_shot()
-	if shot.is_empty():
-		return
-	world.spawn_ordnance(self, 1, shot.origin, velocity, shot.direction)
-	_gunner_cooldown = GUNNER_INTERVAL
-	_gun_sound_firing(true)
+	if _gunners.update(self, dt):
+		_gun_sound_firing(true)
 
 
 func _gunner_shot() -> Dictionary:
-	var best := {}
-	var closest := GUNNER_RANGE * GUNNER_RANGE
-	var frame := global_transform.basis.orthonormalized()
-	var bullet_speed := Ini.num(world.ordnance.get(1, {}), "releasespeed", 250.0)
-	for enemy in world.planes:
-		if enemy == self or enemy.allied == allied or not enemy.present():
-			continue
-		var to := enemy.global_position - global_position
-		var distance := to.length_squared()
-		if distance < 30.0 * 30.0 or distance > closest:
-			continue
-		var aim := to + (enemy.velocity - velocity) * (sqrt(distance) / maxf(bullet_speed, 1.0))
-		var local := frame.inverse() * aim.normalized()
-		var origin: Vector3
-		if local.z < -0.65 and local.y > -0.15 and local.y < 0.7:
-			origin = global_position - frame.z * (back_length + 1.0) + frame.y * up_length
-		elif local.y > 0.35 and local.z < 0.35:
-			origin = global_position + frame.y * (up_length + 1.0)
-		else:
-			continue  # Forward, low and wing-level broadside sectors are masked by the airframe.
-		var end := global_position + aim
-		if world.ground_hit_fraction(origin, end) > 0.0:
-			continue
-		var safe := true
-		for friend in world.planes:
-			if friend == self or friend.allied != allied or not friend.present():
-				continue
-			var near := Geometry3D.get_closest_point_to_segment(friend.global_position, origin, end)
-			if near.distance_to(friend.global_position) < friend.radius + 3.0:
-				safe = false
-				break
-		if safe:
-			closest = distance
-			best = {"origin": origin, "direction": (end - origin).normalized()}
-	return best
+	return DefensiveGunners.shot_for(self, GUNNER_RANGE)
 
 
 func take_damage(amount: float, attacker = null) -> void:

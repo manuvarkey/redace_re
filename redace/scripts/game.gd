@@ -17,6 +17,7 @@ const SAVE_PATH := "user://pilots.cfg"
 const SETTINGS_PATH := "user://settings.cfg"
 const RENDER_HEIGHTS := [360, 480, 540, 720, 1080, 0]
 const RENDER_NAMES := ["Very Low (360p)", "Low (480p)", "Medium (540p)", "Standard (720p)", "High (1080p)", "Native"]
+const DETAIL_LABELS := ["Low", "Standard"]
 const MSAA_LABELS := ["Off", "2x", "4x", "8x"]
 const ANISOTROPY_LABELS := ["Off", "2x", "4x", "8x", "16x"]
 const ANISOTROPY_SETTING := "textures/default_filters/anisotropic_filtering_level"
@@ -160,6 +161,9 @@ func _load() -> void:
 	settings.effects_volume = s.get_value("sound", "effects_volume", 10)
 	settings.clip_plane = int(s.get_value("graphics", "draw_distance", Ini.num(cfg_ini.get("graphics", {}), "drawdistance", 600)))
 	settings.effects_detail = s.get_value("graphics", "effects_detail", int(Ini.num(cfg_ini.get("graphics", {}), "effectsdetail", 700) / 100))
+	for key in ["water_detail", "cloud_detail", "scenery_detail"]:
+		var detail := int(s.get_value("graphics", key, 1))
+		settings[key] = detail if detail in [0, 1] else 1
 	var msaa := int(s.get_value("graphics", "msaa", 0))
 	settings.msaa = msaa if msaa >= 0 and msaa < MSAA_LABELS.size() else 0
 	var anisotropy := int(s.get_value("rendering", ANISOTROPY_SETTING, 0))
@@ -190,6 +194,8 @@ func _save() -> void:
 	s.set_value("graphics", "draw_distance", settings.clip_plane)
 	s.set_value("graphics", "effects_detail", settings.effects_detail)
 	s.set_value("graphics", "msaa", settings.msaa)
+	for key in ["water_detail", "cloud_detail", "scenery_detail"]:
+		s.set_value("graphics", key, settings[key])
 	# GLES3 reads its anisotropy cap before scripts start. This file is also the startup override.
 	s.set_value("rendering", ANISOTROPY_SETTING, settings.anisotropy)
 	s.set_value("video", "vsync", settings.vsync)
@@ -225,6 +231,11 @@ func _apply_settings() -> void:
 func _apply_graphics_settings() -> void:
 	# Apply 3D antialiasing during flights; the menu-only viewport needs no MSAA.
 	get_tree().root.msaa_3d = (int(settings.get("msaa", 0)) if is_instance_valid(world) else 0) as Viewport.MSAA
+	if is_instance_valid(world):
+		world.apply_graphics_quality(int(settings.water_detail), int(settings.cloud_detail), int(settings.scenery_detail))
+		world.effects_detail = settings.effects_detail / 10.0
+		if is_instance_valid(world.particles):
+			world.particles.detail = world.effects_detail
 
 
 func _apply_video_settings() -> void:
@@ -387,6 +398,9 @@ func _fill(html: String) -> String:
 		"musicvolbar": _bar("command:volume:0:%d", settings.music_volume, 10, 8),
 		"hardwaresound": _check("command:hardwaresound", true, false),
 		"clipplane": _value_bar("command:clipplane:%d", DRAW_DISTANCES, settings.clip_plane, 2),
+		"waterdetail": _graphics_choices("water_detail", DETAIL_LABELS),
+		"clouddetail": _graphics_choices("cloud_detail", DETAIL_LABELS),
+		"scenerydetail": _graphics_choices("scenery_detail", DETAIL_LABELS),
 		"msaa": _graphics_choices("msaa", MSAA_LABELS),
 		"anisotropy": _graphics_choices("anisotropy", ANISOTROPY_LABELS),
 		"anisotropynote": "Restart required to apply." if int(settings.anisotropy) != int(
@@ -835,6 +849,15 @@ func _command(c: String) -> void:
 			_refresh()
 		"effectsdetail":
 			settings.effects_detail = int(a[1])
+			_apply_graphics_settings()
+			_save()
+			_refresh()
+		"water_detail", "cloud_detail", "scenery_detail":
+			var detail := int(a[1])
+			if detail not in [0, 1]:
+				return
+			settings[a[0]] = detail
+			_apply_graphics_settings()
 			_save()
 			_refresh()
 		"msaa", "anisotropy":

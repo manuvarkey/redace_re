@@ -5,8 +5,12 @@ slash-separated lists in the same style as Extra Options → Collision Damage:
 
 - Antialiasing (MSAA): Off / 2x / 4x / 8x.
 - Anisotropic Filtering: Off / 2x / 4x / 8x / 16x.
+- Water Detail: Low / Standard (Britain).
+- Cloud Detail: Low / Standard (Britain).
+- Scenery Detail: Low / Standard (all missions).
 
-Both default to Off for old and new saves. Selected choices are bracketed and
+MSAA and anisotropy default to Off for old and new saves. The three detail
+choices default to Standard, preserving the existing appearance. Selected choices are bracketed and
 bold; other choices are links. MSAA applies to the root 3D viewport during a
 flight, including when changed while paused. Menus without a flight keep MSAA
 disabled because they contain only 2D content. Standalone --mission launches
@@ -58,3 +62,46 @@ A shallow-angle mipmapped checker plane uses the actual game's shader. Off and
 have an effect. Android/Web device testing remains manual. Video Options,
 Extra Options, bullet parity, collision damage and Britain/stock-isolation
 regressions passed; the Britain fixture retains shutdown resource warnings.
+
+
+## Environment quality
+
+Low Water removes four fine-ripple noise evaluations per water fragment. Broad
+waves, main ripples, Fresnel colour, glints, transparency, shoreline foam and fog
+remain. Low Clouds removes fine wisps and the highest noise octave, retaining
+broad moving clouds, sun/horizon colours and approximately the same mean coverage.
+Switching back to Standard restores the original shader source exactly. Both
+choices apply live without rebuilding water meshes or sea collision geometry.
+
+Low Scenery sets GPU mesh LOD bias to 0.5 rather than Standard's 1.0 for ground
+objects, including replacement damage models. Aircraft, terrain and CPU collision
+meshes remain unchanged. Existing Effects Detail now also updates particles in a
+currently loaded flight; it remains the particle-detail control rather than adding
+a duplicate setting. New preferences are graphics/water_detail, cloud_detail and
+scenery_detail in settings.cfg, using 0 for Low and 1 for Standard.
+
+Run `godot --path redace -s tools/bench_environment.gd` on a graphical desktop for
+fixed-camera viewport GPU timings and comparison PNGs in /tmp. The diagnostic
+uses mission 26 at 1280x720, Native scaling, MSAA Off and 1800 view distance. AI,
+physics, particles and HUD are disabled; shader animation is frozen only in the
+benchmark. Each view measures Standard → Low → Standard, with 30 warmup frames
+and 80 measured frames per variant. Linux, Godot 4.7.2 Compatibility, Radeon 760M:
+
+| View / changed option | Standard GPU ms | Low GPU ms | Standard repeat GPU ms |
+|---|---:|---:|---:|
+| Water | 0.764 | 0.756 | 0.778 |
+| Clouds | 0.682 | 0.593 | 0.693 |
+| Scenery | 0.747 | 0.754 | 0.761 |
+
+Low Clouds reduced viewport GPU time around 13–14% in this sky-focused view.
+Water and scenery frame-time differences were within normal variation on this GPU.
+Low Scenery reduced submitted primitives from 438,044 to 434,210 in its view.
+These are isolated viewport timings, not full-game FPS or Android results. The
+benchmark reports existing texture cleanup warnings at shutdown. GPU texture
+compression remains unchanged; it needs a separate asset/platform validation pass.
+
+`tools/test_environment_quality.gd` verifies shader variants, restoration, unchanged
+sea meshes/collision shapes and aircraft state, scenery LOD on damage replacement,
+and stock-mission compatibility. The menu suite checks persistence and layout for
+all detail choices. Original visibility-override removal remains covered by the
+Britain integration test, which verifies camera and environment fog at 400 units.

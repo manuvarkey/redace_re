@@ -65,6 +65,9 @@ func run() -> void:
 		check(game.settings.msaa == 0, "old saves default MSAA Off")
 	if not saved.has_section_key("rendering", Game.ANISOTROPY_SETTING):
 		check(game.settings.anisotropy == 0, "old saves default anisotropy Off")
+	for key in ["water_detail", "cloud_detail", "scenery_detail"]:
+		if not saved.has_section_key("graphics", key):
+			check(game.settings[key] == 1, "old saves default quality to Standard")
 	game.open_page("Menus\\graphicoptions.html")
 	var distance: int = game.settings.clip_plane
 	var detail: int = game.settings.effects_detail
@@ -72,13 +75,14 @@ func run() -> void:
 	var window_size := root.size
 	var scale := root.scaling_3d_scale
 	Engine.time_scale = 0.73
-	for key in ["msaa", "anisotropy"]:
-		var count := Game.MSAA_LABELS.size() if key == "msaa" else Game.ANISOTROPY_LABELS.size()
+	for key in ["msaa", "anisotropy", "water_detail", "cloud_detail", "scenery_detail"]:
+		var labels: Array = Game.MSAA_LABELS if key == "msaa" else (Game.ANISOTROPY_LABELS if key == "anisotropy" else Game.DETAIL_LABELS)
+		var count := labels.size()
 		for mode in count:
 			game._on_link("command:%s:%d" % [key, mode])
 			check(game.settings[key] == mode, "select %s %d" % [key, mode])
-			check(game._graphics_choices(key, Game.MSAA_LABELS if key == "msaa" else Game.ANISOTROPY_LABELS).contains("[%s]" % (["Off", "2x", "4x", "8x", "16x"][mode])), "selected choice marked")
-			check(game.view._links.size() == 28, "all sliders, quality choices and Back fit")
+			check(game._graphics_choices(key, labels).contains("[%s]" % labels[mode]), "selected choice marked")
+			check(game.view._links.size() == 31, "all sliders, quality choices and Back fit")
 			links_fit(game.view)
 			if key == "msaa":
 				check(root.msaa_3d == Viewport.MSAA_DISABLED, "menu-only viewport keeps MSAA disabled")
@@ -98,6 +102,12 @@ func run() -> void:
 		if "--snapshot" in OS.get_cmdline_user_args():
 			await settle()
 			check(root.get_texture().get_image().get_pixel(200, 600).r > 0.1, "menu artwork remains visible over MSAA flight")
+	game.world.particles = Particles.new()
+	for value in [2, 5, detail]:
+		game._command("effectsdetail:%d" % value)
+		check(is_equal_approx(game.world.effects_detail, value / 10.0) and is_equal_approx(game.world.particles.detail, value / 10.0), "Effects Detail updates current flight particles")
+	game.world.particles.free()
+	game.world.particles = null
 	check(is_equal_approx(Engine.time_scale, 0.73), "graphics changes preserve mission timing")
 	game._end_flight()
 	game.open_page("Menus\\graphicoptions.html")
@@ -105,19 +115,23 @@ func run() -> void:
 	check(game.settings.clip_plane == distance and game.settings.effects_detail == detail, "existing graphics settings preserved")
 	check(root.size == window_size and root.scaling_3d_scale == scale and game.settings.fullscreen == fullscreen, "display/render resolution preserved")
 	Engine.time_scale = 1.0
-	for key in ["msaa", "anisotropy"]:
+	for key in ["msaa", "anisotropy", "water_detail", "cloud_detail", "scenery_detail"]:
 		var before: int = game.settings[key]
 		game._command(key + ":99")
 		check(game.settings[key] == before, "invalid menu choice ignored")
 	game._on_link("Menus\\Options.html")
 	check(game._page.to_lower().ends_with("options.html"), "Back returns to Options")
 	saved.load(Game.SETTINGS_PATH)
+	for key in ["water_detail", "cloud_detail", "scenery_detail"]:
+		saved.set_value("graphics", key, 99)
 	saved.set_value("graphics", "msaa", 99)
 	saved.set_value("rendering", Game.ANISOTROPY_SETTING, -1)
 	saved.save(Game.SETTINGS_PATH)
 	var invalid := Game.new()
 	invalid._load()
 	check(invalid.settings.msaa == 0 and invalid.settings.anisotropy == 0, "invalid saved choices fall back to Off")
+	for key in ["water_detail", "cloud_detail", "scenery_detail"]:
+		check(invalid.settings[key] == 1, "invalid saved detail falls back to Standard")
 	invalid.free()
 	game._command("msaa:0")
 	game._command("anisotropy:0")

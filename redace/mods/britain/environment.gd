@@ -15,6 +15,10 @@ const MAX_CRASHES := 12
 const CRASH_LIFETIME := 24.0
 var camera_distance_scale := CAMERA_DISTANCE_SCALE
 var _crashes: Array[Dictionary] = []
+var _water_detail := 1
+var _cloud_detail := 1
+var _sky_material_ref: ShaderMaterial
+var _water_material_ref: ShaderMaterial
 
 const NOISE := """
 float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -65,16 +69,19 @@ func is_sea(pos: Vector3) -> bool:
 	return true
 
 
-func setup(base_environment: Environment) -> void:
+func setup(base_environment: Environment, water_detail := 1, cloud_detail := 1) -> void:
+	_water_detail = water_detail
+	_cloud_detail = cloud_detail
 	name = "BritainEnvironment"
 	base_environment.sky = Sky.new()
-	base_environment.sky.sky_material = _sky_material(base_environment.fog_light_color)
+	_sky_material_ref = _sky_material(base_environment.fog_light_color, _cloud_detail)
+	base_environment.sky.sky_material = _sky_material_ref
 	base_environment.sky.radiance_size = Sky.RADIANCE_SIZE_64
 	_build_water()
 	set_process(false)
 
 
-func _sky_material(horizon: Color) -> ShaderMaterial:
+func _sky_material(horizon: Color, detail := 1) -> ShaderMaterial:
 	var shader := Shader.new()
 	shader.code = """
 shader_type sky;
@@ -97,13 +104,17 @@ void sky() {
 	COLOR = mix(colour, cloud_colour, cover * 0.92);
 }
 """
+	if detail == 0:
+		# Retain the same broad cloud scales and mean coverage; omit fine noise/wisps.
+		shader.code = shader.code.replace("noise2(p * 4.07) * 0.17", "0.085")
+		shader.code = shader.code.replace("float wisps = cloud_noise(p * 2.8 - wind * 0.65);", "float wisps = 0.5;")
 	var material := ShaderMaterial.new()
 	material.shader = shader
 	material.set_shader_parameter("horizon", Vector3(horizon.r, horizon.g, horizon.b))
 	return material
 
 
-func _water_material() -> ShaderMaterial:
+func _water_material(detail := 1) -> ShaderMaterial:
 	var shader := Shader.new()
 	shader.code = """
 shader_type spatial;
@@ -150,9 +161,25 @@ void fragment() {
 	ALPHA = mix(mix(0.64, 0.87, depth), 0.97, max(foam, fog));
 }
 """
+	if detail == 0:
+		# Keep waves, broad ripples, Fresnel, glints and foam. Remove only fine normals.
+		var fine := """	slope += vec2(noise2(fine + vec2(0.12, 0)) - noise2(fine - vec2(0.12, 0)),
+		noise2(fine + vec2(0, 0.12)) - noise2(fine - vec2(0, 0.12))) * 0.65;"""
+		shader.code = shader.code.replace(fine, "")
 	var material := ShaderMaterial.new()
 	material.shader = shader
 	return material
+
+
+func set_quality(water: int, cloud: int) -> void:
+	if water != _water_detail and _water_material_ref != null:
+		_water_detail = water
+		_water_material_ref.shader = _water_material(water).shader
+	if cloud != _cloud_detail and _sky_material_ref != null:
+		_cloud_detail = cloud
+		var horizon: Vector3 = _sky_material_ref.get_shader_parameter("horizon")
+		_sky_material_ref.shader = _sky_material(Color(horizon.x, horizon.y, horizon.z), cloud).shader
+		_sky_material_ref.set_shader_parameter("horizon", horizon)
 
 
 func _build_water() -> void:
@@ -210,7 +237,8 @@ func _build_water() -> void:
 	var water := MeshInstance3D.new()
 	water.name = "SeaSurface"
 	water.mesh = mesh
-	water.material_override = _water_material()
+	_water_material_ref = _water_material(_water_detail)
+	water.material_override = _water_material_ref
 	water.extra_cull_margin = 1.0
 	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(water)

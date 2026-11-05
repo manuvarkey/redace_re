@@ -159,13 +159,35 @@ func _run() -> void:
 func _test_ceiling_and_limits() -> void:
 	_fresh_world()
 	for name_ in ["he111", "bf109", "spitfire"]:
-		var plane = _plane(name_, Vector3(0, 950, 0))
+		var plane = _plane(name_, Vector3(0, 750, 0))
 		plane._ai_pitch = 5.0
 		plane.pitch_rate = 5.0
 		plane._fly(STEP)
-		_check(plane.speed >= plane.cruise_speed - 0.1, name_ + " must not lose speed above the old ceiling")
-		_check(plane.state == Aircraft.State.FLYING, name_ + " must not altitude-stall")
-		_check(plane.ahead_alt > 900.0, name_ + " must retain actual ahead clearance")
+		_check(plane.speed >= plane.cruise_speed - 0.1, name_ + " retains normal speed below the ceiling band")
+		_check(plane.state == Aircraft.State.FLYING, name_ + " must not altitude-stall below the ceiling band")
+		_check(plane.ahead_alt > 700.0, name_ + " must retain actual ahead clearance")
+		_check(is_equal_approx(plane._altitude_limited_speed(plane.high_speed), plane.high_speed), name_ + " keeps normal target speed below 800")
+		plane.position.y = 900.0
+		var middle: float = plane._altitude_limited_speed(plane.high_speed)
+		_check(middle < plane.high_speed and middle > plane.stall_speed * 0.75, name_ + " fades speed cap through ceiling band")
+		for height in [1000.0, 10000.0]:
+			plane.position.y = height
+			plane.state = Aircraft.State.FLYING
+			_check(plane._altitude_limited_speed(plane.dive_speed * 1.2) <= plane.stall_speed * 0.75, name_ + " caps dive bonuses at the ceiling")
+			plane.speed = plane.high_speed
+			plane.boost = true
+			plane.pitch_rate = 5.0
+			plane._ai_pitch = 5.0
+			plane._fly(STEP)
+			_check(plane.speed < plane.stall_speed and plane.state == Aircraft.State.STALL, name_ + " stalls at/above 1000 even with boost")
+			_check(plane.speed >= 0.0 and absf(plane.position.y - height) < 2.0, name_ + " avoids negative-speed reset and altitude teleportation")
+		plane.position.y = 700.0
+		plane.state = Aircraft.State.STALL
+		plane.speed = plane.stall_speed + 1.0
+		plane.flight_basis = Basis.IDENTITY
+		plane.pitch_rate = 5.0
+		plane._fly(STEP)
+		_check(plane.state == Aircraft.State.FLYING, name_ + " can recover below the ceiling at flying speed")
 		plane.position.y = 100.0
 		plane._update_ahead_alt()
 		plane._ai_pitch = 0.0
@@ -179,6 +201,17 @@ func _test_ceiling_and_limits() -> void:
 		plane.speed = plane.stall_speed - 20.0
 		plane._fly(STEP)
 		_check(plane.state == Aircraft.State.STALL, name_ + " must retain real low-speed stalls")
+	var vertical = _plane("spitfire", Vector3(0, 1000, 0))
+	vertical.flight_basis = Basis(Vector3.RIGHT, -PI * 0.5)
+	vertical.boost = true
+	var highest: float = vertical.position.y
+	for i in 900:
+		vertical.pitch_rate = 5.0
+		vertical._ai_pitch = 5.0
+		vertical._rate_set = true
+		vertical._fly(STEP)
+		highest = maxf(highest, vertical.position.y)
+	_check(highest < 1100.0, "A perfectly vertical boosted stall cannot climb indefinitely")
 	var legacy = _plane("bristol", Vector3(0, 950, 0))
 	legacy.ahead_alt = 600.0
 	legacy.pitch_rate = 5.0

@@ -4,10 +4,10 @@ extends Node
 var environment: Node3D
 var camera_distance_scale := 0.65
 
-func setup_map(_world: World, sky: Environment, level: Node3D) -> void:
+func setup_map(world: World, sky: Environment, level: Node3D) -> void:
 	environment = load("res://mods/britain/environment.gd").new()
 	level.add_child(environment)
-	environment.setup(sky)
+	environment.setup(sky, world.water_detail, world.cloud_detail)
 	camera_distance_scale = environment.camera_distance_scale
 
 func create_aircraft() -> Aircraft:
@@ -24,3 +24,6 @@ func sea_crash(pos: Vector3) -> void:
 
 func counts_as_lost(plane: Aircraft) -> bool:
 	return plane.state == Aircraft.State.DEAD
+
+func apply_graphics_quality(water: int, cloud: int) -> void:
+	environment.set_quality(water, cloud)

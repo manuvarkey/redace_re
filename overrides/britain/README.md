@@ -84,3 +84,22 @@ scale, vessel counts and placement clear of land, quays and other vessels.
 Allied Spitfires preview terrain 2, 4 and 6 seconds ahead and climb when a
 cliff would intersect their projected path. `test_britain_aircraft.gd` includes
 a direct 180-unit cliff crossing and full bomber formation checks.
+
+
+### Performance and flight limits
+
+Options → Graphics offers Low/Standard Water and Cloud Detail for this mission,
+and Low/Standard Scenery Detail plus the existing Effects Detail slider. Standard
+retains the original shaders; Low water/clouds simplify fine shading while retaining
+broad waves and moving cloud coverage. These settings do not change collision
+geometry. See [graphics options](../../docs/graphics-options.md) for measurements.
+
+The map follows the global View Distance setting; its generator no longer inserts
+a minimum visibility override. Britain Spitfires, Bf 109s and He 111s have a soft
+stall ceiling at 1,000 world units above sea level. Speed limiting fades in from
+800 units and caps the flight target below stall speed at the ceiling, including
+boost/dive bonuses. Remaining thrust fades to zero by 1,100 units to prevent
+a perfectly vertical stalled fighter from climbing indefinitely. The usual stall motion remains and descending permits recovery;
+there is no altitude teleport or hard wall. Ground/falling states and stock aircraft
+retain their previous rules. `tools/test_britain_aircraft.gd` covers this transition,
+recovery, very high altitude and the stock altitude-penalty path.

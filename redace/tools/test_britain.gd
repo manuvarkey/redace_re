@@ -10,12 +10,18 @@ func _initialize() -> void:
 	_start.call_deferred()
 
 func _start() -> void:
+	world.view_distance = 400.0
 	world.load_mission(26)
 
 func _physics_process(_dt: float) -> bool:
 	ticks += 1
 	if ticks != 5:
 		return false
+	assert(is_equal_approx(world.camera.far, 400.0), "Britain must respect the selected View Distance")
+	assert(is_equal_approx(world._effective_view_distance, 400.0))
+	for child in world._level.get_children():
+		if child is WorldEnvironment:
+			assert(is_equal_approx(child.environment.fog_depth_end, 400.0), "Environment fog must follow View Distance")
 	assert(world.player.plane_name == "spitfire")
 	assert(world.planes.size() == 22)
 	assert(world.player.get_script() == load("res://mods/britain/aircraft.gd"))

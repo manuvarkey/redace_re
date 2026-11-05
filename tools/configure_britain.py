@@ -72,6 +72,6 @@ for name,speeds in [('spitfire',(145,122,110,175,70)),('bf109',(145*354/355,122,
  if name=='he111':c['physics'].update({'highroll':'20','lowroll':'15','highpitch':'12','lowpitch':'8','accel':'4'})
  c['collision'].update({'frontlength':'7','backlength':'8','portlength':'9' if name!='he111' else '17','starboardlength':'9' if name!='he111' else '17','uplength':'2','downlength':'2'})
  save(c,p)
-p=D/'maps/britain/map.ini';p.write_text('[appearance]\nbsp = britain\nfogcolour = 193 213 226 255\nminimumviewdistance = 1800\n')
+p=D/'maps/britain/map.ini';p.write_text('[appearance]\nbsp = britain\nfogcolour = 193 213 226 255\n')
 p=D/'language/english/missions/26/mission.html';s=p.read_text().replace('Southern England, September 1940.','Dover-inspired coast, September 1940.').replace('Their Heinkel bombers are making for our aircraft factory,','Their Heinkel bombers are making for the factory in the coastal hills,');p.write_text(s)
 print('Placed',i,'ground objects; water fraction',sum(x>coast(z) for x in range(0,6000,30) for z in range(0,6000,30))/40000)

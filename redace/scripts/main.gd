@@ -68,6 +68,9 @@ var brief_time := 10.0
 var controls: Controls  # player bindings; Game passes its own, debug runs load the saved ones
 var view_distance := 600.0  # options "View Distance", drawdistance in redace.ini (0x458ea2): far clip and fog end
 var _effective_view_distance := 600.0
+var water_detail := 1
+var cloud_detail := 1
+var scenery_detail := 1
 var effects_detail := 0.7  # options "Effects Detail"
 var camera_mode := 1  # original camera modes: 1 chase, 4 behind, 6 left, 7 right, 8 above
 var _mouse_dx := 0.0
@@ -143,6 +146,9 @@ func _ready() -> void:
 	if standalone:
 		var settings := ConfigFile.new()
 		settings.load(SETTINGS_PATH)
+		for key in ["water_detail", "cloud_detail", "scenery_detail"]:
+			var detail := int(settings.get_value("graphics", key, 1))
+			set(key, detail if detail in [0, 1] else 1)
 		var msaa := int(settings.get_value("graphics", "msaa", 0))
 		get_viewport().msaa_3d = (msaa if msaa >= 0 and msaa < 4 else 0) as Viewport.MSAA
 		collision_damage = clampi(int(settings.get_value("extra", "collision_damage", 0)), 0, 2) as CollisionDamage
@@ -368,6 +374,7 @@ func load_mission(id: int) -> void:
 			rules.append({"group": int(k.substr(5)), "percent": float(ms[k]), "total": 0, "lost": 0})
 	_count_rule_members()
 	_build_grid()
+	apply_graphics_quality(water_detail, cloud_detail, scenery_detail)
 
 	_setup_camera()
 	_play_music(int(Ini.num(m.get("music", {}), "track", 3)))
@@ -382,6 +389,18 @@ func load_mission(id: int) -> void:
 		if p.groups & (1 << 8):
 			p.endurance *= player_side_endurance
 		p.health = p.endurance
+
+
+func apply_graphics_quality(water: int, cloud: int, scenery: int) -> void:
+	water_detail = clampi(water, 0, 1)
+	cloud_detail = clampi(cloud, 0, 1)
+	scenery_detail = clampi(scenery, 0, 1)
+	if is_instance_valid(_mod) and _mod.has_method("apply_graphics_quality"):
+		_mod.apply_graphics_quality(water_detail, cloud_detail)
+	# GPU mesh LOD leaves the original CPU collision mesh, objects and aircraft intact.
+	for target in targets:
+		for mesh in target.node.find_children("*", "MeshInstance3D", true, false):
+			(mesh as MeshInstance3D).lod_bias = 0.5 if scenery_detail == 0 else 1.0
 
 
 ## Bullets as the exe draws them (FUN_0044c4fe): a camera-facing ribbon of the ordinance raster
@@ -1463,6 +1482,8 @@ func _damage_target(t: Dictionary, amount: float) -> void:
 			for c in node.get_children():
 				c.queue_free()
 			node.add_child(m)
+			for mesh in m.find_children("*", "MeshInstance3D", true, false):
+				(mesh as MeshInstance3D).lod_bias = 0.5 if scenery_detail == 0 else 1.0
 		play_at(node.global_position, t.break_sound)
 	# mission targets (group 7) flash red when hit (RedAce.c:29655)
 	if int(t.groups) & (1 << 7):

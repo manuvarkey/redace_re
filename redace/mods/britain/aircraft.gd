@@ -2,6 +2,9 @@ extends Aircraft
 ## Britain-only aircraft. World selects this script and assigns escort_leader_id.
 ## Optional sea API: is_sea(Vector3) -> bool, sea_crash(Vector3) -> void (wreck + splash).
 
+const STALL_CEILING := 1000.0  # world units above sea level; deliberately below the old unlimited climb
+const CEILING_BLEND_START := 800.0
+const CEILING_OVERSHOOT_BAND := 100.0
 const BOMBER_BANK := 18.0
 const BOMBER_PITCH := 8.0
 const BOMB_HEIGHT := 350.0
@@ -139,6 +142,20 @@ func _apply_ai_commands() -> void:
 	super._apply_ai_commands()
 
 
+func _altitude_limited_speed(target_speed: float) -> float:
+	if not _wwii():
+		return super._altitude_limited_speed(target_speed)
+	# Preserve normal Britain flight and falling/ground states. Fade the speed cap
+	# below stall speed at the ceiling, after boost/dive bonuses, without a hard wall.
+	if state in [State.GROUND, State.DEAD] or global_position.y <= CEILING_BLEND_START:
+		return target_speed
+	var fade := clampf((global_position.y - CEILING_BLEND_START) / (STALL_CEILING - CEILING_BLEND_START), 0.0, 1.0)
+	# Fade remaining thrust above the ceiling too: a perfectly vertical stalled
+	# fighter must not keep climbing forever on its residual forward speed.
+	var cap := stall_speed * 0.75 * clampf(1.0 - (global_position.y - STALL_CEILING) / CEILING_OVERSHOOT_BAND, 0.0, 1.0)
+	return lerpf(target_speed, minf(target_speed, cap), fade)
+
+
 func _fly(dt: float) -> void:
 	if not _wwii():
 		super._fly(dt)
@@ -155,11 +172,7 @@ func _fly(dt: float) -> void:
 		pitch_rate = rate + (5.0 if rate >= 0.0 else -5.0)
 		_ai_pitch = pitch_rate
 		_rate_set = true
-	var actual_alt := ahead_alt
-	ahead_alt = minf(ahead_alt, 400.0)
 	super._fly(dt)
-	# super updates this normally, but can return early on impact. Never expose the speed workaround to AI.
-	ahead_alt = actual_alt
 	if state != State.DEAD or falling:
 		_update_ahead_alt()
 	if plane_name == "he111" and state != State.DEAD and state != State.GROUND:

@@ -304,6 +304,10 @@ func _physics_process(dt: float) -> void:
 			_engine_sound.play()
 
 
+func _altitude_limited_speed(target_speed: float) -> float:
+	return target_speed - (ahead_alt - 400.0) * 0.5 if ahead_alt > 400.0 else target_speed
+
+
 func _fly(dt: float) -> void:
 	_probe_previous_basis = flight_basis
 	var m := flight_basis
@@ -320,8 +324,7 @@ func _fly(dt: float) -> void:
 		target_speed -= (dive_speed - target_speed) * fwd.y
 	if boost:
 		target_speed *= 1.2
-	if ahead_alt > 400.0:
-		target_speed -= (ahead_alt - 400.0) * 0.5
+	target_speed = _altitude_limited_speed(target_speed)
 	if state != State.GROUND:
 		speed = minf(speed + dt * accel, target_speed)
 		if speed < 0.0:

@@ -154,3 +154,10 @@ Mission 8:
   the aerodrome is half what it was at the rejoin; they appear 500 ahead and 350 to the side, facing
   their targets, one attacking the Baron and one Brenner ("Enemy scouts ahead! Protect Brenner.").
 - Script API: `reveal(plane, pos, then, face)` can set the heading.
+
+## Playtest 5: home aerodrome bombed
+
+- Stock mission 6's scenery shows the aerodrome burnt (`bighangerburn` x3, `Factory_burned`). Build key
+  `[build] intact = x z r` swaps burnt / wrecked scenery for the standing model within r (bighangerburn
+  -> bighanger, hangerburned -> hanger, factory_burned -> factory, tree1_burned -> tree1, housestumps
+  -> house1). Missions 2 and 8: `intact = 6200 7450 700` (4 objects restored).

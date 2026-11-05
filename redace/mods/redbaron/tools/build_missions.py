@@ -3,7 +3,9 @@
 
 Each mission is a spec in tools/missions/mNN.ini plus a briefing body in tools/missions/mNN.html.
 The spec's [build] section names the stock mission whose scenery (every [groundN] section, as
-groups = 0 scenery) is copied, so ground objects already sit on the terrain. Every other spec
+groups = 0 scenery) is copied, so ground objects already sit on the terrain. [build] intact = x z r
+puts the undamaged model in place of each burnt / wrecked one within r of (x, z), e.g. at a home
+aerodrome the stock missions show bombed. Every other spec
 section is copied as written after the scenery. Usage: python3 build_missions.py [NN ...]
 """
 import re
@@ -35,6 +37,11 @@ def keyvals(lines):
     return {l.split("=", 1)[0].strip().lower(): l.split("=", 1)[1].strip() for l in lines if "=" in l}
 
 
+# burnt or wrecked scenery -> the standing original (same footprint in the stock missions)
+INTACT = {"bighangerburn": "bighanger", "hangerburned": "hanger", "factory_burned": "factory",
+          "tree1_burned": "tree1", "housestumps": "house1"}
+
+
 def build(num):
     spec = sections((SPECS / f"m{num:02d}.ini").read_text())
     conf = keyvals(dict(spec).get("build", []))
@@ -55,10 +62,19 @@ def build(num):
     archetypes = dict(tpl).get("archetypes")
     if archetypes:
         emit("archetypes", archetypes)
+    intact = [float(v) for v in conf.get("intact", "").split()]
     n = 0
+    restored = 0
     for name, lines in tpl:
         if name.lower().startswith("ground"):
             kv = [l for l in lines if not l.lower().startswith("groups")]
+            if len(intact) == 3:
+                obj = keyvals(kv)
+                x, _, z = (float(c) for c in obj["pos"].split())
+                standing = INTACT.get(obj["name"].lower())
+                if standing and (x - intact[0]) ** 2 + (z - intact[1]) ** 2 <= intact[2] ** 2:
+                    kv = [f"name = {standing}" if l.lower().startswith("name") else l for l in kv]
+                    restored += 1
             emit(f"ground{n}", kv[:2] + ["groups = 0"] + kv[2:])
             n += 1
     for name, lines in spec:
@@ -80,7 +96,7 @@ def build(num):
     bdir = DATA / "language" / "english" / "missions" / str(mission_id)
     bdir.mkdir(parents=True, exist_ok=True)
     (bdir / "mission.html").write_text(page)
-    print(f"mission {mission_id}: {n} ground sections, template {template}")
+    print(f"mission {mission_id}: {n} ground sections, template {template}, {restored} restored to standing")
 
 
 # The game's briefing page layout (as missions/26/mission.html): text panel, then Fly Mission / Go Back.

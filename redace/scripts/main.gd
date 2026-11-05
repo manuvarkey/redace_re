@@ -225,6 +225,7 @@ uniform float scissor = 0.5;
 uniform vec3 light_dir;
 global uniform vec3 ra_fog_colour;
 global uniform float ra_fog_far;
+global uniform vec3 ra_light_tint;  // (1, 1, 1) as the exe; mission scripts may dim or tint the scene (dusk)
 uniform bool flash = false;
 varying vec3 lit;
 varying float fogged;
@@ -242,7 +243,7 @@ void vertex() {
 void fragment() {
 	vec4 c = texture(tex, UV) * base;
 	// the Compatibility renderer shows ALBEDO as is (measured), so this is display space, as in D3D
-	vec3 shade = c.rgb * lit;
+	vec3 shade = c.rgb * lit * ra_light_tint;
 	ALBEDO = flash ? mix(shade, vec3(1.0, 0.0, 0.0), 0.5) : mix(shade, ra_fog_colour, fogged);
 	%s
 }
@@ -291,6 +292,7 @@ static func _add_fog_globals() -> void:
 	_fog_globals_added = true
 	RenderingServer.global_shader_parameter_add("ra_fog_colour", RenderingServer.GLOBAL_VAR_TYPE_VEC3, Vector3.ONE)
 	RenderingServer.global_shader_parameter_add("ra_fog_far", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 600.0)
+	RenderingServer.global_shader_parameter_add("ra_light_tint", RenderingServer.GLOBAL_VAR_TYPE_VEC3, Vector3.ONE)
 
 
 static var _white: Texture2D
@@ -495,6 +497,7 @@ func _load_map(map_name: String) -> void:
 	_add_fog_globals()
 	RenderingServer.global_shader_parameter_set("ra_fog_colour", Vector3(fog.r, fog.g, fog.b))
 	RenderingServer.global_shader_parameter_set("ra_fog_far", _effective_view_distance)
+	RenderingServer.global_shader_parameter_set("ra_light_tint", Vector3.ONE)  # a mod's setup_map may change it
 	var we := WorldEnvironment.new()
 	we.environment = env
 	_level.add_child(we)

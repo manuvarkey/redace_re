@@ -222,3 +222,28 @@ the wound came from an observer during the attack pass.
   Got Away", then the defeat page and the mission's own failure message. Generic: Game's `^defeaturl^`
   uses `language/english/missions/<id>/failed_<result>.html` when a mission has one (original missions
   have none). Build tool writes it from `tools/missions/mNN_failed_<result>.html`.
+
+## Phase 3: plane folders, paint, dawn and dusk
+
+- Folders (sources `overrides/redbaron/objects/planes/<folder>/`, built by `tools/paint_planes.py` then
+  `tools/build_planes.py`, then `godot --import`):
+  - `albatros_player` (mission 1): the tuned Albatros stats, stock factory paint.
+  - `albatros_red`, `albatros_brenner`: fuselage, tail surfaces and wheel covers repainted in the stock
+    Dr.I's red (186, 42, 0), shading kept; wings keep the camouflage (design). Brenner adds a white
+    band between the fuselage cross and the tail.
+  - `fokker_red`: the stock Dr.I is already all red (the original game's Red Baron), so its atlas is a
+    copy. `fokker_brenner`: white band ahead of the tail. Stock Dr.I flight values and guns (33.3
+    rounds/s), endurance 125 (Brenner 125 too, after the mission 2 playtest).
+  - Rookies: **four folders** `fokker_rookie` (yellow rudder), `fokker_rookie_blue`, `_green`, `_black`,
+    endurance 80. Deviation: the design names one folder with texture variants; a folder per variant
+    needs no engine change (the model's atlas is chosen by folder).
+  - Paint is done on the 1024 atlases by pixel boxes (recorded in paint_planes.py); checked in a
+    lineup screenshot next to the stock Albatros, Dr.I and Camel (same models, so same scale).
+- Dawn (mission 6): `mods/redbaron/skies/dawn/sky_*.jpg` made by `tools/make_skies.py` from the
+  trenches sunset sky (brighter, less saturated, cooler). Dusk (mission 9): the trenches sky as is.
+- Generic: global shader parameter `ra_light_tint` (default (1,1,1), reset on every mission load)
+  multiplies lit terrain and objects; the terrain is unlit in the original, so without it a dusk sky
+  sat over a daylight landscape. Mod keys `[environment] light = r g b`, and `sky` accepts .jpg faces.
+- Planned values (for the mission specs): dawn `fogcolour 170 160 175`, `ambient 220 210 215`,
+  `light 215 205 210`; dusk `sky = res://game_data/maps/trenches/`, `fogcolour 58 52 66`,
+  `ambient 150 140 140`, `light 150 125 120`. To be judged in playtest.

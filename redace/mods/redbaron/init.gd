@@ -3,8 +3,9 @@ extends Node
 ## [mod] init = res://mods/redbaron/init.gd. Optional mission keys read here (not by the engine):
 ##   [mod] script = res://mods/redbaron/missions/mNN.gd   mission script (default: stock rules only)
 ##   [environment] fogcolour = r g b                      fog and horizon colour, 0..255
-##   [environment] sky = res://mods/redbaron/skies/<name>/  folder with sky_front/back/left/right/up.png
+##   [environment] sky = res://.../                         folder with sky_front/back/left/right/up.png|.jpg
 ##   [environment] ambient = r g b                        ambient light, 0..255
+##   [environment] light = r g b                          tint of the lit scene (terrain, objects), 255 = as is
 ##   [airN] gunners = 0 / 1                               defensive gunners off / on (aircraft.gd)
 ##   [airN] gunnerrate = N                                gunners' rounds per second (default 5)
 ##   [airN] firerate / fireon / fireoff                   the plane's own guns (plane.ini [armaments])
@@ -17,6 +18,7 @@ var world: World
 var environment: Environment
 var mission := {}  # the mission.ini sections
 var mission_script: MissionScript
+var light_tint := Color.WHITE  # last set_light (the global shader parameter is not readable headless)
 var overlay: CanvasLayer  # overlay.gd, made by the mission script on first use
 
 
@@ -31,6 +33,8 @@ func setup_map(world_: World, env: Environment, _level: Node3D) -> void:
 		set_sky(str(envs.sky))
 	if envs.has("ambient"):
 		environment.ambient_light_color = _colour(str(envs.ambient))
+	if envs.has("light"):
+		set_light(_colour(str(envs.light)))
 	var path := str(mission.get("mod", {}).get("script", ""))
 	if path.begins_with("res://mods/") and ResourceLoader.exists(path):
 		mission_script = load(path).new()
@@ -56,15 +60,23 @@ func set_fog(colour: Color) -> void:
 	RenderingServer.global_shader_parameter_set("ra_fog_colour", Vector3(colour.r, colour.g, colour.b))
 
 
-## Sky box from a folder of sky_front/back/left/right/up.png (the maps' own layout).
+## Tint of the whole lit scene (terrain, ground objects, aircraft): white keeps the original lighting.
+func set_light(colour: Color) -> void:
+	light_tint = colour
+	RenderingServer.global_shader_parameter_set("ra_light_tint", Vector3(colour.r, colour.g, colour.b))
+
+
+## Sky box from a folder of sky_front/back/left/right/up (.png or .jpg; the maps' own layout).
 func set_sky(dir: String) -> void:
 	var sky_mat := environment.sky.sky_material as ShaderMaterial if environment.sky else null
 	if sky_mat == null:
 		return
 	for f in ["front", "back", "left", "right", "up"]:
-		var p := dir.path_join("sky_%s.png" % f)
-		if ResourceLoader.exists(p):
-			sky_mat.set_shader_parameter("sky_" + f, load(p))
+		for ext in ["png", "jpg"]:
+			var p := dir.path_join("sky_%s.%s" % [f, ext])
+			if ResourceLoader.exists(p):
+				sky_mat.set_shader_parameter("sky_" + f, load(p))
+				break
 
 
 func create_aircraft() -> Aircraft:

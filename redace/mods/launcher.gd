@@ -18,6 +18,8 @@ extends RefCounted
 ##                                          other non-empty name = loss, "" = keep flying)
 ##   end_message(world, result) -> Variant  String replaces the end-of-flight line ("" = none); null = stock
 ##   result_page(world, result, campaign) -> String  menu page after the flight; "" = stock page
+## Global shader parameters a mod may set in setup_map (reset by each mission load): ra_fog_colour (fog),
+## ra_light_tint (Vector3 multiplying lit terrain and objects; (1, 1, 1) = original lighting).
 ## World helpers for mission scripts: show_message(text, seconds), secure_progress() (credit the campaign
 ## win now, however the flight ends), map_markers (extra minimap icons: {pos: Vector3, icon: HUD icon name
 ## or res:// image}; cleared on each mission load).

@@ -106,6 +106,10 @@ func _check_load() -> void:
 	check(env.ambient_light_color.is_equal_approx(Color8(100, 100, 120)), "[environment] ambient sets the ambient light")
 	var sky_fog: Color = (env.sky.sky_material as ShaderMaterial).get_shader_parameter("fog_color")
 	check(sky_fog.is_equal_approx(Color8(200, 120, 80)), "fog colour reaches the sky horizon")
+	var tint: Color = world._mod.light_tint
+	check(tint.is_equal_approx(Color8(204, 153, 102)), "[environment] light tints the lit scene (%s)" % tint)
+	var sky_front: Texture2D = (env.sky.sky_material as ShaderMaterial).get_shader_parameter("sky_front")
+	check(sky_front != null and sky_front.resource_path.ends_with("skies/dawn/sky_front.jpg"), "[environment] sky loads .jpg faces")
 	s().set_fog(Color(0.1, 0.2, 0.3))
 	check(env.fog_light_color.is_equal_approx(Color(0.1, 0.2, 0.3)), "set_fog changes the fog at run time")
 	# gunners

@@ -1,30 +1,41 @@
 #!/usr/bin/env python3
 """Build the Red Baron plane folders in game_data/objects/planes.
 
-Each folder in overrides/redbaron/objects/planes/<name>/ holds the tuned plane.ini and any repainted
-textures; the model (glTF + bin, shadow) comes from the stock folder named in BASE until a folder
-supplies its own. Run, then `godot --headless --path redace --import` so Godot imports new models.
+Each folder in overrides/redbaron/objects/planes/<name>/ holds the tuned plane.ini and, when repainted,
+<name>.png (made by paint_planes.py). The model (glTF + bin, shadow) is copied from the stock folder in
+BASE; when the folder has its own paint, the copied model's atlas (ATLAS) is pointed at it.
+Run paint_planes.py first, then this, then `godot --headless --path redace --import`.
 """
+import json
 import shutil
 from pathlib import Path
 
 GODOT = Path(__file__).resolve().parents[4]
 SRC = GODOT / "overrides" / "redbaron" / "objects" / "planes"
 DST = GODOT / "redace" / "game_data" / "objects" / "planes"
-BASE = {"albatros_red": "albertross", "albatros_brenner": "albertross"}
+# folder prefix -> (stock folder, stock atlas that the paint replaces)
+BASE = {"albatros_": ("albertross", "albatrostemp1_a.png"), "fokker_": ("fokkertriplane", "fokker_a.png")}
 
 
 def build(name):
+    stock, atlas = next(v for k, v in BASE.items() if name.startswith(k))
     out = DST / name
     out.mkdir(parents=True, exist_ok=True)
-    base = DST / BASE[name]
-    for f in base.iterdir():
-        if f.suffix in (".gltf", ".bin") and not (SRC / name / f.name).exists():
+    paint = SRC / name / f"{name}.png"
+    for f in (DST / stock).iterdir():
+        if f.suffix == ".bin":
             shutil.copy2(f, out / f.name)
+        elif f.suffix == ".gltf":
+            g = json.loads(f.read_text())
+            if paint.exists():
+                for img in g.get("images", []):
+                    if img.get("uri", "").endswith("/" + atlas):
+                        img["uri"] = paint.name
+            (out / f.name).write_text(json.dumps(g, indent=1))
     for f in (SRC / name).iterdir():
         if f.is_file():
             shutil.copy2(f, out / f.name)
-    print(f"{name}: model from {BASE[name]}, {sum(1 for _ in (SRC / name).iterdir())} override file(s)")
+    print(f"{name}: model from {stock}" + (f", paint {paint.name}" if paint.exists() else ", stock paint"))
 
 
 if __name__ == "__main__":

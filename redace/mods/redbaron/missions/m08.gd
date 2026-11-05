@@ -1,7 +1,8 @@
 extends "res://mods/redbaron/mission_script.gd"
 ## Mission 8, Wounded (reworked after playtests; see IMPLEMENTATION_NOTES):
 ##   1. Four F.E.2ds (aircodh2 stand-ins with observers' guns) cross our lines and turn east for home.
-##      Objective: shoot them down before they leave the map. A HUD counter shows down / escaped.
+##      Objective: shoot them down before they leave the map. A HUD counter shows how many are down; the
+##      first one to leave the map fails the mission ("An F.E.2d Got Away").
 ##   2. When none is left in the air: "Return to base." Brenner forms up on the Baron.
 ##   3. Halfway home (flat distance to the aerodrome down to half of what it was) two Nieuports dive in
 ##      from behind and above; their first burst wounds the Baron: the view dims and blurs, the throttle
@@ -32,6 +33,7 @@ var last_event := -100.0
 
 func start() -> void:
 	owns_win = true
+	end_messages["escaped"] = "An F.E.2d Got Away"
 	brenner = plane(3002)
 	ambushers.assign([plane(3020), plane(3021)])
 	for p in world.planes:
@@ -60,19 +62,17 @@ func step(_dt: float) -> void:
 	if not alive(p):
 		return
 	if not returning:
-		overlay().set_counter("F.E.2d down %d / %d" % [_down(), fe2ds.size()] +
-			("   escaped %d" % _escaped() if _escaped() > 0 else ""))
-		if _down() + _escaped() == fe2ds.size() and now() >= last_event + MESSAGE_GAP:
+		if _escaped() > 0:
+			overlay().set_counter("")
+			lose("escaped")  # the objective: none may get home (failed_escaped.html after the defeat page)
+			return
+		overlay().set_counter("F.E.2d down %d / %d" % [_down(), fe2ds.size()])
+		if _down() == fe2ds.size() and now() >= last_event + MESSAGE_GAP:
 			returning = true
 			return_distance = distance(p, AERODROME, true)
 			overlay().set_counter("")
 			formation(brenner, p, Vector3(-30.0, 0.0, -30.0))
-			if _escaped() == 0:
-				_event("The F.E.2d flight is destroyed. Well done! Return to base.")
-			elif _down() == 0:
-				_event("The F.E.2ds got away. Return to base.")
-			else:
-				_event("%d F.E.2d%s down, %d got away. Return to base." % [_down(), "s" if _down() > 1 else "", _escaped()])
+			_event("The F.E.2d flight is destroyed. Well done! Return to base.")
 		return
 	if not wounded:
 		if now() >= last_event + MESSAGE_GAP and distance(p, AERODROME, true) <= return_distance * 0.5:

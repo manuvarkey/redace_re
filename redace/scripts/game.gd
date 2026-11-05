@@ -395,7 +395,8 @@ func _fill(html: String) -> String:
 		"cheat": _link("Menus\\cheatoptions.html", _s("cheatoptions")) if _any_completed() else "",
 		"victoryurl": _debrief_page(_flown) if _debrief_page(_flown) != "" else "Menus\\victorybrief.html",
 		"promotionnote": "<br><br>You have been promoted to the rank of %s." % _rank_name(p) if _last_promoted and not p.is_empty() else "",
-		"defeaturl": {"death": "Menus\\faileddeath.html", "defence": "Menus\\faileddefence.html",
+		"defeaturl": _failure_page(_flown, _result) if _failure_page(_flown, _result) != "" else {
+			"death": "Menus\\faileddeath.html", "defence": "Menus\\faileddefence.html",
 			"time": "Menus\\failedtime.html"}.get(_result, "Menus\\faileddeath.html"),
 		"loadbar": "<img src=\"Menus\\loadbar.jpg\" width=298 height=20>",
 		"rollbar": _sens_bar(1, controls.bind.roll.sensitivity),
@@ -1275,6 +1276,15 @@ func _on_finished(result: String, score: int) -> void:
 
 var _promoted_by_secure := false
 var _last_promoted := false  # the last flight earned a promotion (^promotionnote^ on a mission's debriefing)
+
+
+## A mission's own failure message for a result (language/english/missions/<id>/failed_<result>.html, e.g. a
+## mission script's own result name), shown from the defeat page; "" when it has none (all original missions).
+func _failure_page(id: int, result: String) -> String:
+	if result.is_empty() or not result.is_valid_identifier():
+		return ""
+	var rel := "missions\\%d\\failed_%s.html" % [id, result]
+	return rel if FileAccess.file_exists(Ini.data_path("language/english/" + rel.replace("\\", "/"))) else ""
 
 
 ## A mission's own debriefing page (language/english/missions/<id>/debrief.html), shown after a win in

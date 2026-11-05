@@ -218,3 +218,7 @@ the wound came from an observer during the attack pass.
 - Debriefing texts for missions 1-11 in `tools/missions/mNN_debrief.html` (11 is the letter from the
   design); the build tool writes them for built missions. Each closes on the next mission's setting.
   Mission 1 notes Hawker as "a brave man and a fine pilot"; nothing claimed about his burial.
+- User: any F.E.2d that leaves the map fails mission 8. Script result `"escaped"`, end line "An F.E.2d
+  Got Away", then the defeat page and the mission's own failure message. Generic: Game's `^defeaturl^`
+  uses `language/english/missions/<id>/failed_<result>.html` when a mission has one (original missions
+  have none). Build tool writes it from `tools/missions/mNN_failed_<result>.html`.

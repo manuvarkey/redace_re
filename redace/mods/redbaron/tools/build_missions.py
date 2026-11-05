@@ -96,6 +96,10 @@ def build(num):
     bdir = DATA / "language" / "english" / "missions" / str(mission_id)
     bdir.mkdir(parents=True, exist_ok=True)
     (bdir / "mission.html").write_text(page)
+    for failed in SPECS.glob(f"m{num:02d}_failed_*.html"):
+        result = failed.stem.split("_failed_", 1)[1]
+        (bdir / f"failed_{result}.html").write_text(FAILED.replace("{TITLE}", conf.get("title", f"Mission {num}"))
+                                                     .replace("{BODY}", failed.read_text().strip()))
     debrief = SPECS / f"m{num:02d}_debrief.html"
     if debrief.exists():
         (bdir / "debrief.html").write_text(DEBRIEF.replace("{TITLE}", conf.get("title", f"Mission {num}"))
@@ -184,6 +188,40 @@ DEBRIEF = """<html>
 			<tr>
 				<td width = 214><center><a href="command:redo">Re-Fly Mission</a></center></td>
 				<td width = 216><center><a href="command:continue">Next Mission</a></center></td>
+				<td width = 210><center><a href="campaign:redbaron">Campaign</a></center></td>
+			</tr>
+		</table>
+		</font>
+	</body>
+</html>
+"""
+
+# Failure message for a script's own result (Game shows missions/<id>/failed_<result>.html from the defeat
+# page): the original failure messages' blackboard page and links.
+FAILED = """<html>
+	<head>
+		<title>
+			{TITLE} - Failure Message
+		</title>
+	</head>
+	<body background = "Menus\\blackboard.jpg" bgcolor=#000000 link=#ff8800 alink=#ffffff vlink=#ffffff>
+		<font face = "courier new" size=4, color=#ffffff>
+		<table width=640 height=424>
+		<tr>
+			<td>
+				<center>
+					<img width=200 HEIGHT=200><br>
+					{BODY}
+				</center>
+			</td>
+		</tr>
+		</table>
+		</font>
+		<font face = "courier new" size=2, color=#ffffffff>
+		<table>
+			<tr>
+				<td width = 214><center><a href="command:continue">View Briefing</a></center></td>
+				<td width = 216><center><a href="command:replay">Re-Fly Mission</a></center></td>
 				<td width = 210><center><a href="campaign:redbaron">Campaign</a></center></td>
 			</tr>
 		</table>

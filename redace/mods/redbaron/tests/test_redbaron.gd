@@ -82,7 +82,9 @@ func _physics_process(_dt: float) -> bool:
 		12: _m08_land()
 		13: world.load_mission(108)
 		14: _m08_crash()
-		15: _check_campaign_menus()
+		15: world.load_mission(108)
+		16: _m08_escape()
+		17: _check_campaign_menus()
 		_:
 			print("RED BARON: %d checks, %d failures" % [checks, failures])
 			quit(1 if failures else 0)
@@ -406,15 +408,14 @@ func _m08_wound() -> void:
 	fe.global_position = p.global_position + Vector3(100, 0, 0)
 	p.take_damage(1.0, fe)
 	check(not s().wounded, "an observer hit does not wound")
-	# three down, one escapes
+	# all four down
 	p.global_position = Vector3(8600, 650, 8400)
 	for f in s().fe2ds:
 		f.state = Aircraft.State.DEAD
-	s().fe2ds[3].state = Aircraft.State.FLYING
-	s().fe2ds[3].left_map = true
 	world.mission_time = 40.0
 	_settle()
-	check(s().returning and world.message_label.text == "3 F.E.2ds down, 1 got away. Return to base.", "return to base when none is left")
+	check(s().returning and world.message_label.text == "The F.E.2d flight is destroyed. Well done! Return to base.",
+		"success line and return to base when all are down")
 	check(not s().overlay()._counter.visible, "counter hidden on the way home")
 	check(s().plane(3002).current_goal().type == Aircraft.G_FORMATION, "Brenner on the Baron's wing on the way home")
 	# halfway home: ambush and wound
@@ -555,4 +556,25 @@ func _check_campaign_menus() -> void:
 	game._campaign_list()[0].missions.push_front(101)
 	game._campaign_id = "redbaron"
 	check(game._next_campaign_mission(game.pilots[0], game._active_campaign()) == 101, "new earlier mission comes next")
+	game.queue_free()
+
+
+func _m08_escape() -> void:
+	s().fe2ds[0].state = Aircraft.State.DEAD
+	s().fe2ds[3].left_map = true
+	_settle()
+	check(world.mission_over and world._end_result == "escaped" and world._end_label.text == "An F.E.2d Got Away",
+		"one F.E.2d leaving the map fails mission 8")
+	var game := TestGame.new()
+	root.add_child(game)
+	game.pilots.assign([{"name": "Hans Pilot", "mission": 1}, {}, {}, {}, {}, {}])
+	game.current = 0
+	game._flown = 108
+	game._result = "escaped"
+	check(game._fill("^defeaturl^") == "missions\\108\\failed_escaped.html", "defeat page leads to the mission's own failure message")
+	game._result = "death"
+	check(game._fill("^defeaturl^") == "Menus\\faileddeath.html", "other results keep the original failure messages")
+	game._flown = 5
+	game._result = "escaped"
+	check(game._fill("^defeaturl^") == "Menus\\faileddeath.html", "original missions have no own failure pages")
 	game.queue_free()

@@ -14,6 +14,10 @@ signal damaged(plane: Aircraft, amount: float, attacker: Variant)
 
 var gunners_enabled := false
 var damage_scale := 1.0  # mission scripts: fraction of incoming damage taken (e.g. a wounded Baron)
+## Persistent pilots (not in the original): a hit no longer makes them dodge for half a second (the
+## original evade, FUN_00437af6), so attackers keep at it; with retaliation on they still turn on whoever
+## hit them. Default: enemy (group 9) single-seaters; [airN] persistent = 0 / 1 overrides.
+var persistent := -1  # -1 default, 0 off, 1 on
 var _gunners := DefensiveGunners.new(GUNNER_RANGE, GUNNER_INTERVAL)
 
 
@@ -32,6 +36,26 @@ func _guns(dt: float) -> void:
 		return
 	if _gunners.update(self, dt):
 		_gun_sound_firing(true)
+
+
+func is_persistent() -> bool:
+	if persistent >= 0:
+		return persistent == 1
+	return groups & (1 << 9) != 0 and not gunners_enabled
+
+
+func on_hit(attacker) -> void:
+	if not is_persistent():
+		super.on_hit(attacker)
+		return
+	if is_player and not autopilot or hidden or current_goal().is_empty() or not retaliate or attacker == null:
+		return
+	var their_groups: int = attacker.groups if attacker is Aircraft else int(attacker.get("groups", 0))
+	if their_groups & groups or int(current_goal().type) == G_ATTACK:
+		return
+	var id: int = attacker.object_id if attacker is Aircraft else int(attacker.get("id", 0))
+	if id > 0:
+		_push_goal({"type": G_ATTACK, "targetid": id, "pos": Vector3.ZERO, "radius": 0.0})
 
 
 func take_damage(amount: float, attacker = null) -> void:

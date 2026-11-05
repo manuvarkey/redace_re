@@ -312,3 +312,20 @@ Per mission (deviations from the design's INI in **bold**):
   9) the original target icon; the spotters (group 9 + 7) get it over their enemy icon.
 - The Plates: `missions/m05.gd` (extends objective.gd): the S.E.5a escorts turn on the Baron when he
   comes within 700 of the recon plane or it is hit, and form up on it again if he falls back past 1500.
+
+## Playtest 13: bombers, persistent attackers, balloon guns
+
+- Original AI (as ported): when hit, a plane dodges for 0.5 s toward a random point (or, with retaliation
+  on, turns on the attacker); gun attacks break off at 80 % damage or after the 0x130 time limit, and a
+  target behind makes the attacker commit to a hard turn. Hence attackers that "circle away and come
+  back". Mod change: **persistent pilots** (aircraft.gd `is_persistent`): no dodge when hit; with
+  retaliation on they still turn on the attacker. Default for group 9 single-seaters; `[airN]
+  persistent = 0 / 1` overrides. Two-seaters and bombers (gunners) keep the original dodge.
+- Scramble: the S.E.5a raiders now carry one bomb each and fly a level bombing run (0x90) on the hangars
+  with retaliation off, then attack the defenders with guns. In simulation one bomb can take a hangar and
+  the tent beside it; letting two raiders through can lose the mission.
+- AA: placed guns only fire inside `angle` about their facing (stock default 1.57 = 90 degrees) and the
+  mod's guns all faced +z (south), so guns south of the approach never fired. Every mod AA gun and tank
+  now has `angle = 6.28` (all round). Balloon Busting: five guns per balloon in a ring 450 out (the
+  Baron is under fire before he reaches a balloon), range 600, new folder `aagun_rapid` (stock aagun at
+  14 rounds/s instead of 10). Simulated loitering autopilot: 117 damage in 25 s near the balloons.

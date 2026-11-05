@@ -137,6 +137,9 @@ def main():
     brenner = red.copy()
     band(brenner, ALBATROS_BAND)
     save(brenner, "albatros_brenner")
+    wingman = red.copy()  # the other Jasta 11 pilots: never the Baron's own paint (user)
+    band(wingman, ALBATROS_BAND, (215, 175, 40))
+    save(wingman, "albatros_wingman")
 
     fokker = Image.open(TEX / "fokker_a.png").convert("RGBA")
     dull_reds(fokker, DULL_RED)

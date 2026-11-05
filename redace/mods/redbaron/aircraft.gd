@@ -13,6 +13,28 @@ const GUNNER_RANGE := 380.0
 const GUNNER_INTERVAL := 1.0 / 3.0
 const GUNNER_BURST := 6
 const GUNNER_PAUSE := 1.5
+## Gun stations of the big bombers (historical positions): the Handley Page O/100's nose gunner (Scarff ring,
+## forward arc), dorsal gunner (behind the wings, upper and rear arc) and ventral trap-door gun (lower rear).
+## Each fires on its own: 4 rounds/s in bursts of 8, then 1 s, out to 450. Planes listed here use these in
+## place of the two-seater gunner.
+const GUN_STATIONS := {
+	"handleypage": [
+		{"origin": Vector3(0, 3.5, 19.0), "axis": Vector3(0, 0.1, 1), "cos": 0.2},
+		{"origin": Vector3(0, 3.8, -1.0), "axis": Vector3(0, 0.7, -0.7), "cos": -0.1},
+		{"origin": Vector3(0, -2.5, -3.0), "axis": Vector3(0, -0.6, -0.8), "cos": 0.3},
+	],
+}
+const STATION_RANGE := 450.0
+const STATION_INTERVAL := 0.25
+const STATION_BURST := 8
+const STATION_PAUSE := 1.0
+## Heavy bombers turn like the Britain mod's He 111: bank held to HEAVY_BANK, rolled in at HEAVY_ROLL_RATE,
+## pitch held to HEAVY_PITCH; they do not dodge when hit.
+const HEAVY_PLANES := ["handleypage"]
+const HEAVY_BANK := 18.0
+const HEAVY_ROLL_RATE := 10.0
+const HEAVY_PITCH := 8.0
+var _stations: Array = []  # {origin, axis, cos, cooldown, fired}
 
 signal damaged(plane: Aircraft, amount: float, attacker: Variant)
 
@@ -53,6 +75,12 @@ func setup(name_: String, main: World) -> void:
 		_damage_paths.append(dir + dff.get_basename().to_lower() + ".gltf" if not dff.is_empty() else "")
 	_gunners.burst = GUNNER_BURST
 	_gunners.pause = GUNNER_PAUSE
+	_stations.clear()
+	for st in GUN_STATIONS.get(plane_name, []):
+		var s2: Dictionary = st.duplicate()
+		s2.cooldown = 0.0
+		s2.fired = 0
+		_stations.append(s2)
 	gunners_enabled = plane_name in GUNNER_PLANES
 
 
@@ -64,8 +92,74 @@ func _guns(dt: float) -> void:
 	super._guns(dt)
 	if not gunners_enabled or is_player or state == State.DEAD or hidden:
 		return
-	if _gunners.update(self, dt):
+	if _stations.is_empty():
+		if _gunners.update(self, dt):
+			_gun_sound_firing(true)
+		return
+	if state == State.GROUND:
+		return
+	for st in _stations:
+		st.cooldown = maxf(0.0, st.cooldown - dt)
+		if st.cooldown > 0.0:
+			continue
+		var shot := DefensiveGunners.station_shot(self, st.origin, st.axis, st.cos, STATION_RANGE)
+		if shot.is_empty():
+			continue
+		world.spawn_ordnance(self, 1, shot.origin, velocity, shot.direction)
+		st.cooldown = STATION_INTERVAL
+		st.fired += 1
+		if st.fired >= STATION_BURST:
+			st.fired = 0
+			st.cooldown = STATION_PAUSE
 		_gun_sound_firing(true)
+
+
+func _heavy() -> bool:
+	return plane_name in HEAVY_PLANES and state != State.DEAD and state != State.GROUND
+
+
+func _steer(aim: Vector3) -> void:
+	if not _heavy():
+		super._steer(aim)
+		return
+	var flat := aim - global_position
+	flat.y = 0.0
+	var forward := Vector3(flight_basis.z.x, 0.0, flight_basis.z.z).normalized()
+	var turn := forward.signed_angle_to(flat.normalized(), Vector3.UP) if flat.length_squared() > 1.0 else 0.0
+	_ai_bank = clampf(-rad_to_deg(turn) * 0.8, -HEAVY_BANK, HEAVY_BANK)
+	var wanted := clampf((aim.y - global_position.y) * 0.12, -HEAVY_PITCH, HEAVY_PITCH)
+	_ai_pitch = clampf((wanted - rad_to_deg(asin(clampf(flight_basis.z.y, -1.0, 1.0)))) * 1.5, -4.0, 4.0)
+
+
+func _apply_ai_commands() -> void:
+	if _heavy():
+		var dt := get_physics_process_delta_time()
+		_ai_bank = move_toward(_last_ai_bank, clampf(_ai_bank, -HEAVY_BANK, HEAVY_BANK), HEAVY_ROLL_RATE * dt)
+		_last_ai_bank = clampf(_last_ai_bank, -HEAVY_BANK, HEAVY_BANK)
+		if not is_nan(_ai_pitch):
+			_ai_pitch = clampf(_ai_pitch, -4.0, 4.0)
+	super._apply_ai_commands()
+
+
+func _fly(dt: float) -> void:
+	if _heavy():
+		# as the Britain mod's He 111: hold the commanded small pitch rate inside the pitch limit and cancel the
+		# flight step's per-frame 5 decay, which otherwise turns small commands into a steady dive
+		var pitch := rad_to_deg(asin(clampf(flight_basis.z.y, -1.0, 1.0)))
+		var rate := clampf(pitch_rate, -4.0, 4.0)
+		if dt > 0.0:
+			rate = clampf(rate, (-HEAVY_PITCH - pitch) / dt, (HEAVY_PITCH - pitch) / dt)
+		pitch_rate = rate + (5.0 if rate >= 0.0 else -5.0)
+		_ai_pitch = pitch_rate
+		_rate_set = true
+	super._fly(dt)
+	if _heavy():
+		bank = clampf(bank, -HEAVY_BANK, HEAVY_BANK)
+		var heading := Vector3(flight_basis.z.x, 0.0, flight_basis.z.z).normalized()
+		if not heading.is_zero_approx():
+			var pitch := clampf(asin(clampf(flight_basis.z.y, -1.0, 1.0)), -deg_to_rad(HEAVY_PITCH), deg_to_rad(HEAVY_PITCH))
+			flight_basis = Basis.looking_at(-heading, Vector3.UP) * Basis(Vector3.RIGHT, -pitch)
+			basis = flight_basis * Basis(Vector3.BACK, deg_to_rad(bank))
 
 
 func _bomb_run(goal: Dictionary) -> bool:
@@ -98,6 +192,8 @@ func is_persistent() -> bool:
 
 
 func on_hit(attacker) -> void:
+	if plane_name in HEAVY_PLANES:
+		return  # the gunners defend a heavy bomber; its pilot holds the bombing course (as the Britain mod)
 	if not is_persistent():
 		super.on_hit(attacker)
 		return
@@ -114,6 +210,9 @@ func on_hit(attacker) -> void:
 func take_damage(amount: float, attacker = null) -> void:
 	if attacker == self and not is_player:
 		return  # an AI plane's own bomb or rocket blast (the engine gives the firer 5 %): it killed bombers
+	if attacker is Aircraft and attacker != self and attacker.allied == allied and not attacker.is_player:
+		return  # AI fire never hurts its own side (the engine's rounds hit anyone; bomber gunners and
+		# wingmen kept shooting their own formation down)
 	amount *= damage_scale
 	super.take_damage(amount, attacker)
 	_update_damage_model()

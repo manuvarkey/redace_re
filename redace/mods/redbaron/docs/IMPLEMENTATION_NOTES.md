@@ -456,3 +456,19 @@ hangar), marked on the minimap.
 - Country missions (2, 4, 8, 9): `intact` now covers the whole map: every bombed hangar, factory, burnt
   tree, wrecked bridge and AA ruin of the template stands (30 objects; the country map is behind German
   lines). Test: no burn / wreck / ruin scenery in the country missions.
+
+## Playtest 19: Dusk Raiders fights back; wingmen paint; friendly fire
+
+- O/100 gun stations (historical positions): nose (Scarff ring, forward arc), dorsal (behind the wings,
+  upper rear) and ventral trap-door gun (lower rear), each 4 rounds/s in bursts of 8, then 1 s, out to
+  450 (`GUN_STATIONS`; new `DefensiveGunners.station_shot`, Britain untouched).
+- Heavy bombers (O/100) turn like Britain's He 111: bank at most 18 degrees, rolled in at 10 deg/s, pitch
+  within 8 degrees, no dodge when hit; the flight step's per-frame pitch-rate decay is cancelled as in
+  Britain (without it they dived into the hills on the way in).
+- Five Camel escorts in formation on the bombers (`m09.gd`): they turn on a German within 800 of a bomber
+  (or when one is hit) and form up again when none is within 1600. Two wingmen: Brenner and another
+  Jasta 11 pilot. Bomber endurance 150 (design 90).
+- Wingmen never fly the Baron's own paint (user): new `albatros_wingman` (red, yellow band) for the second
+  pilot in Scramble and Dusk Raiders. Check: no non-player `albatros_red` / `fokker_red` in any mission.
+- AI fire no longer hurts its own side in mod missions (mod aircraft `take_damage`): the engine's rounds
+  hit any plane, and bomber gunners and wingmen were shooting down their own formation.

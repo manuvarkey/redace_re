@@ -74,3 +74,41 @@ static func shot_for(plane: Aircraft, max_range: float) -> Dictionary:
 			closest = distance
 			best = {"origin": origin, "direction": (end - origin).normalized()}
 	return best
+
+
+## A gun station (used by the Red Baron mod; Britain uses update/shot_for): the best shot for a gunner at
+## origin_local (plane space: x left wing, y up, z nose) whose arc is the cone of cos_min about axis_local.
+## Same rules as shot_for: nearest present enemy, lead on its velocity, no terrain or friend in the way.
+static func station_shot(plane: Aircraft, origin_local: Vector3, axis_local: Vector3, cos_min: float, max_range: float) -> Dictionary:
+	var world := plane.world
+	var frame := plane.global_transform.basis.orthonormalized()
+	var origin := plane.global_position + frame * origin_local
+	var axis := (frame * axis_local).normalized()
+	var bullet_speed := Ini.num(world.ordnance.get(1, {}), "releasespeed", 250.0)
+	var best := {}
+	var closest := max_range * max_range
+	for enemy in world.planes:
+		if enemy == plane or enemy.allied == plane.allied or not enemy.present():
+			continue
+		var to := enemy.global_position - origin
+		var distance := to.length_squared()
+		if distance < 20.0 * 20.0 or distance > closest:
+			continue
+		var aim := to + (enemy.velocity - plane.velocity) * (sqrt(distance) / maxf(bullet_speed, 1.0))
+		if aim.normalized().dot(axis) < cos_min:
+			continue
+		var end := origin + aim
+		if world.ground_hit_fraction(origin, end) > 0.0:
+			continue
+		var safe := true
+		for friend in world.planes:
+			if friend == plane or friend.allied != plane.allied or not friend.present():
+				continue
+			var near := Geometry3D.get_closest_point_to_segment(friend.global_position, origin, end)
+			if near.distance_to(friend.global_position) < friend.radius + 3.0:
+				safe = false
+				break
+		if safe:
+			closest = distance
+			best = {"origin": origin, "direction": aim.normalized()}
+	return best

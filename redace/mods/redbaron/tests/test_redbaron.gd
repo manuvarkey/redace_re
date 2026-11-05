@@ -620,7 +620,7 @@ func _stock_rule_mission(i: int) -> void:
 		0:
 			world.load_mission(id)
 		1:
-			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m05.gd"), preload("res://mods/redbaron/missions/m06.gd")], "%d: objective script" % id)
+			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m05.gd"), preload("res://mods/redbaron/missions/m06.gd"), preload("res://mods/redbaron/missions/m09.gd")], "%d: objective script" % id)
 			if id == 105:
 				var e: Aircraft = s().plane(3020)
 				check(e.current_goal().type == Aircraft.G_FORMATION, "105: escorts in formation on the recon plane")
@@ -639,6 +639,18 @@ func _stock_rule_mission(i: int) -> void:
 				sp.take_damage(sp.endurance * 0.4, world.player)
 				check(sp.get("_damage_stage") == 1, "103: RE8 shows its first damage stage at 40 %")
 				sp.health = sp.endurance
+			if id == 109:
+				var hp: Array = world.planes.filter(func(q): return q.plane_name == "handleypage")
+				check(hp.size() == 3 and hp.all(func(q): return q.get("_stations").size() == 3), "109: O/100s with nose, dorsal and ventral gunners")
+				check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel" and q.current_goal().type == Aircraft.G_FORMATION).size() == 5, "109: five escorts in formation")
+				check(s().plane(3002).allied and s().plane(3003).allied, "109: two wingmen")
+				var b: Aircraft = hp[0]
+				b.global_position = Vector3(8000, 800, 6500)
+				world.player.global_position = b.global_position + Vector3(0, 0, -400)
+				s()._check = 0.0
+				s().run_step(0.0)
+				var esc: Array = world.planes.filter(func(q): return q.plane_name == "sopwithcamel" and q.get("_formation") == null)
+				check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel" and q.current_goal().type == Aircraft.G_ATTACK).size() >= 2, "109: escorts of a threatened bomber turn on the German")
 			if id == 106:
 				var bal: Array = world.targets.filter(func(x): return x.name == "balloon")
 				check(bal.size() == 3 and bal.all(func(x): return x.models.size() == 3), "106: balloons with two damage stages")

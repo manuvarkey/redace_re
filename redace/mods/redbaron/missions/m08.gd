@@ -29,6 +29,7 @@ func start() -> void:
 			fe2ds.append(p)
 			p.destroyed.connect(_on_fe2d_down)
 	world.player.damaged.connect(_on_player_hit)
+	mark_on_map(AERODROME)
 
 
 func _on_player_hit(_p: Aircraft, _amount: float, attacker: Variant) -> void:
@@ -50,6 +51,7 @@ func wound() -> void:
 	wound_time = now()
 	print("mission 8: wounded at %.1f s" % now())
 	overlay().wound = 1.0
+	message("You are wounded! Land at the aerodrome.", 6.0)
 	var p := world.player
 	var flat := Vector3(p.flight_basis.z.x, 0.0, p.flight_basis.z.z).normalized()
 	if pursuer and pursuer.hidden:

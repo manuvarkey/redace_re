@@ -19,7 +19,8 @@ extends RefCounted
 ##   end_message(world, result) -> Variant  String replaces the end-of-flight line ("" = none); null = stock
 ##   result_page(world, result, campaign) -> String  menu page after the flight; "" = stock page
 ## World helpers for mission scripts: show_message(text, seconds), secure_progress() (credit the campaign
-## win now, however the flight ends).
+## win now, however the flight ends), map_markers (extra minimap icons: {pos: Vector3, icon: HUD icon name
+## or res:// image}; cleared on each mission load).
 
 static func for_mission(mission: Dictionary) -> Node:
 	var path: String = str(mission.get("mod", {}).get("init", ""))

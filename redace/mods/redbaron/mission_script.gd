@@ -188,6 +188,18 @@ func message(text: String, seconds := 3.0) -> void:
 	world.show_message(text, seconds)
 
 
+## A minimap icon at pos (drawn like the map's other icons, held at the rim when far away). Returns the
+## marker, which unmark() removes.
+func mark_on_map(pos: Vector3, icon := "res://mods/redbaron/aerodrome_icon.png") -> Dictionary:
+	var m := {"pos": pos, "icon": icon}
+	world.map_markers.append(m)
+	return m
+
+
+func unmark(m: Dictionary) -> void:
+	world.map_markers.erase(m)
+
+
 func set_fog(colour: Color) -> void:
 	mod.set_fog(colour)
 

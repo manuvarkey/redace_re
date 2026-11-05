@@ -153,6 +153,12 @@ func _draw_map(p: Aircraft, s: float) -> void:
 			_icon("gun", t.node.global_position, p, right, at, scale, icon_centre, s)
 		elif g & (1 << GROUP_TARGET):
 			_icon("smalltarget", t.node.global_position, p, right, at, scale, icon_centre, s)
+	# extra map markers a mission script asked for (World.map_markers: {pos, icon = HUD icon name or res:// path})
+	for m in world.map_markers:
+		var marker: String = str(m.get("icon", "smalltarget"))
+		if not _tex.has(marker) and marker.begins_with("res://") and ResourceLoader.exists(marker):
+			_tex[marker] = with_mipmaps(load(marker))
+		_icon(marker, m.pos, p, right, at, scale, icon_centre, s)
 	for q in world.planes:
 		if q == p or not q.present():
 			continue

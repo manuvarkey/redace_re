@@ -113,3 +113,14 @@ Mission 8:
 - User: raise the Baron's and Brenner's guns to the original mission 1 player's (aircodh2: firerate 25,
   1.4 s on, 0.1 s off = 23.3 rounds/s); Brenner "gets killed fast": endurance 80 -> 125 (as the Baron)
   in `albatros_brenner` and in missions 2 and 8. Design had 80 for Brenner.
+
+## Playtest 2 (user: "winnable now"; rejoin unclear, no way to find base)
+
+- Generic HUD hook: `World.map_markers` ({pos, icon}), drawn by `Hud._draw_map` with the other icons
+  (held at the rim when far), cleared on mission load. Script API `mark_on_map(pos, icon)` / `unmark`.
+  Icon `mods/redbaron/aerodrome_icon.png` (8x8 hangar, scaled 8x like the stock icons).
+- Missions 2 and 8 mark the aerodrome from the start.
+- Mission 2: Brenner "breaks off" when 250 from the Baron or after 10 s (was 300 / 20 s); the HUD then
+  says "Brenner breaks off after the Scout! Fly close to him to call him back." Rejoin range 200 (was
+  150). Message on rejoin "Brenner joins. Return to base." (user's wording). Briefing says how.
+- Mission 8: "You are wounded! Land at the aerodrome." on the wound.

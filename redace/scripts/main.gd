@@ -53,6 +53,7 @@ var time_limit := 0.0
 var mission_time := 0.0
 var mission_over := false
 var progress_was_secured := false
+var map_markers: Array[Dictionary] = []  # extra minimap icons from mission scripts: {pos: Vector3, icon: String}
 var map_bounds := Rect2()
 var map_height := Vector2.ZERO  # lowest and highest point of the terrain
 
@@ -322,6 +323,7 @@ func load_mission(id: int) -> void:
 	mission_time = 0.0
 	mission_over = false
 	progress_was_secured = false
+	map_markers.clear()
 	_fade_in = 0.0
 	_end_time = -1.0
 	_flashes.clear()

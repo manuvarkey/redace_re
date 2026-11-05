@@ -217,6 +217,7 @@ func _check_scripted_loss() -> void:
 func _check_stock_isolation() -> void:
 	world.load_mission(21)
 	check(world._mod == null, "stock mission has no mod")
+	check(world.map_markers.is_empty(), "map markers cleared on mission load")
 	check(world.player.get_script() == load("res://scripts/aircraft.gd"), "stock aircraft class")
 	world.player.state = Aircraft.State.DEAD
 	world._check_rules()
@@ -308,11 +309,14 @@ func _m02_rejoin() -> void:
 	b.global_position = p.global_position + Vector3(500, 0, 0)
 	_settle()
 	check(s().armed and not s().rejoined, "rejoin armed once Brenner is away")
-	b.global_position = p.global_position + Vector3(100, 0, 0)
+	check(world.message_label.text.begins_with("Brenner breaks off"), "HUD says when Brenner breaks off")
+	b.global_position = p.global_position + Vector3(180, 0, 0)
 	_settle()
 	check(s().rejoined and b.current_goal().type == Aircraft.G_FORMATION and b.current_goal().targetid == 3001,
-		"Brenner rejoins in formation within 150")
-	check(world.message_label.text == "Brenner rejoins", "HUD says Brenner rejoins")
+		"Brenner rejoins in formation within 200")
+	check(world.message_label.text == "Brenner joins. Return to base.", "HUD says Brenner joins, return to base")
+	check(world.map_markers.size() == 1 and MS.near(world.map_markers[0].pos, Vector3(6200, 0, 7450), 1.0),
+		"aerodrome marked on the minimap")
 
 
 func _m02_win_and_loss() -> void:

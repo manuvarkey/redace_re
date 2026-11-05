@@ -282,6 +282,12 @@ func _settle() -> void:
 func _m02_rejoin() -> void:
 	check(world._mod is RedBaronInit and s().get_script().resource_path.ends_with("missions/m02.gd"), "102 loads m02.gd")
 	var b: Aircraft = s().plane(3002)
+	var nieuport: Aircraft = s().plane(3004)
+	var sustained := func(a: Aircraft) -> float: return a.fire_rate * a.fire_on / (a.fire_on + a.fire_off)
+	check(world.player.plane_name == "albatros_red" and b.plane_name == "albatros_brenner", "tuned Albatros folders")
+	check(is_equal_approx(sustained.call(world.player), sustained.call(nieuport)) and is_equal_approx(world.player.fire_rate, 25.0),
+		"player guns match the British scouts (%.1f rounds/s)" % sustained.call(world.player))
+	check(world.player.high_speed == 110.0 and world.player.endurance == 125.0 and b.endurance == 80.0, "design stats")
 	check(b.current_goal().type == Aircraft.G_ATTACK and b.current_goal().targetid == 3003, "Brenner chases the decoy")
 	check(s().plane(3004).hidden and s().plane(3005).hidden, "ambush hidden at start")
 	world._count_rule_members()

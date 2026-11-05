@@ -88,3 +88,14 @@ Mission 8:
 - Found while testing: stock option tests overwrote the real `user://pilots.cfg` / `settings.cfg`;
   fixed with `Game.save_path` / `Game.settings_path` (commit db1d2f7). The Red Baron test uses the
   same scratch paths.
+
+## Phase 3 (part): tuned Albatros folders
+
+- `albatros_red` (the Baron) and `albatros_brenner`: design stats (highspeed 110, climb 85, highroll 80,
+  highpitch 90, accel 10, firerate 25; endurance 125 / 80). Not in the design table, chosen to sit just
+  above the Nieuport 17 / S.E.5a: divespeed 116, cruise 105, stall 60, lowroll 65, lowpitch 65.
+- Guns: user playtest found the stand-in's fire far too slow (stock albertross 4.4 rounds/s sustained:
+  firerate 10, 0.8 s on, 1.0 s off; Nieuport / S.E.5a 20.8). User chose to match the British scouts:
+  firerate 25, fireon 1.0, fireoff 0.2 = 20.8 rounds/s. The design gave only firerate 25.
+- Sources: `overrides/redbaron/objects/planes/<folder>/plane.ini`; `tools/build_planes.py` copies the
+  stock albertross model in (paint comes later), then `godot --import`.

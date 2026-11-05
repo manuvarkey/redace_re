@@ -383,6 +383,19 @@ func _m08_wound() -> void:
 	check(absf(fe.fire_rate * fe.fire_on / (fe.fire_on + fe.fire_off) - 8.0) < 0.1, "F.E.2d front gun 8 rounds/s")
 	check(not fe.retaliate, "F.E.2ds hold course (retaliate off)")
 	check(MS.distance(fe, Vector3(6200, 0, 7450), true) > 2500.0, "F.E.2ds start far from the aerodrome")
+	var route := 0.0
+	var from := fe.global_position
+	var near_base := INF
+	for g in fe.goals:
+		if g.type == Aircraft.G_WAYPOINT:
+			var to: Vector3 = g.pos
+			to.x = minf(to.x, world.map_bounds.end.x + 150.0)
+			route += Vector2(to.x - from.x, to.z - from.z).length()
+			near_base = minf(near_base, MS.distance(g.pos, Vector3(6200, 0, 7450), true))
+			from = to
+	check(route / fe.high_speed > 75.0, "F.E.2d route about %.0f s to the map edge (60+ after interception)" % (route / fe.high_speed))
+	check(near_base > 1550.0, "F.E.2d route stays 1550+ from the aerodrome (%.0f)" % near_base)
+	check(p.ordnance_type == 2 and p.ordnance_left == 10, "the Baron carries 10 rockets")
 	check(fe.goals.back().pos.x > 9358.0, "F.E.2ds head off the map east")
 	check(s().plane(3020).hidden and s().plane(3021).hidden, "ambush hidden")
 	check(s().plane(3002).current_goal().type == Aircraft.G_FORMATION, "Brenner in formation (retaliate before 0x30)")
@@ -411,16 +424,19 @@ func _m08_wound() -> void:
 	p.global_position = start.lerp(home, 0.3)
 	_settle()
 	check(not s().wounded, "no ambush before halfway")
-	var hp := p.health
 	p.global_position = start.lerp(home, 0.6)
 	_settle()
-	check(s().wounded and s().overlay().wound == 1.0 and p.health < hp, "ambush halfway home wounds the Baron")
+	check(s().wounded and s().overlay().wound == 1.0, "ambush halfway home wounds the Baron")
+	check(p.health >= p.endurance * 0.5 and p.get("damage_scale") == 0.25, "wounded: at least half endurance, quarter damage")
+	var before := p.health
+	p.take_damage(8.0, s().plane(3021))
+	check(is_equal_approx(p.health, before - 2.0), "a hit after the wound does a quarter")
 	check(not s().plane(3020).hidden and not s().plane(3021).hidden, "two Nieuports revealed")
-	check(s().plane(3002).current_goal().type == Aircraft.G_ATTACK and s().plane(3002).current_goal().targetid == 3020,
-		"Brenner turns on the first at once")
+	check(s().plane(3002).current_goal().type == Aircraft.G_ATTACK and s().plane(3002).current_goal().targetid == 3020
+		and s().plane(3002).goals[1].targetid == 3021, "Brenner turns on the first at once, then the second")
 	var second: Aircraft = s().plane(3021)
-	check(second.goals[1].type == Aircraft.G_RETALIATE_ON and second.goals[1].radius == 25.0 and second.goals.back().pos.x > 9358.0,
-		"the second attacks 25 s, then turns for home")
+	check(second.goals[1].type == Aircraft.G_RETALIATE_ON and second.goals[1].radius == 20.0 and second.goals.back().pos.x > 9358.0,
+		"the second attacks 20 s, then turns for home")
 	check(s().plane(3002).goals.back().type == Aircraft.G_FORMATION and s().plane(3002).goals.back().has("offset"),
 		"Brenner forms up again afterwards")
 	check(world.message_label.text.begins_with("Ambush!"), "HUD says ambush")

@@ -189,3 +189,17 @@ the wound came from an observer during the attack pass.
   wounded ("Ambush! You are hit. Land at the aerodrome."). Brenner attacks the first at once, then forms
   up; the second attacks 25 s (0x130 limit), then flies east.
 - Observer hits no longer wound; the "last F.E.2d" fallback is gone.
+
+## Playtest 8: mission 8 timing, rockets, surviving the ambush
+
+- The Baron carries 10 rockets (`ordinancetype = 2`, `numordinance = 10`).
+- F.E.2d route lengthened (all 1550+ from the aerodrome): south-west to 1700 short of it, south along
+  our lines, a loop south and east, back north, then east. Simulated: they leave the map at about
+  89 s, about 75 s after the Baron meets them (the user asked for 60+).
+- Ambush survival (simulated with the Baron flying level for home: he was crashing into the ground
+  with no input, and with the old values ambushers then shot him down): after the 20-point wound hit he
+  keeps at least half his endurance and takes a quarter of each hit (mod `Aircraft.damage_scale`);
+  Brenner attacks both Nieuports in turn; the second's attack limit is 20 s. Result over three runs:
+  both Nieuports down about 10 s after the ambush, the Baron home with 40..46 of 125.
+- Ambushers appear 250 / 310 behind, 120 either side, 80 / 110 above (they spawned on top of each
+  other and collided before).

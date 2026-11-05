@@ -13,6 +13,7 @@ const GUNNER_INTERVAL := 0.2
 signal damaged(plane: Aircraft, amount: float, attacker: Variant)
 
 var gunners_enabled := false
+var damage_scale := 1.0  # mission scripts: fraction of incoming damage taken (e.g. a wounded Baron)
 var _gunners := DefensiveGunners.new(GUNNER_RANGE, GUNNER_INTERVAL)
 
 
@@ -34,5 +35,6 @@ func _guns(dt: float) -> void:
 
 
 func take_damage(amount: float, attacker = null) -> void:
+	amount *= damage_scale
 	super.take_damage(amount, attacker)
 	damaged.emit(self, amount, attacker)

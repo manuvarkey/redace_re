@@ -382,34 +382,48 @@ func _m08_wound() -> void:
 	check(fe.get("gunners_enabled") == true, "F.E.2d stand-ins have gunners")
 	check(absf(fe.fire_rate * fe.fire_on / (fe.fire_on + fe.fire_off) - 8.0) < 0.1, "F.E.2d front gun 8 rounds/s")
 	check(not fe.retaliate, "F.E.2ds hold course (retaliate off)")
-	check(s().plane(3020).hidden, "pursuer hidden")
+	check(MS.distance(fe, Vector3(6200, 0, 7450), true) > 2500.0, "F.E.2ds start far from the aerodrome")
+	check(fe.goals.back().pos.x > 9358.0, "F.E.2ds head off the map east")
+	check(s().plane(3020).hidden and s().plane(3021).hidden, "ambush hidden")
 	check(s().plane(3002).current_goal().type == Aircraft.G_FORMATION, "Brenner in formation (retaliate before 0x30)")
-	fe.global_position = p.global_position + Vector3(100, 0, 0)
-	p.take_damage(1.0, fe)
-	check(not s().wounded, "no wound in the first 30 s")
+	check(world.message_label.text.begins_with("F.E.2ds over our lines"), "first objective on the HUD")
+	check(s().overlay()._counter != null and s().overlay()._counter.text.begins_with("F.E.2d down 0 / 4"), "kill counter")
+	# hits do not wound any more: the ambush does
 	world.mission_time = 31.0
-	p.take_damage(1.0, s().plane(3002))
-	check(not s().wounded, "only an F.E.2d observer wounds")
-	fe.global_position = p.global_position + Vector3(400, 0, 0)
-	p.take_damage(1.0, fe)
-	check(not s().wounded, "observer must be within 150")
 	fe.global_position = p.global_position + Vector3(100, 0, 0)
 	p.take_damage(1.0, fe)
-	check(s().wounded and s().overlay().wound == 1.0, "observer hit after 30 s within 150 wounds")
-	check(s().plane(3020).present() and s().plane(3020).current_goal().type == Aircraft.G_APPEAR, "pursuer revealed")
-	var pursuer: Aircraft = s().plane(3020)
-	check(pursuer.goals[1].type == Aircraft.G_RETALIATE_ON and pursuer.goals[1].radius == 25.0
-		and pursuer.goals[2].type == Aircraft.G_ATTACK and pursuer.goals[3].type == Aircraft.G_WAYPOINT,
-		"pursuer attacks 25 s, then turns for home")
-	check(fe.current_goal().type == Aircraft.G_RETALIATE_OFF and fe.goals[1].pos.x > 9358.0, "F.E.2ds turn for home after the wound")
-	s().run_step(0.0)
-	check(s().plane(3002).current_goal().type != Aircraft.G_ATTACK, "Brenner waits before going for the Nieuport")
-	world.mission_time += 13.0
-	pursuer.global_position = p.global_position + Vector3(0, 0, -200)
-	s()._escort_check = 0.0
-	s().run_step(0.0)
+	check(not s().wounded, "an observer hit does not wound")
+	# three down, one escapes
+	p.global_position = Vector3(8600, 650, 8400)
+	for f in s().fe2ds:
+		f.state = Aircraft.State.DEAD
+	s().fe2ds[3].state = Aircraft.State.FLYING
+	s().fe2ds[3].left_map = true
+	world.mission_time = 40.0
+	_settle()
+	check(s().returning and world.message_label.text == "1 got away. Return to base.", "return to base when none is left")
+	check(not s().overlay()._counter.visible, "counter hidden on the way home")
+	check(s().plane(3002).current_goal().type == Aircraft.G_FORMATION, "Brenner on the Baron's wing on the way home")
+	# halfway home: ambush and wound
+	var home := Vector3(6200, 650, 7450)
+	var start := p.global_position
+	world.mission_time = 50.0
+	p.global_position = start.lerp(home, 0.3)
+	_settle()
+	check(not s().wounded, "no ambush before halfway")
+	var hp := p.health
+	p.global_position = start.lerp(home, 0.6)
+	_settle()
+	check(s().wounded and s().overlay().wound == 1.0 and p.health < hp, "ambush halfway home wounds the Baron")
+	check(not s().plane(3020).hidden and not s().plane(3021).hidden, "two Nieuports revealed")
 	check(s().plane(3002).current_goal().type == Aircraft.G_ATTACK and s().plane(3002).current_goal().targetid == 3020,
-		"Brenner goes for the Nieuport")
+		"Brenner turns on the first at once")
+	var second: Aircraft = s().plane(3021)
+	check(second.goals[1].type == Aircraft.G_RETALIATE_ON and second.goals[1].radius == 25.0 and second.goals.back().pos.x > 9358.0,
+		"the second attacks 25 s, then turns for home")
+	check(s().plane(3002).goals.back().type == Aircraft.G_FORMATION and s().plane(3002).goals.back().has("offset"),
+		"Brenner forms up again afterwards")
+	check(world.message_label.text.begins_with("Ambush!"), "HUD says ambush")
 	p.throttle = 1.0
 	p.fire_input = true
 	s().run_step(0.0)
@@ -429,7 +443,7 @@ func _m08_land() -> void:
 
 
 func _m08_crash() -> void:
-	s().wound()
+	s().ambush()
 	world.player.crash()
 	_settle()
 	check(world.mission_over and world._end_result == "death", "a crash loses mission 8")

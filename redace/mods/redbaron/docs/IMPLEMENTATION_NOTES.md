@@ -171,3 +171,21 @@ Mission 8:
   holds formation and goes for the Nieuport 12 s after the wound (6 s let him kill it before it ever
   fired). Simulated (wound 1300 from base, Baron flying straight home): the Nieuport closes to about
   140 by the aerodrome while Brenner engages it; no damage taken in that straight run.
+
+## Playtest 7: mission 8 reworked (user's flow)
+
+User asked for: first objective = shoot down the observers (F.E.2ds) before they leave the map; then
+"Return to base"; on the way back the Baron is ambushed and takes the hit, so Brenner is beside him to
+deal with it; the F.E.2d formation must be well away from the base. **Deviation from the design**, where
+the wound came from an observer during the attack pass.
+
+- F.E.2ds start about 3000 north-east of the aerodrome, fly south-west to about 1700 short of it, south
+  along our lines (about 1600 out), then east to x 10000. They leave the map (150 past x 9358) at about
+  38 s; their waypoint lies beyond that point, or the AI turns back at the edge when the goal is done.
+  HUD counter "F.E.2d down n / 4   escaped n".
+- When none is left in the air: "Return to base." (or "n got away. Return to base."), Brenner forms up.
+- Halfway home (flat distance down to half of that at the return): two Nieuports (3020, 3021) appear
+  250 behind and 80 above; the Baron takes a 20-point hit (never the last 10 of his endurance) and is
+  wounded ("Ambush! You are hit. Land at the aerodrome."). Brenner attacks the first at once, then forms
+  up; the second attacks 25 s (0x130 limit), then flies east.
+- Observer hits no longer wound; the "last F.E.2d" fallback is gone.

@@ -110,3 +110,6 @@ Mission 8:
   (Nieuport / S.E.5a firerate 9.6, Bristol Scout 9.33, aircodh2 8.57 with their stock bursts); planned
   12/s for missions 9-12. F.E.2d observers stay at 2.5/s.
 - Mission 8: F.E.2ds retaliate off (`320` in place of `304`): they hold course, observers shoot back.
+- User: raise the Baron's and Brenner's guns to the original mission 1 player's (aircodh2: firerate 25,
+  1.4 s on, 0.1 s off = 23.3 rounds/s); Brenner "gets killed fast": endurance 80 -> 125 (as the Baron)
+  in `albatros_brenner` and in missions 2 and 8. Design had 80 for Brenner.

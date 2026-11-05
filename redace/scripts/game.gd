@@ -17,6 +17,9 @@ const SAVE_PATH := "user://pilots.cfg"
 const SETTINGS_PATH := "user://settings.cfg"
 const RENDER_HEIGHTS := [360, 480, 540, 720, 1080, 0]
 const RENDER_NAMES := ["Very Low (360p)", "Low (480p)", "Medium (540p)", "Standard (720p)", "High (1080p)", "Native"]
+const MSAA_LABELS := ["Off", "2x", "4x", "8x"]
+const ANISOTROPY_LABELS := ["Off", "2x", "4x", "8x", "16x"]
+const ANISOTROPY_SETTING := "textures/default_filters/anisotropic_filtering_level"
 const WINDOW_HEIGHTS := [480, 540, 720, 900, 1080]
 const MENU_MUSIC := 2  # music.ini entry the exe starts at the title screen (FUN_00456c75)
 
@@ -157,6 +160,10 @@ func _load() -> void:
 	settings.effects_volume = s.get_value("sound", "effects_volume", 10)
 	settings.clip_plane = int(s.get_value("graphics", "draw_distance", Ini.num(cfg_ini.get("graphics", {}), "drawdistance", 600)))
 	settings.effects_detail = s.get_value("graphics", "effects_detail", int(Ini.num(cfg_ini.get("graphics", {}), "effectsdetail", 700) / 100))
+	var msaa := int(s.get_value("graphics", "msaa", 0))
+	settings.msaa = msaa if msaa >= 0 and msaa < MSAA_LABELS.size() else 0
+	var anisotropy := int(s.get_value("rendering", ANISOTROPY_SETTING, 0))
+	settings.anisotropy = anisotropy if anisotropy >= 0 and anisotropy < ANISOTROPY_LABELS.size() else 0
 	settings.vsync = s.get_value("video", "vsync", true)
 	settings.fullscreen = s.get_value("video", "fullscreen", false)
 	var height := int(s.get_value("video", "render_height", 0))
@@ -182,6 +189,9 @@ func _save() -> void:
 	s.set_value("sound", "effects_volume", settings.effects_volume)
 	s.set_value("graphics", "draw_distance", settings.clip_plane)
 	s.set_value("graphics", "effects_detail", settings.effects_detail)
+	s.set_value("graphics", "msaa", settings.msaa)
+	# GLES3 reads its anisotropy cap before scripts start. This file is also the startup override.
+	s.set_value("rendering", ANISOTROPY_SETTING, settings.anisotropy)
 	s.set_value("video", "vsync", settings.vsync)
 	# Other saves during a preview must also retain the last confirmed video preferences.
 	for key in ["fullscreen", "render_height", "window_height"]:
@@ -208,7 +218,13 @@ func _apply_settings() -> void:
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), _vol_db(settings.music_volume))
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Effects"), _vol_db(settings.effects_volume))
 	_apply_video_settings()
+	_apply_graphics_settings()
 	Engine.time_scale = _base_time_scale()
+
+
+func _apply_graphics_settings() -> void:
+	# Apply 3D antialiasing during flights; the menu-only viewport needs no MSAA.
+	get_tree().root.msaa_3d = (int(settings.get("msaa", 0)) if is_instance_valid(world) else 0) as Viewport.MSAA
 
 
 func _apply_video_settings() -> void:
@@ -371,6 +387,10 @@ func _fill(html: String) -> String:
 		"musicvolbar": _bar("command:volume:0:%d", settings.music_volume, 10, 8),
 		"hardwaresound": _check("command:hardwaresound", true, false),
 		"clipplane": _value_bar("command:clipplane:%d", DRAW_DISTANCES, settings.clip_plane, 2),
+		"msaa": _graphics_choices("msaa", MSAA_LABELS),
+		"anisotropy": _graphics_choices("anisotropy", ANISOTROPY_LABELS),
+		"anisotropynote": "Restart required to apply." if int(settings.anisotropy) != int(
+			ProjectSettings.get_setting("rendering/" + ANISOTROPY_SETTING, 0)) else "Changes apply after restarting.",
 		"effectsdetail": _bar("command:effectsdetail:%d", settings.effects_detail, 10, 7),
 		"vsync": _check("command:vsync", settings.vsync, false),
 		"renderers": "<b>Godot (OpenGL / WebGL 2)</b><br>",
@@ -447,6 +467,15 @@ func _collision_damage_options() -> String:
 		var label: String = ["Default", "Mild", "Full"][mode]
 		choices.append("<b>[%s]</b>" % label if mode == selected else
 			_link("command:collisiondamage:%d" % mode, label))
+	return " / ".join(choices)
+
+
+func _graphics_choices(key: String, labels: Array) -> String:
+	var choices := PackedStringArray()
+	for mode in labels.size():
+		var label: String = labels[mode]
+		choices.append("<b>[%s]</b>" % label if int(settings.get(key, 0)) == mode else
+			_link("command:%s:%d" % [key, mode], label))
 	return " / ".join(choices)
 
 
@@ -808,6 +837,16 @@ func _command(c: String) -> void:
 			settings.effects_detail = int(a[1])
 			_save()
 			_refresh()
+		"msaa", "anisotropy":
+			var mode := int(a[1])
+			var count := MSAA_LABELS.size() if a[0] == "msaa" else ANISOTROPY_LABELS.size()
+			if mode < 0 or mode >= count:
+				return
+			settings[a[0]] = mode
+			if a[0] == "msaa":
+				_apply_graphics_settings()
+			_save()
+			_refresh()
 		"vsync":
 			settings.vsync = a[1] == "1"
 			_apply_settings()
@@ -1034,6 +1073,7 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	world.finished.connect(_on_finished)
 	world.pause_requested.connect(_pause)
 	add_child(world)
+	_apply_graphics_settings()
 	world.view_distance = float(settings.clip_plane)
 	world.effects_detail = settings.effects_detail / 10.0
 	if not debug:
@@ -1067,6 +1107,7 @@ func _end_flight() -> void:
 	if world:
 		world.queue_free()
 		world = null
+	_apply_graphics_settings()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 

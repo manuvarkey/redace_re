@@ -143,6 +143,8 @@ func _ready() -> void:
 	if standalone:
 		var settings := ConfigFile.new()
 		settings.load(SETTINGS_PATH)
+		var msaa := int(settings.get_value("graphics", "msaa", 0))
+		get_viewport().msaa_3d = (msaa if msaa >= 0 and msaa < 4 else 0) as Viewport.MSAA
 		collision_damage = clampi(int(settings.get_value("extra", "collision_damage", 0)), 0, 2) as CollisionDamage
 		load_mission(mission_id)
 
@@ -205,7 +207,7 @@ static func _lit_shader(cull_off: bool, blend: int) -> Shader:
 		sh.code = """
 shader_type spatial;
 render_mode unshaded, fog_disabled%s%s;
-uniform sampler2D tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec4 base : source_color = vec4(1.0);
 uniform float ambient = 1.0;
 uniform float diffuse = 0.0;

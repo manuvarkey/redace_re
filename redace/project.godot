@@ -9,6 +9,7 @@ config/description="Godot reimplementation of Master of the Skies - The Red Ace 
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/quit_on_go_back=false
+config/project_settings_override="user://settings.cfg"
 config/icon="res://icon.png"
 
 [display]
@@ -83,6 +84,7 @@ sensors/enable_gravity=true
 
 [rendering]
 
+textures/default_filters/anisotropic_filtering_level=0
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true

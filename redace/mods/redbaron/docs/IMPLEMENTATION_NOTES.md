@@ -472,3 +472,22 @@ hangar), marked on the minimap.
   pilot in Scramble and Dusk Raiders. Check: no non-player `albatros_red` / `fokker_red` in any mission.
 - AI fire no longer hurts its own side in mod missions (mod aircraft `take_damage`): the engine's rounds
   hit any plane, and bomber gunners and wingmen were shooting down their own formation.
+
+## Campaign pictures (slots only; images still to be made)
+
+- Briefings have a player photo (left 128x128 cell) and a target picture (right cell); spec keys
+  `photo =` and `target =` in `tools/missions/mNN.ini`. Mission 11's debriefing takes a paper background
+  (`debrief_background = letter`; others keep `Menus\blackboard.jpg`). The campaign intro and completion
+  pages have `background="campaigns\redbaron\img\intro.jpg"` / `complete.jpg`.
+- build_missions.py `art()` only writes an `<img>` when
+  `game_data/language/english/campaigns/redbaron/img/<name>.png` exists, so the pages are unchanged until
+  the pictures arrive; a missing page background stays black (checked, no errors).
+- `docs/images_required.md`: the 14 pictures, sizes (512x512 slots, 2560x1920 pages, 4x of the 640x480
+  menus) and prompts in the original menu-art style. After adding them: run build_missions.py, then
+  `godot --headless --path redace --import`.
+
+## Open items (for the next session)
+
+- No playtest feedback yet for missions 3, 7, 11, 12; the 12 rounds/s enemy guns of missions 9-12 are
+  untested in play.
+- Before release: `replayall = 0` in campaign.ini; confirm the wreath inscription; Android build untested.

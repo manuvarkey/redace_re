@@ -486,6 +486,18 @@ hangar), marked on the minimap.
   menus) and prompts in the original menu-art style. After adding them: run build_missions.py, then
   `godot --headless --path redace --import`.
 
+## Campaign pictures added (6 November 2026)
+
+- Added all 14 generated pictures from `docs/images_required.md`: 11 square briefing illustrations
+  at 512x512 and intro, completion and letter backgrounds at 2560x1920, all opaque RGB PNG.
+- Rebuilt all 12 mission briefing pages and mission 11's letter debriefing with build_missions.py.
+  The intro and completion backgrounds resolve through the existing HTML image lookup; the epilogue
+  remains text only. No engine or mission behavior changes.
+- Prompts and resizing details: `docs/art_generation.md`. Reviewed the final contact sheet and rendered
+  intro, completion, mission 1 / 9 briefings and mission 11 letter in Godot 4.7.2.
+- Validation: Godot headless import succeeded; asset suite 41 checks and campaign suite 341 checks,
+  both with zero failures.
+
 ## Open items (for the next session)
 
 - No playtest feedback yet for missions 3, 7, 11, 12; the 12 rounds/s enemy guns of missions 9-12 are

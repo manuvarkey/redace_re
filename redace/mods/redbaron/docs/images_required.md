@@ -1,8 +1,9 @@
 # Images required for the Red Baron campaign pages
 
 Fourteen pictures for the briefings and campaign pages, in the style of the original game's menu art.
-None exist yet; every page already works without them and picks each one up as soon as its file is in
-place (see "Putting them in").
+All fourteen are now included in `game_data/language/english/campaigns/redbaron/img/`.
+See [art_generation.md](art_generation.md) for generation prompts and image processing details.
+The pages still work without optional artwork (see "Putting them in" for replacements).
 
 ## Style of the original art
 

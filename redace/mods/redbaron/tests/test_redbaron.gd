@@ -7,6 +7,11 @@ const RedBaronInit := preload("res://mods/redbaron/init.gd")
 const RedBaronAircraft := preload("res://mods/redbaron/aircraft.gd")
 const MS := preload("res://mods/redbaron/mission_script.gd")
 const ObjectiveScript := preload("res://mods/redbaron/missions/objective.gd")
+## Sustained gun rates (docs/plane_figures.md): German twin Spandau 23.3; British twin guns 1.5x weaker (15.6);
+## single guns half their side's twin rate (British 7.8, German 11.7).
+const RATES := {"albatros_red": 23.33, "albatros_brenner": 23.33, "albatros_wingman": 23.33, "albatros_player": 23.33,
+	"fokker_red": 23.33, "fokker_brenner": 23.33, "fokker_rookie": 23.33, "sopwithcamel_rb": 15.56, "se5a_rb": 15.56,
+	"nieuport17_rb": 7.78, "bristolscout_rb": 7.8, "aircodh2_rb": 7.78, "re8": 7.78, "handleypage": 7.78, "halberstadt_rb": 11.66}
 
 var world: World
 var ticks := 0
@@ -306,7 +311,7 @@ func _m02_rejoin() -> void:
 	check(absf(sustained.call(world.player) - 25.0 * 1.4 / 1.5) < 0.01 and is_equal_approx(sustained.call(b), sustained.call(world.player)) and is_equal_approx(world.player.fire_rate, 25.0),
 		"player and Brenner guns match the original mission 1 player (%.1f rounds/s)" % sustained.call(world.player))
 	for id in [3003, 3004, 3005]:
-		check(absf(sustained.call(s().plane(id)) - 8.0) < 0.1, "mission 2 enemy %d fires 8 rounds/s" % id)
+		check(absf(sustained.call(s().plane(id)) - 7.8) < 0.1, "mission 2 enemy %d: single gun, 7.8 rounds/s" % id)
 	check(world.player.high_speed == 110.0 and world.player.endurance == 125.0 and b.endurance == 125.0, "design stats")
 	check(b.current_goal().type == Aircraft.G_FORMATION and b.current_goal().targetid == 3001, "Brenner starts on the Baron's wing")
 	check(b.high_speed > world.player.high_speed, "Brenner is faster, so he can run away")
@@ -399,7 +404,7 @@ func _m08_wound() -> void:
 	var p := world.player
 	var fe: Aircraft = s().plane(3010)
 	check(fe.get("gunners_enabled") == true, "F.E.2d stand-ins have gunners")
-	check(absf(fe.fire_rate * fe.fire_on / (fe.fire_on + fe.fire_off) - 8.0) < 0.1, "F.E.2d front gun 8 rounds/s")
+	check(absf(fe.fire_rate * fe.fire_on / (fe.fire_on + fe.fire_off) - 7.8) < 0.1, "F.E.2d front gun 7.8 rounds/s")
 	check(not fe.retaliate, "F.E.2ds hold course (retaliate off)")
 	check(MS.distance(fe, Vector3(6200, 0, 7450), true) > 2500.0, "F.E.2ds start far from the aerodrome")
 	var route := 0.0
@@ -642,20 +647,29 @@ func _stock_rule_mission(i: int) -> void:
 			if id == 109:
 				var hp: Array = world.planes.filter(func(q): return q.plane_name == "handleypage")
 				check(hp.size() == 3 and hp.all(func(q): return q.get("_stations").size() == 3), "109: O/100s with nose, dorsal and ventral gunners")
-				check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel" and q.current_goal().type == Aircraft.G_FORMATION).size() == 5, "109: five escorts in formation")
+				check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel_rb" and q.current_goal().type == Aircraft.G_FORMATION).size() == 5, "109: five escorts in formation")
 				check(s().plane(3002).allied and s().plane(3003).allied, "109: two wingmen")
+				var leads := world.planes.filter(func(q): return q.plane_name == "sopwithcamel_rb").map(func(q): return int(q.goals.back().targetid))
+				leads.sort()
+				check(leads == [3010, 3010, 3010, 3011, 3012], "109: one close escort per bomber, two sweeping ahead of the lead (%s)" % [leads])
+				check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel_rb").all(func(q): return q.get("keep_station")), "109: escorts keep station")
+				var spread := INF
+				for i2 in hp.size():
+					for j2 in range(i2 + 1, hp.size()):
+						spread = minf(spread, hp[i2].global_position.distance_to(hp[j2].global_position))
+				check(spread > 400.0, "109: bombers well apart (%.0f)" % spread)
 				var b: Aircraft = hp[0]
 				b.global_position = Vector3(8000, 800, 6500)
 				world.player.global_position = b.global_position + Vector3(0, 0, -400)
 				s()._check = 0.0
 				s().run_step(0.0)
-				var esc: Array = world.planes.filter(func(q): return q.plane_name == "sopwithcamel" and q.get("_formation") == null)
-				check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel" and q.current_goal().type == Aircraft.G_ATTACK).size() >= 2, "109: escorts of a threatened bomber turn on the German")
+				var esc: Array = world.planes.filter(func(q): return q.plane_name == "sopwithcamel_rb" and q.get("_formation") == null)
+				check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel_rb" and q.current_goal().type == Aircraft.G_ATTACK).size() >= 2, "109: escorts of a threatened bomber turn on the German")
 			if id == 106:
 				var bal: Array = world.targets.filter(func(x): return x.name == "balloon")
 				check(bal.size() == 3 and bal.all(func(x): return x.models.size() == 3), "106: balloons with two damage stages")
 
-				var cl := world.planes.filter(func(q): return q.plane_name == "halberstadt")
+				var cl := world.planes.filter(func(q): return q.plane_name == "halberstadt_rb")
 				var armed := cl.size() == 3
 				for q in cl:
 					armed = armed and q.ordnance_type == 1 and q.ordnance_left == 20 and q.goals.any(func(g): return g.type == Aircraft.G_BOMB_RUN and g.targetid == -6)
@@ -677,7 +691,7 @@ func _stock_rule_mission(i: int) -> void:
 				check(route > 5000.0, "104: bombers about 60 s out (route %.0f)" % route)
 				var ahead := true
 				for q in wave1:
-					if q.plane_name == "se5a":
+					if q.plane_name == "se5a_rb":
 						var d := MS.distance(q, home, true)
 						ahead = ahead and d < route - 2000.0 and d > 2500.0
 				check(ahead, "104: fighters well ahead, about 30 s out")
@@ -711,9 +725,12 @@ func _stock_rule_mission(i: int) -> void:
 			for r in world.rules:
 				check(r.lost == 0, "%d: nothing lost at the start (hidden planes are not lost)" % id)
 			for p in world.planes:
-				if not p.allied and p.groups & (1 << 9):
-					check(absf(p.fire_rate * p.fire_on / (p.fire_on + p.fire_off) - (12.0 if id >= 109 else 8.0)) < 0.05,
-						"%d: %s guns as tuned" % [id, p.plane_name])
+				var key := "fokker_rookie" if p.plane_name.begins_with("fokker_rookie") else p.plane_name
+				if RATES.has(key):
+					check(absf(p.fire_rate * p.fire_on / (p.fire_on + p.fire_off) - RATES[key]) < 0.05,
+						"%d: %s guns %.2f rounds/s" % [id, p.plane_name, p.fire_rate * p.fire_on / (p.fire_on + p.fire_off)])
+				check(not p.plane_name in ["sopwithcamel", "se5a", "nieuport17", "bristolscout", "aircodh2", "halberstadt"],
+					"%d: %s is the mod's copy (stock figures untouched)" % [id, p.plane_name])
 			# win: every member of every destroy group lost
 			for p in world.planes:
 				for r in world.rules:
@@ -756,8 +773,8 @@ func _stock_rule_mission(i: int) -> void:
 
 func _m07() -> void:
 	var photo: Aircraft = s().plane(3002)
-	check(photo.plane_name == "halberstadt" and photo.get("gunners_enabled") and not photo.retaliate, "107: photo plane, gunners, holds course")
-	check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel").all(func(q): return q.hidden), "107: Camels hidden until it is over their side")
+	check(photo.plane_name == "halberstadt_rb" and photo.get("gunners_enabled") and not photo.retaliate, "107: photo plane, gunners, holds course")
+	check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel_rb").all(func(q): return q.hidden), "107: Camels hidden until it is over their side")
 	photo.global_position = Vector3(8400, 400, 7750)
 	_settle()
 	check(not world.mission_over, "107: no win before the photo run")

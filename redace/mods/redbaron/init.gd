@@ -11,6 +11,7 @@ extends Node
 ##   [airN] firerate / fireon / fireoff                   the plane's own guns (plane.ini [armaments])
 ##   [airN] bombsight = 1                                 bombing runs aimed with the real bomb fall
 ##   [airN] persistent = 0 / 1                            no dodging when hit (default 0, the original)
+##   [airN] keepstation = 1                               formation goals hold the slot at the leader's speed
 
 const MissionScript := preload("res://mods/redbaron/mission_script.gd")
 const RedBaronAircraft := preload("res://mods/redbaron/aircraft.gd")
@@ -99,6 +100,8 @@ func configure_aircraft(plane: Aircraft, section: Dictionary) -> void:
 		plane.set("bombsight", int(Ini.num(section, "bombsight", 0)) != 0)
 	if section.has("persistent"):
 		plane.set("persistent", int(Ini.num(section, "persistent", 1)))
+	if section.has("keepstation"):
+		plane.set("keep_station", int(Ini.num(section, "keepstation", 0)) != 0)
 	if section.has("gunnerrate"):
 		plane.call("set_gunner_rate", Ini.num(section, "gunnerrate", 5.0))
 

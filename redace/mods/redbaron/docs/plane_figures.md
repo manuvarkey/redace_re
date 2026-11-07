@@ -1,0 +1,97 @@
+# Red Baron plane figures and mission overrides
+
+Reference for every aircraft the campaign flies: its figures, why they are what they are, and every
+per-mission override with the mission-script reason for it. Updated 7 November 2026.
+
+Sources: `overrides/redbaron/objects/planes/<folder>/plane.ini` (built into `game_data/objects/planes` by
+`tools/build_planes.py`) and `tools/missions/mNN.ini` (built by `tools/build_missions.py`). Tests:
+`tests/test_redbaron.gd` (`RATES` and the per-mission rule checks).
+
+## Rules
+
+1. **Stock planes stay stock.** The British fighters and the Halberstadt are original game folders shared
+   with the stock missions. The campaign flies its own copies, `<stock>_rb` (stock model and paint, the
+   mod's `plane.ini`). Nothing in the original folders changes.
+2. **Defaults live in the plane file.** A mission overrides a figure only when its script needs it; each
+   override carries its reason in the mission file and in the table below.
+3. **Guns: about 1.5x for the player's side.** Sustained rate = `firerate * fireon / (fireon + fireoff)`.
+   Every fighter of a type keeps its own burst rhythm; only `firerate` sets the rate.
+   - German twin Spandau (Albatros D.II / D.III, Fokker Dr.I; the Baron, his wingmen, the rookies): **23.3**.
+   - British twin guns (Camel: two Vickers; S.E.5a: Vickers + Lewis): 23.3 / 1.5 = **15.6**.
+   - Single guns fire half their side's twin rate: British (Nieuport 17, Bristol Scout, DH.2, the R.E.8
+     and O/100 pilots) **7.8**; German (Halberstadt pilot) **11.7**.
+   - Defensive gunners (two-seater observers, the O/100's three stations) are a separate, playtested
+     system in `aircraft.gd` (3 and 4 rounds/s in bursts) and are not part of this scale.
+4. **Endurance** is the player side's main edge and is unchanged from the playtests: the Baron, Brenner
+   and the wingmen 125, rookies 80; British fighters 45-50. A round scores 1 on every tick it spends inside
+   a plane's hit radius and flies on (the original's proximity test), so a well-aimed round scores several
+   points: measured, a Camel holding 25-38 behind the Baron took his 125 in about 3 s. With rule 3 the
+   Camel has to hold its aim (125 / 50) x 1.5 = 3.75 times as long as the Baron does to win the exchange.
+5. **Flight figures follow history, relative to the plane they meet**, with no British fighter better than
+   the player's in every respect. Speed scale: about 0.63 units/s per km/h (Albatros D.III, 175 km/h = 110).
+
+## Player and allied aircraft
+
+| Folder | Who | End. | Top / dive / cruise | Climb | Stall | Roll lo/hi | Pitch lo/hi | Accel | Guns (rounds/s) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `albatros_player` | Baron, mission 1 | 125 | 110 / 116 / 105 | 85 | 60 | 65 / 80 | 65 / 90 | 10 | 25 x 1.4/0.1 = 23.3 |
+| `albatros_red` | Baron, 2-9 | 125 | 110 / 116 / 105 | 85 | 60 | 65 / 80 | 65 / 90 | 10 | 23.3 |
+| `albatros_brenner`, `albatros_wingman` | wingmen, 2-9 | 125 | 110 / 116 / 105 | 85 | 60 | 65 / 80 | 65 / 90 | 10 | 23.3 |
+| `fokker_red`, `fokker_brenner` | Baron, Brenner, 10-12 | 125 | 120 / 130 / 107 | 110 | 82 | 97 / 112 | 107 / 117 | 9 | 25 x 1.4/0.1 = 23.3 (was 33.3) |
+| `fokker_rookie` (+ `_blue`, `_green`, `_black`) | rookies, 10-12 | 80 | as above | 110 | 82 | 97 / 112 | 107 / 117 | 9 | 23.3 (was 33.3) |
+| `halberstadt_rb` | allied two-seater, 6 / 7 / 11 | 35 | 105 / 110 / 90 | 85 | 74 | 30 / 40 | 50 / 60 | 7 | 31.1 x 0.9/1.5 = 11.7 (stock 4.5) + observer |
+
+The Dr.I carried the same twin Spandau as the Albatros, so it fires at the same rate; the stock Dr.I
+(33.3) was the original game's tuning for a plane that never met a 1.5x-weaker enemy.
+
+## British aircraft
+
+| Folder | Plane | End. | Top / dive / cruise | Climb | Stall | Roll lo/hi | Pitch lo/hi | Accel | Guns (rounds/s) | Character |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `sopwithcamel_rb` | Sopwith Camel | 50 | 112 / 116 / 103 | 90 | 70 | 75 / 90 | 75 / 95 | 10 | 18.7 x 0.75/0.15 = 15.6 | A little faster and handier than the Albatros; clearly below the Dr.I in turn and climb |
+| `se5a_rb` | S.E.5a | 45 | 115 / 125 / 106 | 85 | 65 | 55 / 70 | 55 / 80 | 10 | 18.7 x 1.0/0.2 = 15.6 | Fast, strong dive, less agile |
+| `nieuport17_rb` | Nieuport 17 | 45 | 104 / 108 / 96 | 88 | 55 | 70 / 85 | 70 / 90 | 10 | 9.33 x 1.0/0.2 = 7.8 | Out-turns and out-climbs the Albatros, slower |
+| `bristolscout_rb` | Bristol Scout | 45 | 100 / 105 / 92 | 75 | 60 | 60 / 70 | 60 / 80 | 10 | 9.1 x 1.5/0.25 = 7.8 | Outdated by 1917 |
+| `aircodh2_rb` | Airco DH.2 (also the F.E.2d stand-in) | 45 | 95 / 100 / 88 | 70 | 55 | 65 / 80 | 65 / 85 | 10 | 8.33 x 1.4/0.1 = 7.8 | Nimble but slow |
+| `re8` | R.E.8 two-seater | 40 | 92 / 105 / 88 | 60 | 50 | 45 / 55 | 45 / 60 | 7 | 8.33 x 1.4/0.1 = 7.8 + observer | unchanged flight |
+| `handleypage` | Handley Page O/100 | 150 | 88 / 100 / 84 | 50 | 45 | 22 / 30 | 25 / 35 | 5 | 7.8 + three gun stations | unchanged flight |
+
+Stock figures for comparison: Camel 118 / 128, climb 108, stall 80, roll 90 / 105, pitch 100 / 110,
+accel 20, endurance 130, 41.7 rounds/s (it was the original game's player plane); S.E.5a and Nieuport 17
+105 / 111, roll 60 / 75, 20.8 rounds/s; Bristol Scout 115, 25.7 rounds/s; DH.2 105, 23.3 rounds/s.
+R.E.8 and O/100 flight figures stay: their speeds set the timing of missions 3-5 and 9.
+
+## Mission overrides
+
+Everything else is the plane file's default. Loadouts (`ordinancetype` / `numordinance`: the Baron's
+rockets, bombers' bombs) are part of each mission's design rather than plane figures; the Baron carries
+10 rockets in missions 2-9, 11 and 12 and 30 in mission 10 (eight tanks).
+
+| Mission | Plane | Override | Default | Reason (mission script) |
+| --- | --- | --- | --- | --- |
+| 1 Hawker | DH.2 (Hawker) | endurance 120 | 45 | The mission is a duel; at 45 a head-on pass ended it in seconds |
+| 1 Hawker | DH.2 (Hawker) | highspeed 105 | 95 | Leaving the map fails the mission at once ("Hawker Got Away"); at 95 against the Baron's 110 he could never get away |
+| 2 First Sortie | Brenner | highspeed 125 | 110 | The script sends him after the decoy and the player must catch him to call him back; he has to pull away visibly (measured 400 away 4 s after the break) |
+| 4 Scramble | R.E.8 bombers | persistent 1 | 0 | They must press their bombing run on the hangars; two-seaters otherwise dodge when hit |
+| 6 Balloon Busting | Halberstadt x3 | endurance 250, bombsight 1 | 35 | Their bombing of the AA guns is what lets the Baron reach the balloons; they must live through the AA rings and hit the guns |
+| 7 The Other Side | Halberstadt (photo plane) | endurance 290 | 35 | It must survive the three Camels until the Baron, escorting from behind, reaches them; 150 was set against Camels at 8 rounds/s (about 10 s to lose 80), scaled to their 15.6 |
+| 8 Wounded | DH.2 x4 (as F.E.2d) | gunners 1 | 0 | They stand in for the two-seat F.E.2d (observer's gun); the DH.2 is a single-seater elsewhere |
+| 8 Wounded | DH.2 x4 (as F.E.2d) | gunnerrate 2.5 | 3 | The script holds all four in formation (retaliate off), so four observers fire at once at the attacker |
+| 9 Dusk Raiders | Camel x5 | keepstation 1 | 0 | The script keeps one escort on each bomber and two ahead, at the bombers' speed |
+| 9 Dusk Raiders | O/100 x3 | bombsight 1 | 0 | The rail-yard objective needs bombs that land where aimed |
+| 6 / 9 | bombers | bombsight 1 | 0 | as above |
+| 11 Formation | Halberstadt (damaged two-seater) | endurance 40 | 35 | Damaged: it must fall quickly if the Baron leaves it (the script brings two Camels on it); 30 was set against Camels at 12 rounds/s, scaled to their 15.6 |
+| 11 Formation | Halberstadt | highspeed 92 | 105 | Its route home is timed at about 110 s so the Camels reach it before it lands |
+
+Removed (now the plane file's default, or equal to it): every British `firerate` and `endurance`
+(missions 1-12), the O/100's `firerate 12.86` and `endurance 150`, R.E.8 `endurance 40`, and
+`endurance` on Brenner, the second wingman and the rookies.
+
+## Run-time changes in mission scripts
+
+| Mission | Plane | Change | Reason |
+| --- | --- | --- | --- |
+| 8 Wounded | Baron | after the ambush burst: health at least half, then 1/4 of every hit | The story wounds him; Brenner must have time to deal with the ambushers |
+| 11 Formation | Brenner | no damage from when he leaves to chase a Camel until his scripted death | His death is the story's; he must live until the Baron arrives |
+| 11 Formation | Camels C-E | no damage until the Baron is within 400 | They must still be there when he arrives (they collided and fell otherwise) |
+| 12 The Last Patrol | Baron | shot down by the ridge fire at the end | The story's ending |

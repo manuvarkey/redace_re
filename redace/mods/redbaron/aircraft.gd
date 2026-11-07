@@ -2,11 +2,11 @@ extends Aircraft
 ## Red Baron aircraft: the stock Aircraft plus defensive gunners on two-seaters and bombers
 ## (mods/shared/defensive_gunners.gd, as the Battle of Britain He 111) and a damaged signal for
 ## mission scripts. Gunners are on by default for the folders in GUNNER_PLANES; a mission's
-## [airN] gunners = 0 / 1 overrides that (the aircodh2 stands in for the two-seat F.E.2d in mission 8
+## [airN] gunners = 0 / 1 overrides that (the aircodh2_rb stands in for the two-seat F.E.2d in mission 8
 ## but flies as the single-seat DH.2 in mission 1).
 
 const DefensiveGunners := preload("res://mods/shared/defensive_gunners.gd")
-const GUNNER_PLANES := ["re8", "handleypage", "halberstadt"]
+const GUNNER_PLANES := ["re8", "handleypage", "halberstadt", "halberstadt_rb"]
 # tempered after playtests (Britain's: 450, 5 rounds/s, no pauses): 3 rounds/s in bursts of 6 (2 s),
 # then 1.5 s to re-aim, out to 380
 const GUNNER_RANGE := 380.0
@@ -50,6 +50,15 @@ var persistent := -1  # -1 default, 0 off, 1 on
 ## (the original pushes a 40-radius go-round point a two-seater can circle for ever). [airN] bombsight = 1.
 var bombsight := false
 const BOMB_MISS := 25.0
+## Station keeping (not in the original): [airN] keepstation = 1. A formation goal holds its slot at the
+## leader's speed: the wingman steers at a point STATION_LEAD ahead of the slot on the leader's heading and
+## sets the throttle for the leader's speed plus STATION_GAIN per unit it is behind (minus ahead) of the
+## slot, never below 1.1 x its stall speed (adding back the flight step's high-altitude speed cut, which
+## otherwise stalls a fast fighter throttled back to a bomber's speed). The original goes to full throttle whenever the leader is slower,
+## so a fast escort on a slow bomber overshoots and circles 50-500 away.
+var keep_station := false
+const STATION_LEAD := 150.0
+const STATION_GAIN := 0.2
 const BOMB_HEIGHT := 150.0
 var _gunners := DefensiveGunners.new(GUNNER_RANGE, GUNNER_INTERVAL)
 
@@ -183,6 +192,23 @@ func _bomb_run(goal: Dictionary) -> bool:
 	if Vector2(impact.x - tp.x, impact.z - tp.z).length() < BOMB_MISS:
 		secondary_input = true
 	return false
+
+
+func _formation(goal: Dictionary) -> bool:
+	var o = _goal_object(goal)
+	if not keep_station or not (o is Aircraft):
+		return super._formation(goal)
+	if not goal.has("offset"):
+		goal.offset = Vector3.ZERO
+	var fwd := Vector3(o.flight_basis.z.x, 0.0, o.flight_basis.z.z).normalized()
+	var slot: Vector3 = o.global_position + o.flight_basis * goal.offset
+	_steer(slot + fwd * STATION_LEAD)
+	_avoid_terrain()
+	var behind := (slot - global_position).dot(fwd)
+	var want := maxf(o.speed + behind * STATION_GAIN, stall_speed * 1.1)
+	want += maxf(ahead_alt - 400.0, 0.0) * 0.5  # undo _altitude_limited_speed
+	throttle = asin(clampf(want / high_speed, 0.0, 1.0)) / 1.57
+	return true
 
 
 func is_persistent() -> bool:

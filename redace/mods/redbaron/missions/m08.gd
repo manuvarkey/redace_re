@@ -1,6 +1,6 @@
 extends "res://mods/redbaron/mission_script.gd"
 ## Mission 8, Wounded (reworked after playtests; see IMPLEMENTATION_NOTES):
-##   1. Four F.E.2ds (aircodh2 stand-ins with observers' guns) cross our lines and turn east for home.
+##   1. Four F.E.2ds (aircodh2_rb stand-ins with observers' guns) cross our lines and turn east for home.
 ##      Objective: shoot them down before they leave the map. A HUD counter shows how many are down; the
 ##      first one to leave the map fails the mission ("An F.E.2d Got Away").
 ##   2. When none is left in the air: "Return to base." Brenner forms up on the Baron.
@@ -37,7 +37,7 @@ func start() -> void:
 	brenner = plane(3002)
 	ambushers.assign([plane(3020), plane(3021)])
 	for p in world.planes:
-		if p.plane_name == "aircodh2":
+		if p.plane_name == "aircodh2_rb":
 			fe2ds.append(p)
 	mark_on_map(AERODROME)
 	message("F.E.2ds over our lines! Shoot them down before they get home.", 6.0)

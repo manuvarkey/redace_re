@@ -15,6 +15,8 @@ SRC = GODOT / "overrides" / "redbaron" / "objects" / "planes"
 DST = GODOT / "redace" / "game_data" / "objects" / "planes"
 # folder prefix -> (stock folder, stock atlas that the paint replaces)
 BASE = {"albatros_": ("albertross", "albatrostemp1_a.png"), "fokker_": ("fokkertriplane", "fokker_a.png")}
+# <stock>_rb: a stock plane with the mod's own figures (docs/plane_figures.md), stock model and paint
+STOCK_COPIES = ["sopwithcamel", "se5a", "nieuport17", "bristolscout", "aircodh2", "halberstadt"]
 # folders with their own model (blender_redbaron.py writes it into the source folder) are copied as they are
 GROUND_SRC = GODOT / "overrides" / "redbaron" / "objects" / "ground"
 GROUND_DST = GODOT / "redace" / "game_data" / "objects" / "ground"
@@ -28,7 +30,10 @@ def build(name):
         shutil.copytree(SRC / name, out)
         print(f"{name}: own model")
         return
-    stock, atlas = next(v for k, v in BASE.items() if name.startswith(k))
+    if name.endswith("_rb") and name[:-3] in STOCK_COPIES:
+        stock, atlas = name[:-3], None
+    else:
+        stock, atlas = next(v for k, v in BASE.items() if name.startswith(k))
     out.mkdir(parents=True, exist_ok=True)
     paint = SRC / name / f"{name}.png"
     for f in (DST / stock).iterdir():

@@ -498,8 +498,56 @@ hangar), marked on the minimap.
 - Validation: Godot headless import succeeded; asset suite 41 checks and campaign suite 341 checks,
   both with zero failures.
 
+## Dusk Raiders: bombers spaced, escorts reorganised (7 November 2026)
+
+- Measured first (headless 60 Hz simulation, Germans moved away): the O/100s (span 76) flew 170-240
+  apart and closed to 68 (wings overlapping) in the first 15 s; the Camels, 118 against the bombers' 88,
+  overshot and wandered 50-490 from their bomber (the original formation goes to full throttle whenever
+  the leader is slower), and one died at the yard with nobody shooting.
+- Bombers: echelon heading north, each 300 east of and 350 behind the one before, each turning for the
+  yard at its own point 300 further on: never closer than about 300 in flight, 430+ at the yard, arriving
+  about 12 s apart. Start height 850-870 (from 900-960): above 400 over the ground the flight step cuts
+  the target speed (`_altitude_limited_speed`), and they had crawled for 20 s after appearing. The map
+  is 4680..9360 on both axes; a plane placed beyond it leaves at once (hidden, and for group 9 lost).
+- Generic: `[airN] keepstation = 1` (mod aircraft): a formation goal holds its slot at the leader's speed
+  (steer at a point 150 ahead of the slot, throttle for the leader's speed + 0.2 per unit behind, at least
+  1.1 x stall, the altitude cut added back; without that a Camel at bomber speed stalled and fell).
+- Escorts (m09.gd): one close escort per bomber (slot 110 off the wing, 30 up, 40 back; turns on a German
+  within 800 of its bomber or of itself, forms up again when none within 1600; hunts if its bomber falls)
+  and two sweeping 700 ahead of the lead bomber (turn on a German within 1000, back on station when none
+  within 1800 or when 2500 from the lead). Escorts appear on their slots; the step skips a plane whose
+  appear goal has not run yet (re-forming it there removed the appear and left it parked on the ground).
+- Measured after: close escorts 110-220 from their bomber, sweep about 600-700 ahead (falls back when the
+  lead circles for another pass). Bullets in flight during the fight peak at about 150-200 (limit 4096),
+  so the round count is not what made the close fight hard to see; overlapping bombers were.
+- Autopilot Baron (a rough measure only): dies after 26-67 s (was 36-40 s); contact comes about 10 s
+  earlier, with the sweep out in front. Needs a real playtest.
+- The rail yard rule is unchanged (Group3 = 60: the third of its six objects lost fails the mission);
+  the briefing now says so, and describes the escort.
+
+## Plane figures and overrides rationalised (7 November 2026)
+
+- User: "enemy is too much leading". The stock Camel (the original game's player plane) beat the Albatros
+  in every flight figure (118 / 128, climb 108, roll 90-105, accel 20). User chose the proposed figures and
+  a gun scale with about 1.5x for the player's side. Full tables and reasons: `docs/plane_figures.md`.
+- The British fighters and the Halberstadt are stock folders shared with the stock missions: the campaign
+  now flies copies `<stock>_rb` (`build_planes.py` `STOCK_COPIES`: stock model and paint, own plane.ini).
+- Guns (sustained): German twin 23.3 (the Dr.I down from 33.3: same Spandaus as the Albatros); British
+  twin (Camel, S.E.5a) 15.6; single guns half their side's twin rate (British 7.8, German 11.7). Gunners
+  unchanged. Endurances moved into the plane files unchanged (British fighters 45-50).
+- Overrides cut to those a mission script needs, each with its reason in the mission file. Protected
+  Halberstadts scaled to the stronger Camel guns: mission 7 photo plane 150 -> 290, mission 11 30 -> 40.
+- Mission 1's Hawker keeps `highspeed 105` (the DH.2's new default is 95; leaving the map fails at once).
+- The build step deletes the committed `.import` files of folders it recreates; restore them with
+  `git checkout` (their UIDs) before `godot --import`.
+- Measured: autopilot Baron, six runs of each mission before and after: 12 wins each way (101: 1 / 1, 103:
+  2 / 0, 104: 1 / 1, 106: 5 / 6, 107: 3 / 4); no mission became unwinnable or trivial for the autopilot,
+  which is no stand-in for a player. Tests: 408 checks (a gun-rate check for every plane in the
+  stock-rule missions, no stock British folder in any mission).
+
 ## Open items (for the next session)
 
-- No playtest feedback yet for missions 3, 7, 11, 12; the 12 rounds/s enemy guns of missions 9-12 are
-  untested in play.
+- No playtest feedback yet for missions 3, 7, 11, 12. The plane figures and gun rates were rationalised
+  on 7 November 2026 (docs/plane_figures.md); every mission needs a playtest against them, above all 4-5
+  (S.E.5a now 15.6 rounds/s), 7 and 9 (Camels 15.6) and 10-12 (Dr.I 23.3, was 33.3).
 - Before release: `replayall = 0` in campaign.ini; confirm the wreath inscription; Android build untested.

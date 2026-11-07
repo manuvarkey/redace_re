@@ -75,6 +75,7 @@ None of these ship: exports leave out `*.md` and `mods/*/docs/*`.
 | --- | --- | --- |
 | `docs/IMPLEMENTATION_NOTES.md` | Development log: hooks added, every change from the design, playtests, open items (at the end) | **Current.** Read first; it wins where the design disagrees |
 | `docs/red_baron_mod_design.md` | Original design: story, missions, planes, ranks, intended mission INI | Reference; out of date where the notes record a change |
+| `docs/plane_figures.md` | Every aircraft's figures and gun rates, the rules behind them, every mission override with its script reason | **Current.** Update it with any plane or override change |
 | `docs/images_required.md` | Included campaign art: paths, sizes, prompts in the original menu-art style | All 14 included; generation record in `docs/art_generation.md` |
 | `docs/history/IMPLEMENTATION_PROMPT.md` | Task brief the mod was built from | Done; its ground rules still apply to new work (stock game unchanged, generic opt-in engine hooks, no `redbaron` in core scripts, commit per step) |
 | `docs/history/IMPLEMENTATION_PLAN.md` | Phase 0 plan: test baseline, hook plan, design INI problems | Done; kept for the baseline and the reasons behind the hooks |

@@ -228,15 +228,15 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 		"joystick" when int(q.axis) == 0:
 			# upbutton = nose down, like upkey
 			if _joy_buttons(q) == 0.0 and tilt.y != 0.0:
-				p.joy_pitch(tilt.y * ps, q.sensitivity, dt, response)
+				p.joy_pitch(tilt.y * ps, q.sensitivity, dt)
 			else:
 				if response > 0.0:
-					p.joy_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt, response)
+					p.joy_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
 				else:
 					p.key_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
 		"joystick":
 			var v := _joy_axis(q.axis)
-			p.joy_pitch((tilt.y if absf(v) < STICK_REST and tilt.y != 0.0 else v) * ps, q.sensitivity, dt, response)
+			p.joy_pitch((tilt.y if absf(v) < STICK_REST and tilt.y != 0.0 else v) * ps, q.sensitivity, dt)
 		_:
 			# upkey = nose down (keyboard.ini: upkey = uparrow)
 			p.key_pitch((_pressed_key(q.downkey) - _pressed_key(q.upkey)) * ps, q.sensitivity, dt)

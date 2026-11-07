@@ -440,8 +440,9 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 - Controller tilt steering (not in the original): on controllers with motion sensors, the "Gyroscope?" box on the Controls page
   steers by tilting, like the phones' tilt mode. The stick takes over whenever it is deflected, and `\` in flight recentres.
 - Mouse roll and the default joystick response apply directly, as in the exe. The Controls page's **Stick** choice
-  offers Quick (0.2 s) and Gentle (0.4 s) roll/pitch response for D-pads, gamepad buttons, or axes that jump to full
-  deflection. It affects joystick bindings only; Direct is the original behaviour.
+  offers Quick (0.2 s) and Gentle (0.4 s) roll response for D-pads, gamepad buttons, or axes that jump to full
+  deflection: the stick sets the bank itself, so Direct tilts the plane at once. Pitch is always direct, since the
+  stick sets a pitch rate and the nose never jumps. It affects joystick bindings only; Direct is the original behaviour.
 - Mouse and joystick pitch feel: the exe's formulas depend on its update rate. `Aircraft.ref_fps` (default 100; `;` and `'`
   in flight, saved) picks the rate used; the exe's update tick is a fixed 10 ms timer (`0x301` messages, RedAce.c:14177), so 100 is its value on any machine and in every mission. It touches nothing else: no damage,
   AI, camera or flight speed code reads it.

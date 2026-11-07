@@ -16,7 +16,10 @@ Sources: `overrides/redbaron/objects/planes/<folder>/plane.ini` (built into `gam
    override carries its reason in the mission file and in the table below.
 3. **Guns: about 1.5x for the player's side.** Sustained rate = `firerate * fireon / (fireon + fireoff)`.
    Every fighter of a type keeps its own burst rhythm; only `firerate` sets the rate.
-   - German twin Spandau (Albatros D.II / D.III, Fokker Dr.I; the Baron, his wingmen, the rookies): **23.3**.
+   - German twin Spandau, Albatros D.II / D.III (the Baron and his wingmen, missions 1-9): **23.3**.
+   - Fokker Dr.I (the Baron, Brenner, the rookies, missions 10-12): **32.7**, 1.4x the Albatros. The user's
+     choice (7 November 2026): the player must feel the 1918 upgrade. Historically the Dr.I carried the
+     same guns as the Albatros; its real edge was turn and climb.
    - British twin guns (Camel: two Vickers; S.E.5a: Vickers + Lewis): 23.3 / 1.5 = **15.6**.
    - Single guns fire half their side's twin rate: British (Nieuport 17, Bristol Scout, DH.2, the R.E.8
      and O/100 pilots) **7.8**; German (Halberstadt pilot) **11.7**.
@@ -29,6 +32,9 @@ Sources: `overrides/redbaron/objects/planes/<folder>/plane.ini` (built into `gam
    Camel has to hold its aim (125 / 50) x 1.5 = 3.75 times as long as the Baron does to win the exchange.
 5. **Flight figures follow history, relative to the plane they meet**, with no British fighter better than
    the player's in every respect. Speed scale: about 0.63 units/s per km/h (Albatros D.III, 175 km/h = 110).
+   One exception, the user's choice (7 November 2026): the Camel's roll and pitch are 25% below the
+   Albatros's, although historically it was the better turner. In the original campaign the player out-turned
+   every ordinary enemy (only the Baron's boss Dr.I out-turned him), and the campaign keeps that feel.
 
 ## Player and allied aircraft
 
@@ -37,18 +43,18 @@ Sources: `overrides/redbaron/objects/planes/<folder>/plane.ini` (built into `gam
 | `albatros_player` | Baron, mission 1 | 125 | 110 / 116 / 105 | 85 | 60 | 65 / 80 | 65 / 90 | 10 | 25 x 1.4/0.1 = 23.3 |
 | `albatros_red` | Baron, 2-9 | 125 | 110 / 116 / 105 | 85 | 60 | 65 / 80 | 65 / 90 | 10 | 23.3 |
 | `albatros_brenner`, `albatros_wingman` | wingmen, 2-9 | 125 | 110 / 116 / 105 | 85 | 60 | 65 / 80 | 65 / 90 | 10 | 23.3 |
-| `fokker_red`, `fokker_brenner` | Baron, Brenner, 10-12 | 125 | 120 / 130 / 107 | 110 | 82 | 97 / 112 | 107 / 117 | 9 | 25 x 1.4/0.1 = 23.3 (was 33.3) |
-| `fokker_rookie` (+ `_blue`, `_green`, `_black`) | rookies, 10-12 | 80 | as above | 110 | 82 | 97 / 112 | 107 / 117 | 9 | 23.3 (was 33.3) |
+| `fokker_red`, `fokker_brenner` | Baron, Brenner, 10-12 | 125 | 120 / 130 / 107 | 110 | 82 | 97 / 112 | 107 / 117 | 9 | 35 x 1.4/0.1 = 32.7 (stock 33.3) |
+| `fokker_rookie` (+ `_blue`, `_green`, `_black`) | rookies, 10-12 | 80 | as above | 110 | 82 | 97 / 112 | 107 / 117 | 9 | 32.7 |
 | `halberstadt_rb` | allied two-seater, 6 / 7 / 11 | 35 | 105 / 110 / 90 | 85 | 74 | 30 / 40 | 50 / 60 | 7 | 31.1 x 0.9/1.5 = 11.7 (stock 4.5) + observer |
 
-The Dr.I carried the same twin Spandau as the Albatros, so it fires at the same rate; the stock Dr.I
-(33.3) was the original game's tuning for a plane that never met a 1.5x-weaker enemy.
+The Dr.I fires 1.4x the Albatros so that the player feels the upgrade (historically the same twin
+Spandau). Against the Camel that is 2.1x, with a far better turn and climb as well.
 
 ## British aircraft
 
 | Folder | Plane | End. | Top / dive / cruise | Climb | Stall | Roll lo/hi | Pitch lo/hi | Accel | Guns (rounds/s) | Character |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `sopwithcamel_rb` | Sopwith Camel | 50 | 112 / 116 / 103 | 90 | 70 | 75 / 90 | 75 / 95 | 10 | 18.7 x 0.75/0.15 = 15.6 | A little faster and handier than the Albatros; clearly below the Dr.I in turn and climb |
+| `sopwithcamel_rb` | Sopwith Camel | 50 | 112 / 116 / 103 | 90 | 70 | 49 / 60 | 49 / 68 | 10 | 18.7 x 0.75/0.15 = 15.6 | A little faster than the Albatros; roll and pitch 25% below it, far below the Dr.I |
 | `se5a_rb` | S.E.5a | 45 | 115 / 125 / 106 | 85 | 65 | 55 / 70 | 55 / 80 | 10 | 18.7 x 1.0/0.2 = 15.6 | Fast, strong dive, less agile |
 | `nieuport17_rb` | Nieuport 17 | 45 | 104 / 108 / 96 | 88 | 55 | 70 / 85 | 70 / 90 | 10 | 9.33 x 1.0/0.2 = 7.8 | Out-turns and out-climbs the Albatros, slower |
 | `bristolscout_rb` | Bristol Scout | 45 | 100 / 105 / 92 | 75 | 60 | 60 / 70 | 60 / 80 | 10 | 9.1 x 1.5/0.25 = 7.8 | Outdated by 1917 |

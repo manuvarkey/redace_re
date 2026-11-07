@@ -7,10 +7,10 @@ const RedBaronInit := preload("res://mods/redbaron/init.gd")
 const RedBaronAircraft := preload("res://mods/redbaron/aircraft.gd")
 const MS := preload("res://mods/redbaron/mission_script.gd")
 const ObjectiveScript := preload("res://mods/redbaron/missions/objective.gd")
-## Sustained gun rates (docs/plane_figures.md): German twin Spandau 23.3; British twin guns 1.5x weaker (15.6);
-## single guns half their side's twin rate (British 7.8, German 11.7).
+## Sustained gun rates (docs/plane_figures.md): German twin Spandau 23.3, the Dr.I 32.7 (the player's 1918 upgrade);
+## British twin guns 1.5x weaker than the Albatros (15.6); single guns half their side's twin rate (British 7.8, German 11.7).
 const RATES := {"albatros_red": 23.33, "albatros_brenner": 23.33, "albatros_wingman": 23.33, "albatros_player": 23.33,
-	"fokker_red": 23.33, "fokker_brenner": 23.33, "fokker_rookie": 23.33, "sopwithcamel_rb": 15.56, "se5a_rb": 15.56,
+	"fokker_red": 32.67, "fokker_brenner": 32.67, "fokker_rookie": 32.67, "sopwithcamel_rb": 15.56, "se5a_rb": 15.56,
 	"nieuport17_rb": 7.78, "bristolscout_rb": 7.8, "aircodh2_rb": 7.78, "re8": 7.78, "handleypage": 7.78, "halberstadt_rb": 11.66}
 
 var world: World

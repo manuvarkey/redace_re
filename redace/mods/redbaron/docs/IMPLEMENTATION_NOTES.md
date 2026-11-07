@@ -545,9 +545,25 @@ hangar), marked on the minimap.
   which is no stand-in for a player. Tests: 408 checks (a gun-rate check for every plane in the
   stock-rule missions, no stock British folder in any mission).
 
+## Dr.I guns up, Camel agility down (7 November 2026)
+
+- User: "Fokker Dr.I rate should be higher for players to feel an upgrade in plane", then "Upgrade the
+  firerate of Dr.I to 35. Reduce camels agility 25% below player."
+- Dr.I (`fokker_red`, `fokker_brenner`, the four `fokker_rookie` folders): firerate 25 -> 35, so 32.7
+  rounds/s sustained, 1.4x the Albatros and 2.1x the Camel. Endurances unchanged (125, rookies 80).
+- `sopwithcamel_rb`: roll 75 / 90 -> 49 / 60, pitch 75 / 95 -> 49 / 68, 25% below the Albatros (the
+  player plane it meets in missions 7 and 9). That is close to the original game's Albatros (50 / 60,
+  55 / 70), which the original's player always out-turned. Speed, climb and guns unchanged.
+- Before the change, simulations showed agility made no measurable difference: missions 7 and 9 on
+  autopilot, and duels with the Camel at Albatros agility. The autopilot does not dogfight (it flew
+  straight while a Camel sat 25-38 behind it), and AI-against-AI duels only circle. Mission 9 on autopilot
+  won 2-3 of 8-12 runs whatever the Camel's figures; it dies in the first head-on pass with the sweep pair.
+- Damage: a round scores 1 on every tick inside a plane's hit radius and flies on, so a held aim kills
+  fast (a Camel on the Baron's tail took 125 in about 3 s). `plane_figures.md` corrected.
+
 ## Open items (for the next session)
 
 - No playtest feedback yet for missions 3, 7, 11, 12. The plane figures and gun rates were rationalised
   on 7 November 2026 (docs/plane_figures.md); every mission needs a playtest against them, above all 4-5
-  (S.E.5a now 15.6 rounds/s), 7 and 9 (Camels 15.6) and 10-12 (Dr.I 23.3, was 33.3).
+  (S.E.5a now 15.6 rounds/s), 7 and 9 (Camels 15.6, roll and pitch 25% below the Albatros) and 10-12 (Dr.I 32.7).
 - Before release: `replayall = 0` in campaign.ini; confirm the wreath inscription; Android build untested.

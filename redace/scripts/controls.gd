@@ -15,6 +15,10 @@ const AXES := ["roll", "pitch", "throttle"]
 const BUTTONS := ["fire", "secondary", "special", "camabove", "camleft", "camright", "cambehind"]
 const SETTINGS_PATH := "user://settings.cfg"
 const TRIGGER_BASE := 1000
+## A stick nearer centre than this is at rest: the controller tilt steers that axis. Sticks rarely come back to exactly
+## 0 once moved (get_joy_axis has no dead zone), and an exact-zero test let the first stick movement hand the axis to
+## the stick for good.
+const STICK_REST := 0.15
 
 ## key names used in the control files (strings.ini) -> Godot keys
 const KEY_NAMES := {
@@ -213,7 +217,7 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 					p.key_roll(-_joy_buttons(r) * rs, r.sensitivity, dt)
 		"joystick":
 			var v := _joy_axis(r.axis)
-			p.joy_roll((v if v != 0.0 else tilt.x) * rs, r.sensitivity, response)
+			p.joy_roll((tilt.x if absf(v) < STICK_REST and tilt.x != 0.0 else v) * rs, r.sensitivity, response)
 		_:
 			# upkey = roll left, downkey = roll right (keyboard.ini: upkey = leftarrow)
 			p.key_roll((_pressed_key(r.downkey) - _pressed_key(r.upkey)) * rs, r.sensitivity, dt)
@@ -232,7 +236,7 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 					p.key_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
 		"joystick":
 			var v := _joy_axis(q.axis)
-			p.joy_pitch((v if v != 0.0 else tilt.y) * ps, q.sensitivity, dt, response)
+			p.joy_pitch((tilt.y if absf(v) < STICK_REST and tilt.y != 0.0 else v) * ps, q.sensitivity, dt, response)
 		_:
 			# upkey = nose down (keyboard.ini: upkey = uparrow)
 			p.key_pitch((_pressed_key(q.downkey) - _pressed_key(q.upkey)) * ps, q.sensitivity, dt)

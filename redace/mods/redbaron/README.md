@@ -35,6 +35,7 @@ a release (then only missions the pilot has reached, all once the campaign is co
 ```sh
 python3 redace/mods/redbaron/tools/redbaron_textures.py             # procedural fabric / wicker textures
 blender --background --factory-startup --python redace/mods/redbaron/tools/blender_redbaron.py  # RE8, O/100, balloon
+python3 redace/mods/redbaron/tools/redbaron_rails.py                # railway track segment (mission 9)
 python3 redace/mods/redbaron/tools/paint_planes.py                  # Albatros / Dr.I paint
 python3 redace/mods/redbaron/tools/build_planes.py                  # plane and ground folders into game_data
 python3 redace/mods/redbaron/tools/make_skies.py                    # dawn sky

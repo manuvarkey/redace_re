@@ -440,29 +440,42 @@ func _m08_wound() -> void:
 		"success line and return to base when all are down")
 	check(not s().overlay()._counter.visible, "counter hidden on the way home")
 	check(s().plane(3002).current_goal().type == Aircraft.G_FORMATION, "Brenner on the Baron's wing on the way home")
-	# halfway home: ambush and wound
+	# halfway home: the ambush is seen coming, then the first hit wounds
 	var home := Vector3(6200, 650, 7450)
 	var start := p.global_position
 	world.mission_time = 50.0
 	p.global_position = start.lerp(home, 0.3)
 	_settle()
-	check(not s().wounded, "no ambush before halfway")
+	check(not s().ambushed, "no ambush before halfway")
 	p.global_position = start.lerp(home, 0.6)
 	_settle()
-	check(s().wounded and s().overlay().wound == 1.0, "ambush halfway home wounds the Baron")
-	check(p.health >= p.endurance * 0.5 and p.get("damage_scale") == 0.25, "wounded: at least half endurance, quarter damage")
-	var before := p.health
-	p.take_damage(8.0, s().plane(3021))
-	check(is_equal_approx(p.health, before - 2.0), "a hit after the wound does a quarter")
+	check(s().ambushed and not s().wounded, "ambush halfway home, not yet wounded")
 	check(not s().plane(3020).hidden and not s().plane(3021).hidden, "two Nieuports revealed")
+	var appear: Vector3 = s().plane(3020).current_goal().pos
+	check(s().plane(3020).current_goal().type == Aircraft.G_APPEAR and MS.distance(appear, p) > 400.0 and appear.y > p.global_position.y + 150.0,
+		"they appear far behind and above (%.0f), to be seen coming" % MS.distance(appear, p))
+	check(world.message_label.text == "Scouts diving behind us!", "HUD warns of the scouts")
+	check(world.map_markers.filter(func(m): return m.get("follow") in [s().plane(3020), s().plane(3021)]).size() == 2, "ambushers highlighted on the minimap")
 	check(s().plane(3002).current_goal().type == Aircraft.G_ATTACK and s().plane(3002).current_goal().targetid == 3020
-		and s().plane(3002).goals[1].targetid == 3021, "Brenner turns on the first at once, then the second")
+		and s().plane(3002).goals[1].targetid == 3021, "Brenner turns to engage the first, then the second")
 	var second: Aircraft = s().plane(3021)
 	check(second.goals[1].type == Aircraft.G_RETALIATE_ON and second.goals[1].radius == 20.0 and second.goals.back().pos.x > 9358.0,
 		"the second attacks 20 s, then turns for home")
 	check(s().plane(3002).goals.back().type == Aircraft.G_FORMATION and s().plane(3002).goals.back().has("offset"),
 		"Brenner forms up again afterwards")
-	check(world.message_label.text.begins_with("Ambush!"), "HUD says ambush")
+	check(world.map_markers.any(func(m): return m.icon == MS.AERODROME_ICON), "aerodrome still marked")
+	# their first hit is the wound
+	p.take_damage(1.0, s().plane(3020))
+	check(s().wounded, "the first ambusher hit wounds the Baron")
+	check(p.health >= p.endurance * 0.5 and p.get("damage_scale") == 0.25, "wounded: at least half endurance, quarter damage")
+	var before := p.health
+	p.take_damage(8.0, s().plane(3021))
+	check(is_equal_approx(p.health, before - 2.0), "a hit after the wound does a quarter")
+	check(s().overlay()._jolt > 0.0, "the hit jolts the view")
+	world.mission_time += 0.5
+	s().run_step(0.0)
+	check(s().overlay().wound == 1.0 and world.message_label.text == "You are hit. Land at the aerodrome.",
+		"then the impaired view and the order to land")
 	p.throttle = 1.0
 	p.fire_input = true
 	s().run_step(0.0)
@@ -609,7 +622,7 @@ func _m08_escape() -> void:
 const STOCK_RULE := [
 	[101, "albatros_player", {7: -100.0}, 300.0, 3002, -1],
 	[103, "albatros_red", {7: -100.0}, 240.0, 0, 7],
-	[104, "albatros_red", {3: 60.0, 9: -100.0}, 0.0, 0, 9],
+	[104, "albatros_red", {3: 60.0, 7: -100.0}, 0.0, 0, 7],
 	[105, "albatros_red", {7: -100.0}, 0.0, 3010, -1],
 	[106, "albatros_red", {7: -100.0}, 0.0, 0, 7],
 	[110, "fokker_red", {7: -75.0}, 300.0, 0, 7],
@@ -625,7 +638,7 @@ func _stock_rule_mission(i: int) -> void:
 		0:
 			world.load_mission(id)
 		1:
-			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m05.gd"), preload("res://mods/redbaron/missions/m06.gd"), preload("res://mods/redbaron/missions/m09.gd")], "%d: objective script" % id)
+			check(world._mod is RedBaronInit and s().get_script() in [ObjectiveScript, preload("res://mods/redbaron/missions/m01.gd"), preload("res://mods/redbaron/missions/m05.gd"), preload("res://mods/redbaron/missions/m06.gd"), preload("res://mods/redbaron/missions/m09.gd"), preload("res://mods/redbaron/missions/m10.gd")], "%d: objective script" % id)
 			if id == 105:
 				var e: Aircraft = s().plane(3020)
 				check(e.current_goal().type == Aircraft.G_FORMATION, "105: escorts in formation on the recon plane")
@@ -645,6 +658,7 @@ func _stock_rule_mission(i: int) -> void:
 				check(sp.get("_damage_stage") == 1, "103: RE8 shows its first damage stage at 40 %")
 				sp.health = sp.endurance
 			if id == 109:
+				check(world.message_label.text == "Bombers approaching from the northeast. Fighters ahead of them!", "109: warning at the start")
 				var hp: Array = world.planes.filter(func(q): return q.plane_name == "handleypage")
 				check(hp.size() == 3 and hp.all(func(q): return q.get("_stations").size() == 3), "109: O/100s with nose, dorsal and ventral gunners")
 				check(world.planes.filter(func(q): return q.plane_name == "sopwithcamel_rb" and q.current_goal().type == Aircraft.G_FORMATION).size() == 5, "109: five escorts in formation")
@@ -671,9 +685,76 @@ func _stock_rule_mission(i: int) -> void:
 
 				var cl := world.planes.filter(func(q): return q.plane_name == "halberstadt_rb")
 				var armed := cl.size() == 3
+				var assigned := 0
+				var rings := {}
 				for q in cl:
-					armed = armed and q.ordnance_type == 1 and q.ordnance_left == 20 and q.goals.any(func(g): return g.type == Aircraft.G_BOMB_RUN and g.targetid == -6)
-				check(armed, "106: three Halberstadts bombing the AA guns")
+					var guns: Array = s().BOMBERS[q.object_id].guns
+					assigned += guns.size()
+					rings[s().BOMBERS[q.object_id].ring] = true
+					armed = armed and q.ordnance_type == 1 and q.ordnance_left == 20 and q.goals.any(func(g): return g.type == Aircraft.G_BOMB_RUN and g.targetid == guns[0])
+				check(armed, "106: three Halberstadts bombing their own AA guns")
+				var guns_total := world.targets.filter(func(x): return x.name == "aagun_rapid").size()
+				check(rings.size() == 3 and assigned * 2 >= guns_total - 1 and assigned * 2 <= guns_total + 1,
+					"106: about half the guns (%d of %d) assigned, across all three rings" % [assigned, guns_total])
+				check(s().extra_lines()[0].begins_with("Guns silenced   West 0/5"), "106: silenced guns per ring on the HUD")
+				# the West bomber's guns silenced: it turns for home (off the north edge), the others carry on
+				for gid in s().BOMBERS[3030].guns:
+					s().object(gid).dead = true
+				s().run_step(0.0)
+				var west: Aircraft = s().plane(3030)
+				check(west.current_goal().type == Aircraft.G_WAYPOINT and west.current_goal().pos.z < world.map_bounds.position.y,
+					"106: a Halberstadt done with its guns withdraws north")
+				check(world.map_markers.filter(func(m): return m.icon == MS.SILENCED_ICON).size() == 3, "106: silenced guns marked on the minimap")
+				check(not s()._announced, "106: no 'complete' line while bombers are still at work")
+				# the others time out on their guns (they move on, then withdraw)
+				for k in 8:
+					world.mission_time += 40.0
+					s().run_step(0.0)
+				check(s()._announced and world.message_label.text == s().COMPLETE_TEXT, "106: bombing run complete line")
+				check(world.targets.filter(func(x): return x.name == "aagun_rapid" and not x.dead).size() >= 5, "106: guns outside the assignments stay active")
+				world.mission_time = 0.0
+			if id == 101:
+				var hk: Aircraft = s().plane(3002)
+				check(hk.high_speed < world.player.high_speed and hk.high_roll > world.player.high_roll, "101: Hawker out-turns the Albatros but is slower")
+				var flat := hk.global_position - world.player.global_position
+				flat.y = 0.0
+				var fwd := Vector3(world.player.flight_basis.z.x, 0, world.player.flight_basis.z.z).normalized()
+				check(absf(fwd.dot(flat.normalized())) < 0.95 and hk.global_position.y >= world.player.global_position.y,
+					"101: Hawker offset from the Baron's path, as high or higher (not head-on)")
+				check(hk.goals.any(func(g): return g.type == Aircraft.G_WAYPOINT), "101: Hawker opens by crossing the Baron's track, then attacks")
+				# the Baron settles on his tail: he breaks, then cannot break again for the recovery time
+				MS.attack(hk, world.player)
+				world.player.flight_basis = hk.flight_basis
+				world.player.global_position = hk.global_position - hk.flight_basis.z * 150.0
+				for k in 16:
+					s().run_step(0.1)
+				check(hk.current_goal().type == Aircraft.G_EVADE, "101: Hawker breaks when the Baron settles behind him")
+				hk._remove_goal(hk.current_goal())
+				for k in 16:
+					s().run_step(0.1)
+				check(hk.current_goal().type != Aircraft.G_EVADE, "101: recovery time between breaks")
+				world.mission_time = 201.0
+				s().run_step(0.0)
+				check(s().retreating and hk.goals.back().type == Aircraft.G_WAYPOINT and hk.goals.back().pos.z > world.map_bounds.end.y
+					and world.message_label.text.begins_with("Hawker breaks away"), "101: retreat phase with its own line")
+				world.mission_time = 0.0
+			if id == 104:
+				check(s().overlay()._counter.text.contains("Hangars standing 6 / 6  (fails at 3 lost)"), "104: protected buildings counted on the HUD")
+				check(world.map_markers.filter(func(m): return m.icon == MS.PROTECT_ICON).size() == 6, "104: protected buildings marked")
+				check(world.planes.filter(func(q): return q.plane_name == "re8").all(func(q): return q.groups & (1 << 7)), "104: the bombers are the objective")
+			if id == 109:
+				var rails := world.targets.filter(func(x): return x.name == "rail")
+				check(rails.size() > 60, "109: railway laid (%d segments)" % rails.size())
+				check(rails.all(func(x): return absf(x.node.global_position.y - world.ground_height(x.node.global_position)) < 0.5), "109: rails on the terrain")
+				check(world.targets.filter(func(x): return x.groups & (1 << 3)).all(func(x): return x.node.global_position.y > 100.0), "109: yard buildings on the terrain")
+				check(s().overlay()._counter.text.contains("Rail yard standing 6 / 6"), "109: yard losses on the HUD")
+			if id == 110:
+				check(world.message_label.text.begins_with("Destroy six of the eight tanks"), "110: objective stated directly")
+				check(s().overlay()._counter.text.contains("(need 6)"), "110: counter shows six needed")
+				world.mission_time = 101.0
+				s().run_step(0.0)
+				check(s().plane(3024).present() and s().plane(3025).present(), "110: second Camel pair for the wingmen")
+				world.mission_time = 0.0
 			if id == 104:
 				for id2 in [3002, 3003]:
 					var b: Aircraft = s().plane(id2)
@@ -792,6 +873,8 @@ func _m11() -> void:
 	var brenner: Aircraft = s().plane(3002)
 	var ts: Aircraft = s().plane(3004)
 	check(brenner.current_goal().type == Aircraft.G_FORMATION and s().plane(3003).current_goal().targetid == 3002, "111: Brenner on the Baron, his second on Brenner")
+	check(brenner.call("keeps_station") and s().plane(3003).call("keeps_station") and not s().plane(3010).call("keeps_station"),
+		"111: the Dr.I wingmen keep station in formation (no zig-zag); the Camels fly the original formation")
 	world.mission_time = 61.0
 	_settle()
 	check(s().stage == 1 and s().camel_a.present() and s().camel_b.present() and brenner.current_goal().targetid == 3010, "111: Camels A and B at 60 s, Brenner takes A")

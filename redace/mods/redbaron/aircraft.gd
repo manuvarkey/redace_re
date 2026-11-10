@@ -50,13 +50,14 @@ var persistent := -1  # -1 default, 0 off, 1 on
 ## (the original pushes a 40-radius go-round point a two-seater can circle for ever). [airN] bombsight = 1.
 var bombsight := false
 const BOMB_MISS := 25.0
-## Station keeping (not in the original): [airN] keepstation = 1. A formation goal holds its slot at the
+## Station keeping (not in the original): [airN] keepstation = 1 (default for the player's wingmen, keeps_station). A formation goal holds its slot at the
 ## leader's speed: the wingman steers at a point STATION_LEAD ahead of the slot on the leader's heading and
 ## sets the throttle for the leader's speed plus STATION_GAIN per unit it is behind (minus ahead) of the
 ## slot, never below 1.1 x its stall speed (adding back the flight step's high-altitude speed cut, which
 ## otherwise stalls a fast fighter throttled back to a bomber's speed). The original goes to full throttle whenever the leader is slower,
 ## so a fast escort on a slow bomber overshoots and circles 50-500 away.
 var keep_station := false
+var station_set := false  # [airN] keepstation given; otherwise the player's wingmen keep station by default
 const STATION_LEAD := 150.0
 const STATION_GAIN := 0.2
 const BOMB_HEIGHT := 150.0
@@ -194,9 +195,19 @@ func _bomb_run(goal: Dictionary) -> bool:
 	return false
 
 
+## The player's AI wingmen (group 8, not the player) keep station unless the mission says otherwise: with the
+## original formation step a wingman faster than its leader (a Dr.I on a cruising Baron, Brenner at 125 on the Albatros)
+## overshoots the slot, then banks 90 degrees back toward it, and zig-zags across the leader's track (measured:
+## 17 bank reversals in 30 s on a gentle turn at 105 against the Dr.I's 120; none with station keeping).
+func keeps_station() -> bool:
+	if station_set:
+		return keep_station
+	return not is_player and groups & (1 << 8) != 0
+
+
 func _formation(goal: Dictionary) -> bool:
 	var o = _goal_object(goal)
-	if not keep_station or not (o is Aircraft):
+	if not keeps_station() or not (o is Aircraft):
 		return super._formation(goal)
 	if not goal.has("offset"):
 		goal.offset = Vector3.ZERO
@@ -234,11 +245,13 @@ func on_hit(attacker) -> void:
 
 
 func take_damage(amount: float, attacker = null) -> void:
-	if attacker == self and not is_player:
+	if attacker is Aircraft and attacker == self and not is_player:
 		return  # an AI plane's own bomb or rocket blast (the engine gives the firer 5 %): it killed bombers
 	if attacker is Aircraft and attacker != self and attacker.allied == allied and not attacker.is_player:
 		return  # AI fire never hurts its own side (the engine's rounds hit anyone; bomber gunners and
 		# wingmen kept shooting their own formation down)
+	if attacker is Dictionary and world._mod:
+		amount *= float(world._mod.get("aa_damage"))  # [mod] aadamage: AA guns and tanks
 	amount *= damage_scale
 	super.take_damage(amount, attacker)
 	_update_damage_model()

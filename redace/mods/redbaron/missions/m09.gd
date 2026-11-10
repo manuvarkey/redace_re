@@ -1,6 +1,9 @@
 extends "res://mods/redbaron/missions/objective.gd"
-## Mission 9, Dusk Raiders: the original rules plus objective.gd (intro, counter, target icons, the yard
-## marker). Three Handley Pages fly well apart (a staggered vic, 500+ between them); five Camels escort them
+## Mission 9, Dusk Raiders: the original rules plus objective.gd (intro "Bombers approaching from the northeast.
+## Fighters ahead of them!", bomber counter, priority marks on the bombers, protect marks and a losses line for the
+## yard, the yard marker). A warning and highlight when the sweep pair comes within SWEEP_WARN of the Baron. The yard
+## and its railway (mission file [build] track) are put on the terrain at the start.
+## Three Handley Pages fly well apart (a staggered vic, 500+ between them); five Camels escort them
 ## at the bombers' speed (keepstation):
 ##   close escorts  one per bomber, a slot off its wing; a German within ENGAGE_RANGE of the bomber or of
 ##                  the escort (or a hit on the bomber) turns it on the nearest German; it forms up again
@@ -24,11 +27,22 @@ const SWEEP_ENGAGE := 1000.0
 const SWEEP_RELEASE := 1800.0
 const SWEEP_LEASH := 2500.0
 
+const YARD := [3300, 3301, 3302, 3303, 3304, 3305]
+const SWEEP_WARN := 1800.0
+const SWEEP_WARN_AFTER := 6.0  # the start line ("Bombers approaching ...") stays up first
+
 var escorts: Array[Aircraft] = []
 var _check := 0.0
+var _sweep_warned := false
 
 
 func start() -> void:
+	# the yard and its railway are placed at height 0: stand them on the terrain (rails along its slope)
+	for t in world.targets:
+		if t.name == "rail":
+			snap_to_ground(t, 0.0, true)
+		elif t.name in ["station", "hanger", "van"] and (t.node as Node3D).global_position.y < 1.0:
+			snap_to_ground(t, 0.25 if t.name == "van" else 0.0)
 	super.start()
 	for id in CLOSE:
 		_station(plane(id), plane(CLOSE[id][0]), CLOSE[id][1])
@@ -68,6 +82,14 @@ func _lead_bomber() -> Aircraft:
 
 func step(dt: float) -> void:
 	super.step(dt)
+	if not _sweep_warned and now() >= SWEEP_WARN_AFTER:
+		for id in SWEEP:
+			var e := plane(id)
+			if e and e.present() and near(e, world.player, SWEEP_WARN):
+				_sweep_warned = true
+				warn("Camels closing ahead and high! The bombers are behind them.", 5.0)
+				highlight([plane(3023), plane(3024)], 7.0)
+				break
 	_check -= dt
 	if _check > 0.0:
 		return

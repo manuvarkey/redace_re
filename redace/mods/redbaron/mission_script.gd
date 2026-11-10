@@ -34,6 +34,7 @@ func run_step(dt: float) -> void:
 	for t in due:
 		(t.fn as Callable).call()
 	step(dt)
+	track_markers()
 
 
 func outcome(stock: String) -> String:
@@ -180,10 +181,11 @@ static func damage(p: Aircraft, amount: float, attacker: Variant = null) -> void
 
 # ---------------------------------------------------------------- HUD, environment, results
 
-## The mod's screen overlay (wound effect, counter line), made on first use.
+## The mod's screen overlay (wound effect, counter and objective lines, brackets, cues), made on first use.
 func overlay() -> CanvasLayer:
 	if mod.get("overlay") == null:
 		mod.overlay = load("res://mods/redbaron/overlay.gd").new()
+		mod.overlay.world = world
 		mod.add_child(mod.overlay)
 	return mod.overlay
 
@@ -208,12 +210,24 @@ func unmark(m: Dictionary) -> void:
 ## removed once it is no longer in the world. The minimap draws aircraft only for groups 8 and 9, so
 ## a target plane in group 4 + 7 (Hawker, the plates) would otherwise not show.
 var _tracked := {}  # Aircraft -> marker
+var _tracked_objects: Array[Dictionary] = []  # {target (ground object), marker, dead_icon}
 
 
-func track_on_map(p: Aircraft, icon := "smalltarget") -> void:
+func track_on_map(p: Aircraft, icon := "smalltarget", colour := Color.WHITE, pulse := false, size := 1.0) -> Dictionary:
 	if not _tracked.has(p):
 		_tracked[p] = mark_on_map(p.global_position, icon)
-		_tracked[p].size = 1.0
+	var m: Dictionary = _tracked[p]
+	m.icon = icon
+	m.size = size
+	m.color = colour
+	m.pulse = pulse
+	return m
+
+
+func untrack(p: Aircraft) -> void:
+	if _tracked.has(p):
+		unmark(_tracked[p])
+		_tracked.erase(p)
 
 
 func track_markers() -> void:
@@ -224,6 +238,129 @@ func track_markers() -> void:
 			_tracked.erase(p)
 		else:
 			m.pos = p.global_position
+	for m in _highlights:
+		var f = m.get("follow")
+		if is_instance_valid(f):
+			m.pos = (f as Node3D).global_position
+	for e in _tracked_objects:
+		if e.target.dead and not e.get("done", false):
+			e.done = true
+			if e.dead_icon == "":
+				unmark(e.marker)
+			else:
+				e.marker.icon = e.dead_icon
+				e.marker.color = Color(0.75, 0.75, 0.75, 0.8)
+				e.marker.pulse = false
+
+
+# ---------------------------------------------------------------- consistent markers (every mission alike)
+# priority  the targets the objective names: red-orange target icon (slow blink) on the minimap, red-orange bracket
+# protect   what must survive: green ring on the minimap, green bracket with distance (and an edge arrow for planes)
+# ally      a wingman whose cover matters: pale blue bracket with distance
+# threat    a short warning: yellow blinking enemy icon and bracket for a few seconds
+# destination  where to go: the aerodrome icon on the minimap (blinking while it is the objective)
+
+const PROTECT_ICON := "res://mods/redbaron/protect_icon.png"
+const SILENCED_ICON := "res://mods/redbaron/silenced_icon.png"
+const AERODROME_ICON := "res://mods/redbaron/aerodrome_icon.png"
+const PRIORITY_COLOUR := Color(1.0, 0.38, 0.2)
+const PROTECT_COLOUR := Color(0.45, 1.0, 0.45)
+const THREAT_COLOUR := Color(1.0, 0.9, 0.2)
+
+
+static func _node_of(o: Variant) -> Node3D:
+	if o is Aircraft:
+		return o
+	if o is Dictionary:
+		return o.node
+	return null
+
+
+func _track_object(t: Dictionary, icon: String, colour: Color, pulse: bool, size: float, dead_icon := "") -> void:
+	var m := mark_on_map(position(t), icon)
+	m.color = colour
+	m.pulse = pulse
+	m.size = size
+	_tracked_objects.append({"target": t, "marker": m, "dead_icon": dead_icon})
+
+
+## A target the objective names (an Aircraft or a ground object).
+func mark_priority(o: Variant, label := "", arrow := false) -> void:
+	if o is Aircraft:
+		track_on_map(o, "smalltarget", PRIORITY_COLOUR, true, 1.2)
+	elif o is Dictionary:
+		_track_object(o, "smalltarget", PRIORITY_COLOUR, true, 1.0)
+	overlay().add_bracket(_node_of(o), "priority", label, arrow)
+
+
+## Something that must survive (an Aircraft or a ground object). Ground objects: dead_icon marks the ruin.
+func mark_protect(o: Variant, label := "", arrow := true, dead_icon := SILENCED_ICON) -> void:
+	if o is Aircraft:
+		track_on_map(o, PROTECT_ICON, PROTECT_COLOUR, false, 1.4)
+		overlay().add_bracket(o, "protect", label, arrow, 0.0, 6000.0)
+	elif o is Dictionary:
+		_track_object(o, PROTECT_ICON, PROTECT_COLOUR, false, 0.9, dead_icon)
+		overlay().add_bracket(_node_of(o), "protect", label, false, 0.0, 1200.0)
+
+
+## A wingman whose cover the player should see (bracket only; the minimap shows him as an ally already).
+func mark_ally(p: Aircraft, label: String) -> void:
+	overlay().add_bracket(p, "ally", label, false, 0.0, 3000.0)
+
+
+## A short warning highlight on planes coming in: blinking yellow on the minimap and in the view.
+func highlight(planes: Array, seconds := 8.0, label := "") -> void:
+	for p in planes:
+		if p == null:
+			continue
+		var m := mark_on_map(position(p), "smallenemy")
+		m.color = THREAT_COLOUR
+		m.pulse = true
+		m.size = 1.6
+		m.follow = p
+		_highlights.append(m)
+		overlay().add_bracket(p, "threat", label, true, seconds)
+		after(seconds, func() -> void:
+			unmark(m)
+			_highlights.erase(m))
+
+
+var _highlights: Array[Dictionary] = []
+
+
+## The aerodrome (or another safe place) on the minimap; blinks while active is true.
+func mark_destination(pos: Vector3, active := false) -> Dictionary:
+	var m := mark_on_map(pos, AERODROME_ICON)
+	m.pulse = active
+	return m
+
+
+## A new objective: HUD message, cue sound, and the objective line (line, or the message itself).
+func objective(text: String, line := "", seconds := 6.0) -> void:
+	message(text, seconds)
+	overlay().cue("objective")
+	overlay().set_objective(line if line != "" else text)
+
+
+## A warning: HUD message and a warning cue.
+func warn(text: String, seconds := 5.0) -> void:
+	message(text, seconds)
+	overlay().cue("warning")
+
+
+## Puts a ground object on the terrain under it (scenery placed by a mission at height 0); tilt: lie along the slope.
+func snap_to_ground(t: Dictionary, lift := 0.0, tilt := false) -> void:
+	var node: Node3D = t.node
+	var p := node.global_position
+	var h := world.ground_height(p)
+	var b := node.global_transform.basis
+	if tilt:
+		var n := world.ground_normal(p)
+		var sc := b.get_scale()
+		var at := (b.z.normalized() - n * b.z.normalized().dot(n)).normalized()
+		var right := n.cross(at).normalized()
+		b = Basis(right * sc.x, n * sc.y, at * sc.z)
+	node.global_transform = Transform3D(b, Vector3(p.x, h + lift, p.z))
 
 
 func set_fog(colour: Color) -> void:

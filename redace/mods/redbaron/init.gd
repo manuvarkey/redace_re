@@ -6,12 +6,15 @@ extends Node
 ##   [environment] sky = res://.../                         folder with sky_front/back/left/right/up.png|.jpg
 ##   [environment] ambient = r g b                        ambient light, 0..255
 ##   [environment] light = r g b                          tint of the lit scene (terrain, objects), 255 = as is
+##   [mod] aadamage = f                                    scale on the damage AA guns and tanks do to aircraft (default 1)
 ##   [airN] gunners = 0 / 1                               defensive gunners off / on (aircraft.gd)
 ##   [airN] gunnerrate = N                                gunners' rounds per second (default 5)
 ##   [airN] firerate / fireon / fireoff                   the plane's own guns (plane.ini [armaments])
 ##   [airN] bombsight = 1                                 bombing runs aimed with the real bomb fall
 ##   [airN] persistent = 0 / 1                            no dodging when hit (default 0, the original)
-##   [airN] keepstation = 1                               formation goals hold the slot at the leader's speed
+##   [airN] keepstation = 0 / 1                           formation goals hold the slot at the leader's speed
+##                                                        (default on for the player's wingmen, off for others)
+##   [airN] highroll / lowroll / highpitch / lowpitch     the plane's turn figures (plane.ini [physics])
 
 const MissionScript := preload("res://mods/redbaron/mission_script.gd")
 const RedBaronAircraft := preload("res://mods/redbaron/aircraft.gd")
@@ -23,6 +26,7 @@ var mission := {}  # the mission.ini sections
 var mission_script: MissionScript
 var light_tint := Color.WHITE  # last set_light (the global shader parameter is not readable headless)
 var overlay: CanvasLayer  # overlay.gd, made by the mission script on first use
+var aa_damage := 1.0  # [mod] aadamage: scale on ground guns' hits on aircraft (aircraft.gd take_damage)
 
 
 func setup_map(world_: World, env: Environment, _level: Node3D) -> void:
@@ -38,6 +42,7 @@ func setup_map(world_: World, env: Environment, _level: Node3D) -> void:
 		environment.ambient_light_color = _colour(str(envs.ambient))
 	if envs.has("light"):
 		set_light(_colour(str(envs.light)))
+	aa_damage = Ini.num(mission.get("mod", {}), "aadamage", 1.0)
 	var path := str(mission.get("mod", {}).get("script", ""))
 	if path.begins_with("res://mods/") and ResourceLoader.exists(path):
 		mission_script = load(path).new()
@@ -102,6 +107,11 @@ func configure_aircraft(plane: Aircraft, section: Dictionary) -> void:
 		plane.set("persistent", int(Ini.num(section, "persistent", 1)))
 	if section.has("keepstation"):
 		plane.set("keep_station", int(Ini.num(section, "keepstation", 0)) != 0)
+		plane.set("station_set", true)
+	# turn figures, as plane.ini [physics] (e.g. a duellist who out-turns the player but is slower)
+	for key in ["highroll", "lowroll", "highpitch", "lowpitch"]:
+		if section.has(key):
+			plane.set(key.replace("roll", "_roll").replace("pitch", "_pitch"), Ini.num(section, key, 0.0))
 	if section.has("gunnerrate"):
 		plane.call("set_gunner_rate", Ini.num(section, "gunnerrate", 5.0))
 

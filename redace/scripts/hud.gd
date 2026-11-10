@@ -164,17 +164,22 @@ func _draw_map(p: Aircraft, s: float) -> void:
 		elif q.groups & (1 << GROUP_ALLY):
 			_icon("smallally", q.global_position, p, right, at, scale, icon_centre, s)
 	# extra map markers a mission script asked for (World.map_markers: {pos, icon = HUD icon name or res:// path,
-	# optional size = icon scale}); drawn last and at full strength on the rim, so a destination stays visible
+	# optional size = icon scale, color = tint, pulse = true to blink}); drawn last and at full strength on the rim,
+	# so a destination stays visible
+	var blink := 0.55 + 0.45 * sin(world.mission_time * 6.0)
 	for m in world.map_markers:
 		var marker: String = str(m.get("icon", "smalltarget"))
 		if not _tex.has(marker) and marker.begins_with("res://") and ResourceLoader.exists(marker):
 			_tex[marker] = with_mipmaps(load(marker))
-		_icon(marker, m.pos, p, right, at, scale, icon_centre, s, float(m.get("size", 1.0)), 1.0)
+		var tint: Color = m.get("color", Color.WHITE)
+		if m.get("pulse", false):
+			tint.a *= blink
+		_icon(marker, m.pos, p, right, at, scale, icon_centre, s, float(m.get("size", 1.0)), 1.0, tint)
 	_icon("planeicon", p.global_position, p, right, at, scale, icon_centre, s)
 
 
 func _icon(name: String, pos: Vector3, p: Aircraft, right: Vector3, at: Vector3, scale: Vector2,
-		centre: Vector2, s: float, icon_scale := 1.0, far_alpha := 0.5) -> void:
+		centre: Vector2, s: float, icon_scale := 1.0, far_alpha := 0.5, tint := Color.WHITE) -> void:
 	var tex: Texture2D = _tex.get(name)
 	if tex == null:
 		return
@@ -186,4 +191,5 @@ func _icon(name: String, pos: Vector3, p: Aircraft, right: Vector3, at: Vector3,
 		alpha = far_alpha
 	var off := Vector2(-right.dot(d), -at.dot(d)) * s
 	var half := 4.0 * icon_scale
-	draw_texture_rect(tex, Rect2(centre + off - Vector2(half, half) * s, Vector2(half, half) * 2.0 * s), false, Color(1, 1, 1, alpha))
+	draw_texture_rect(tex, Rect2(centre + off - Vector2(half, half) * s, Vector2(half, half) * 2.0 * s), false,
+		Color(tint.r, tint.g, tint.b, tint.a * alpha))

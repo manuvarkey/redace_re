@@ -561,8 +561,84 @@ hangar), marked on the minimap.
 - Damage: a round scores 1 on every tick inside a plane's hit radius and flies on, so a held aim kills
   fast (a Camel on the Baron's tail took 125 in about 3 s). `plane_figures.md` corrected.
 
+## Objectives, feedback and mission endings pass, missions 1-10 (10 November 2026)
+
+User brief: keep the campaign, aircraft progression and story; clear objectives, active play, fair difficulty,
+satisfying endings. Missions 11 and 12: the user will comment separately (only the shared fixes reach them).
+
+Campaign-wide:
+- **Consistent markers** (mission_script.gd `mark_priority` / `mark_protect` / `mark_ally` / `highlight` /
+  `mark_destination`; overlay.gd brackets): priority targets red-orange (blinking target icon on the minimap,
+  bracket with a label in the view), protected planes and buildings green (ring on the minimap, bracket; planes get
+  distance and an edge arrow when off screen; a lost building leaves a grey cross), wingmen pale blue, short warning
+  highlights yellow (blinking minimap icon and bracket with arrow), the aerodrome blinks while it is the destination.
+  objective.gd marks every destroy-group target and protect-group member by itself.
+- **Objective feedback**: `objective(text, line)` = HUD message, a two-note cue and a persistent objective line under
+  the counter; `warn(text)` = message and a low three-note cue. Cues are synthesized (no new sound files).
+- HUD counter can show several lines: destroy count ("need k" when fewer than all are required) and, for
+  `protect = group|label`, "label standing s / N (fails at L lost)". Lines stack in a VBox (overlapped at 720p).
+- Generic HUD hook: map markers take optional `color` and `pulse` (hud.gd; stock missions unchanged).
+- **Compulsory clean-up only where it is the objective**: Scramble's bombers are now the destroy group (groups 9 + 7,
+  Group7 = -100); the S.E.5a escort no longer has to be cleared. Other missions already only required their targets.
+- **Dr.I zig-zag** (identified by simulation, formation_sim in the session scratchpad): the original formation step
+  (0x30) steers at the slot itself and goes to full throttle when the leader is slower. A wingman faster than its
+  leader (Dr.I 120 on a cruising Baron) overshoots, the slot falls behind, it banks 90 degrees back: S-turns across
+  the leader's track (17 bank reversals in 30 s on a gentle turn at 105). The player's AI wingmen (group 8, not the
+  player) now keep station by default (`keeps_station`, the Dusk Raiders station keeping): no reversals, slot held
+  within about 25. `[airN] keepstation = 0` restores the original. Also stops the opposite fault (a wingman behind a
+  faster leader throttled to 0.5 and fell back for ever).
+- **Bug: AA guns and tanks did no damage to aircraft** since playtest 16: `take_damage` compared a ground gun
+  (Dictionary) with `self` (script error, hit dropped). Fixed. New `[mod] aadamage` scale (6: 0.6 with the guns back
+  to 10 rounds/s; 10: 0.5; 12 unchanged). Missions 6, 10 and 12 are harder than in the last playtests because of this.
+- Briefings and debriefings 1-10 rewritten to one line of thought: courage with discipline, duty to comrades, respect
+  for a brave enemy (Hawker, the spotter and two-seater crews, the Handley Page crews), each mission's cost to the
+  men on the ground. Facts kept to what the mission guarantees (no claims that a wingman survived where he can fall).
+
+Per mission:
+- 1 Hawker (`m01.gd`, new): Hawker starts offset (650 ahead, 850 to the side, 60 higher, crossing), opens by crossing
+  the track climbing for 7 s, then attacks; out-turns the Albatros (roll 100 / 85, pitch 105 / 85) but is slower
+  (100); breaks hard when the Baron sits on his tail (320, rear cone, nose on him, 1.2 s), then 7 s recovery; retreat
+  phase at 200 s (or 60 % damage after 90 s): retaliation off, dive for the south edge at full throttle, "Hawker
+  breaks away for his lines! Cut him off before he crosses."; edge warning only when heading out.
+- 3 Bloody April: spotters are priority targets with arrows; objective line.
+- 4 Scramble: bombers marked and the objective; hangars marked and counted ("Hangars standing 6 / 6 (fails at 3
+  lost)": five hangars and the tent, not seven as the old notes said). Briefing now says what is there: Brenner and a
+  wingman already up, no German guns. Debriefing matches.
+- 5 The Plates: recon plane bracketed "RECON" with an arrow; warning near its escape edge.
+- 6 Balloon Busting (`m06.gd`): each Halberstadt bombs its own guns on the near (north) side of its ring, 8 of 15
+  (west 3, centre 2, east 3), moves on after 35 s per gun, then withdraws off the north edge; then "Bombing run
+  complete. Remaining guns still active—attack the balloons!" (3 s after the last per-ring line). HUD: silenced guns
+  per ring, grey crosses on the minimap. Patrol at 60 s kept, second pair at 150 s; each announced and highlighted.
+  Simulated (Baron away): all 8 assigned guns silenced by about 80 s, complete line at about 75 s, all three
+  Halberstadts home (endurance 700).
+- 7 The Other Side (`m07.gd`): six Camels in three pairs (outward over no man's land, the photo run, the withdrawal),
+  each announced and highlighted, one on the photo plane and one on the Baron; a pair waits until the last is down or
+  20 s. Simulated waves at about 13, 31 and 55 s. Photo plane protect-marked; "Photographs taken! ..." then the
+  aerodrome blinks.
+- 8 Wounded (`m08.gd`): ambushers appear 450 behind, 220 above ("Scouts diving behind us!", yellow highlight), dive
+  at 130 with no damage and no dodging, chase at full throttle and open fire inside 280; their first hit is the
+  wound (impact sounds, 0.4 s camera jolt, then the blurred view and "You are hit. Land at the aerodrome.").
+  Fallback: within 350 after 15 s, at most 30 s. Brenner turns to engage at the warning (pale blue bracket, HUD
+  lines for his attack and the kills). Simulated: wound from a real hit about 10 s after the warning.
+- 9 Dusk Raiders: start line "Bombers approaching from the northeast. Fighters ahead of them!"; sweep warning when the
+  forward pair is within 1800 (not before 6 s); Baron's flight starts 500 further west. Bombers priority-marked, yard
+  protect-marked with a losses line. **Railway**: `tools/redbaron_rails.py` makes ground object `rail` (one textured
+  quad, 60 x 8, ballast, sleepers and rails in the texture); `[build] track = x z x z ... | ...` in build_missions.py
+  lays polylines of segments; m09.gd stands rails and yard buildings on the terrain. Layout: main line 6500..8700
+  through the yard, three south sidings between junction ladders, a platform siding by the two stations, sheds
+  beside the sidings, wagons on the sidings (two protected, eight scenery).
+- 10 Cambrai (`m10.gd`, new): "Destroy six of the eight tanks within five minutes" (intro, objective line, counter
+  with "need 6"); wingmen with nothing to fight go for the nearest Camel, else form up on the Baron; a second Camel pair
+  comes for the wingmen at 100 s (or when two Camels are down).
+
+Tests: Red Baron suite 451 checks (new: Hawker figures, opening, break and retreat; Scramble counter and markers;
+Balloon Busting assignments, withdrawal, complete line and surviving guns; rails on the terrain; Cambrai counter and
+second pair; wingmen station keeping; the new ambush sequence). Asset suite 41; audit unchanged (8 stock issues).
+
 ## Open items (for the next session)
 
+- Playtest missions 1-10 after the 10 November pass, above all 6 and 10 (ground fire works again) and 8 (ambush).
+- Missions 11 and 12: user comments to come; the ridge guns of 12 now really fire.
 - No playtest feedback yet for missions 3, 7, 11, 12. The plane figures and gun rates were rationalised
   on 7 November 2026 (docs/plane_figures.md); every mission needs a playtest against them, above all 4-5
   (S.E.5a now 15.6 rounds/s), 7 and 9 (Camels 15.6, roll and pitch 25% below the Albatros) and 10-12 (Dr.I 32.7).

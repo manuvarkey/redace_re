@@ -1,7 +1,7 @@
 # Red Baron plane figures and mission overrides
 
 Reference for every aircraft the campaign flies: its figures, why they are what they are, and every
-per-mission override with the mission-script reason for it. Updated 7 November 2026.
+per-mission override with the mission-script reason for it. Updated 10 November 2026.
 
 Sources: `overrides/redbaron/objects/planes/<folder>/plane.ini` (built into `game_data/objects/planes` by
 `tools/build_planes.py`) and `tools/missions/mNN.ini` (built by `tools/build_missions.py`). Tests:
@@ -76,10 +76,11 @@ rockets, bombers' bombs) are part of each mission's design rather than plane fig
 | Mission | Plane | Override | Default | Reason (mission script) |
 | --- | --- | --- | --- | --- |
 | 1 Hawker | DH.2 (Hawker) | endurance 120 | 45 | The mission is a duel; at 45 a head-on pass ended it in seconds |
-| 1 Hawker | DH.2 (Hawker) | highspeed 105 | 95 | Leaving the map fails the mission at once ("Hawker Got Away"); at 95 against the Baron's 110 he could never get away |
+| 1 Hawker | DH.2 (Hawker) | highspeed 100 | 95 | Slower than the Baron's Albatros (110) in a straight line, so his retreat can be intercepted; leaving the map fails the mission at once ("Hawker Got Away"). Was 105 until 10 November 2026 |
+| 1 Hawker | DH.2 (Hawker) | highroll 100, lowroll 85, highpitch 105, lowpitch 85 | 80 / 65 / 85 / 65 | He out-turns the Albatros (80 / 65 / 90 / 65): position and patience win, not turning with him (10 November 2026) |
 | 2 First Sortie | Brenner | highspeed 125 | 110 | The script sends him after the decoy and the player must catch him to call him back; he has to pull away visibly (measured 400 away 4 s after the break) |
 | 4 Scramble | R.E.8 bombers | persistent 1 | 0 | They must press their bombing run on the hangars; two-seaters otherwise dodge when hit |
-| 6 Balloon Busting | Halberstadt x3 | endurance 250, bombsight 1 | 35 | Their bombing of the AA guns is what lets the Baron reach the balloons; they must live through the AA rings and hit the guns |
+| 6 Balloon Busting | Halberstadt x3 | endurance 700, bombsight 1 | 35 | Their bombing of their assigned AA guns is what opens a way to the balloons; they must live through the AA rings and hit the guns. 250 until 10 November 2026, when AA fire on planes started working again: two of three were shot down |
 | 7 The Other Side | Halberstadt (photo plane) | endurance 290 | 35 | It must survive the three Camels until the Baron, escorting from behind, reaches them; 150 was set against Camels at 8 rounds/s (about 10 s to lose 80), scaled to their 15.6 |
 | 8 Wounded | DH.2 x4 (as F.E.2d) | gunners 1 | 0 | They stand in for the two-seat F.E.2d (observer's gun); the DH.2 is a single-seater elsewhere |
 | 8 Wounded | DH.2 x4 (as F.E.2d) | gunnerrate 2.5 | 3 | The script holds all four in formation (retaliate off), so four observers fire at once at the attacker |
@@ -93,11 +94,26 @@ Removed (now the plane file's default, or equal to it): every British `firerate`
 (missions 1-12), the O/100's `firerate 12.86` and `endurance 150`, R.E.8 `endurance 40`, and
 `endurance` on Brenner, the second wingman and the rookies.
 
+## Ground fire on aircraft (`[mod] aadamage`)
+
+Until 10 November 2026 AA guns and tanks did **no damage to aircraft** in mod missions: the mod's `take_damage`
+compared a ground gun (a World target dictionary) with the plane itself, which raised a script error and dropped
+the hit (since the Balloon Busting bomber change of playtest 16). Fixed; the mission key `[mod] aadamage` scales
+ground fire on aircraft where full strength was too much once it worked:
+
+| Mission | aadamage | Reason |
+| --- | --- | --- |
+| 6 Balloon Busting | 0.6 (guns back to the stock 10 rounds/s, were 14) | A straight pass through an unbombed ring cost 55-125 of the Baron's 125; risky, but three balloons must stay possible |
+| 10 Cambrai | 0.5 | An autopilot Baron loitering over the tanks took 100+ in two minutes at full strength |
+| 12 The Last Patrol | 1 (unchanged) | Awaiting the user's mission 12 comments; the ridge guns now really fire |
+
 ## Run-time changes in mission scripts
 
 | Mission | Plane | Change | Reason |
 | --- | --- | --- | --- |
 | 8 Wounded | Baron | after the ambush burst: health at least half, then 1/4 of every hit | The story wounds him; Brenner must have time to deal with the ambushers |
+| 8 Wounded | Nieuports (ambush) | until the wound: highspeed 130, no damage, no dodging; they chase the Baron at full throttle and open fire inside 280 | They must close and fire visibly (a gun attack matches the target's speed and never caught a Baron flying home); afterwards stock figures |
+| 1 Hawker | Hawker | evasive break when the Baron settles behind him, 7 s recovery; dive for the lines at 200 s (or badly hit after 90 s) | The duel's shape (m01.gd) |
 | 11 Formation | Brenner | no damage from when he leaves to chase a Camel until his scripted death | His death is the story's; he must live until the Baron arrives |
 | 11 Formation | Camels C-E | no damage until the Baron is within 400 | They must still be there when he arrives (they collided and fell otherwise) |
 | 12 The Last Patrol | Baron | shot down by the ridge fire at the end | The story's ending |

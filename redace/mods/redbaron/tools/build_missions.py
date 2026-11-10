@@ -6,9 +6,12 @@ The spec's [build] section names the stock mission whose scenery (every [groundN
 groups = 0 scenery) is copied, so ground objects already sit on the terrain. [build] intact = x z r
 puts the undamaged model in place of each burnt / wrecked one within r of (x, z), e.g. at a home
 aerodrome the stock missions show bombed. [build] regroup = groups x z [x z ...] gives the template
-objects within 25 of each point that groups value (e.g. the hangars a mission protects). Every other spec
-section is copied as written after the scenery. Usage: python3 build_missions.py [NN ...]
+objects within 25 of each point that groups value (e.g. the hangars a mission protects). [build] track =
+x z x z ... | x z x z ... lays railway (ground object `rail`, tools/redbaron_rails.py) along each polyline, in
+segments of at most RAIL_SEGMENT, as groups = 0 scenery at height 0 (the mission script puts them on the terrain).
+Every other spec section is copied as written after the scenery. Usage: python3 build_missions.py [NN ...]
 """
+import math
 import re
 import sys
 from pathlib import Path
@@ -56,6 +59,29 @@ def art(name):
     return f'<img src="campaigns\\redbaron\\img\\{name}.jpg">' if (IMG / f"{name}.png").exists() else ""
 
 
+RAIL_SEGMENT = 60.0  # the rail model's length along its `at`
+RAIL_FIRST_ID = 3400
+
+
+def track_sections(spec):
+    """[build] track polylines -> [(name, lines)] of rail segments (each stretched along `at` to fit its leg)."""
+    out = []
+    for line in spec.split("|"):
+        v = [float(x) for x in line.split()]
+        pts = list(zip(v[0::2], v[1::2]))
+        for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
+            length = math.hypot(x1 - x0, z1 - z0)
+            n = max(1, math.ceil(length / RAIL_SEGMENT - 0.01))
+            dx, dz = (x1 - x0) / length, (z1 - z0) / length
+            stretch = length / n / RAIL_SEGMENT
+            for k in range(n):
+                cx, cz = x0 + dx * length * (k + 0.5) / n, z0 + dz * length * (k + 0.5) / n
+                out.append(["name = rail", f"id = {RAIL_FIRST_ID + len(out)}", "groups = 0",
+                            f"pos = {cx:.1f} 0 {cz:.1f}", "up = 0 1 0",
+                            f"at = {dx * stretch:.4f} 0 {dz * stretch:.4f}", f"right = {dz:.4f} 0 {-dx:.4f}"])
+    return out
+
+
 def build(num):
     spec = sections((SPECS / f"m{num:02d}.ini").read_text())
     conf = keyvals(dict(spec).get("build", []))
@@ -101,6 +127,10 @@ def build(num):
                     regrouped += 1
             emit(f"ground{n}", kv[:2] + [f"groups = {groups}"] + kv[2:])
             n += 1
+    rails = track_sections(conf["track"]) if conf.get("track") else []
+    for lines in rails:
+        emit(f"ground{n}", lines)
+        n += 1
     for name, lines in spec:
         low = name.lower()
         if low in ("build", "mod", "map", "mission", "objectives", "environment", "music"):
@@ -132,7 +162,7 @@ def build(num):
         (bdir / "debrief.html").write_text(DEBRIEF.replace("{TITLE}", conf.get("title", f"Mission {num}"))
                                            .replace("{BODY}", debrief.read_text().strip()).replace("{BACKGROUND}", bg))
     print(f"mission {mission_id}: {n} ground sections, template {template}, {restored} restored to standing" +
-          (f", {regrouped} regrouped" if regroup_points else ""))
+          (f", {regrouped} regrouped" if regroup_points else "") + (f", {len(rails)} rail segments" if rails else ""))
 
 
 # The game's briefing page layout (as missions/26/mission.html): text panel, then Fly Mission / Go Back.

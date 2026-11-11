@@ -761,12 +761,27 @@ Mission 8, where landing is required); Mission 8 without "Well done!"; Mission 6
 dash the game font may lack); Mission 9's objective line a full sentence; warmer failure pages for Missions 11 and 12;
 the completion page's line; "Albers is falling behind!".
 
+## Release check (11 November 2026)
+
+- All test suites pass (Red Baron 513, Red Baron assets 41, Britain, avoidance, bullets, collisions, environment,
+  options, replay menu); the user's save files unchanged by them. Stock audit: the 17 known stock issues. Campaign
+  audit (MS=101..112,199): 8, all inherited from the template scenery (sounds missing, houses outside the map) or
+  harmless (Camels parked hidden over the void; one Mission 9 escort starts 4 s short of the ground's edge).
+- All 12 missions load and run 40 s without script errors (autopilot); Linux, Windows and Web export; the Linux
+  pack holds the campaign (missions, scripts, pages, pictures) and leaves out docs, tools and tests; the exported
+  build runs missions 111 and 112.
+- The epilogue's history checked against published accounts (buried 22 April 1918 at Bertangles by No. 3 Squadron
+  AFC; the wreath "To our gallant and worthy foe").
+- The user has playtested every mission; Mission 12's length (about 2.5 minutes of play) accepted.
+- `replayall = 0` for release.
+- Mission 1 probe (autopilot Baron, no damage, seed 1): Hawker shot down at 11 s. Causes measured: (1) he starts 413
+  over the ground and his opening climbs 80 more, so the original ceiling (above 400 the target speed drops by half
+  the excess) bleeds him from 87 to 63 (the Baron too, 96 to 64): a slow target; (2) for the 7 s opening he flies a
+  straight waypoint and ignores the Baron, who closes head-on; (3) the head-on pass at 160-80 cost him 65 of his 120
+  in one second, and he died a second later (with a near collision at 14).
+
 ## Open items (for the next session)
 
-- Playtest missions 1-10 after the 10 November pass, above all 6 and 10 (ground fire works again) and 8 (ambush).
-- Mission 11 reworked (11 November): needs a playtest.
-- Mission 12 reworked (11 November): needs a playtest; play time about 2.5 min against the brief's 6-8 (see above).
-- No playtest feedback yet for missions 3, 7, 11, 12. The plane figures and gun rates were rationalised
-  on 7 November 2026 (docs/plane_figures.md); every mission needs a playtest against them, above all 4-5
-  (S.E.5a now 15.6 rounds/s), 7 and 9 (Camels 15.6, roll and pitch 25% below the Albatros) and 10-12 (Dr.I 32.7).
-- Before release: `replayall = 0` in campaign.ini; confirm the wreath inscription; Android build untested.
+- Mission 1 (Hawker) ends too early (user, 11 November): see the options under "Release check"; to be decided.
+- Android build never tried.
+- Merge `redbaron-mod` into `main`, tag and publish the builds.

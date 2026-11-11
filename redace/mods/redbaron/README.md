@@ -24,11 +24,12 @@ Rittmeister (after mission 3). Debug launch without progress: `godot --path reda
 | 8 | Wounded | country | red Albatros, Brenner with you |
 | 9 | Dusk Raiders | country, dusk | red Albatros, Brenner and a wingman |
 | 10 | Cambrai | trenches | Fokker Dr.I, Brenner and a rookie |
-| 11 | Formation | trenches | Fokker Dr.I, Brenner and a rookie; a damaged Halberstadt to bring home |
-| 12 | The Last Patrol | trenches | Fokker Dr.I, four rookies to get home |
+| 11 | Formation | trenches | Fokker Dr.I, Brenner and his second (Hartwig); a damaged Halberstadt to bring home |
+| 12 | The Last Patrol | trenches | Fokker Dr.I, four young pilots to get across the lines; the closing sequence |
 
-`campaign.ini` has `replayall = 1` (every mission in Replay Missions) while the campaign is tested; set 0 for
-a release (then only missions the pilot has reached, all once the campaign is complete).
+Replay Missions lists the missions the pilot has reached, and all twelve once the campaign is complete
+(`campaign.ini` `replayall = 0`; set 1 to list every mission while testing). After mission 12 the epilogue
+leads to the completion page, with Fly Again (the replay list) and Go Back.
 
 ## Rebuild
 
@@ -40,6 +41,9 @@ python3 redace/mods/redbaron/tools/paint_planes.py                  # Albatros /
 python3 redace/mods/redbaron/tools/build_planes.py                  # plane and ground folders into game_data
 python3 redace/mods/redbaron/tools/make_skies.py                    # dawn sky
 python3 redace/mods/redbaron/tools/build_missions.py                # missions + briefings, debriefings, failure pages
+# optional: a Blender stand-in for the epilogue picture (the shipped one is painted; see docs/images_required.md)
+# blender --background --python redace/mods/redbaron/tools/redbaron_epilogue_art.py -- /tmp/epi.png && \
+#   python3 redace/mods/redbaron/tools/redbaron_epilogue_art.py --post /tmp/epi.png
 godot --headless --path redace --import
 ```
 
@@ -77,6 +81,6 @@ None of these ship: exports leave out `*.md` and `mods/*/docs/*`.
 | `docs/IMPLEMENTATION_NOTES.md` | Development log: hooks added, every change from the design, playtests, open items (at the end) | **Current.** Read first; it wins where the design disagrees |
 | `docs/red_baron_mod_design.md` | Original design: story, missions, planes, ranks, intended mission INI | Reference; out of date where the notes record a change |
 | `docs/plane_figures.md` | Every aircraft's figures and gun rates, the rules behind them, every mission override with its script reason | **Current.** Update it with any plane or override change |
-| `docs/images_required.md` | Included campaign art: paths, sizes, prompts in the original menu-art style | All 14 included; generation record in `docs/art_generation.md` |
+| `docs/images_required.md` | Included campaign art: paths, sizes, prompts in the original menu-art style | All 15 included (the epilogue picture added 11 November 2026); generation record in `docs/art_generation.md` |
 | `docs/history/IMPLEMENTATION_PROMPT.md` | Task brief the mod was built from | Done; its ground rules still apply to new work (stock game unchanged, generic opt-in engine hooks, no `redbaron` in core scripts, commit per step) |
 | `docs/history/IMPLEMENTATION_PLAN.md` | Phase 0 plan: test baseline, hook plan, design INI problems | Done; kept for the baseline and the reasons behind the hooks |

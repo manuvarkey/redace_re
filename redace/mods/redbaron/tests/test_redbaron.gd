@@ -528,7 +528,9 @@ func _check_campaign_menus() -> void:
 	game._page = "campaigns\\redbaron\\intro.html"
 	var intro := game._fill(_page_text(game._page))
 	check(intro.contains("Start Campaign") and intro.contains("Leutnant Hans Pilot"), "intro: Start Campaign, campaign rank")
-	# Replay Missions (replayall = 1 while the campaign is built: every mission)
+	# Replay Missions: the release manifest lists only reached missions; the checks below switch replayall on
+	check(not game._active_campaign().replayall, "campaign.ini ships with replayall = 0")
+	game._active_campaign().replayall = true
 	check(intro.contains("Replay Missions") and intro.contains("campaigns\\redbaron\\replay.html"), "intro links Replay Missions")
 	game._on_link("campaigns\\redbaron\\replay.html")
 	check(game.opened.back() == "campaigns\\redbaron\\replay.html", "Replay Missions page opens")

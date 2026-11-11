@@ -173,15 +173,13 @@ rules are untouched. Both mods are in every build: open **Goodies → Bonus Miss
 ### Der Rote Kampfflieger — the Red Baron campaign
 
 <div align="center">
-<img src="docs/screenshots/rb-lastpatrol.jpg" alt="The Last Patrol: the Red Baron turns back into the enemy formation" width="88%">
+<img src="docs/screenshots/rb-lastpatrol.jpg" alt="The Last Patrol" width="88%">
 </div>
 
 A twelve-mission story campaign flown as Manfred von Richthofen, from his duel with Major Lanoe Hawker in
 November 1916 to the last patrol of April 1918. You take command of Jasta 11 and teach its pilots to fly as
 a squadron and bring each other home. That lesson is tested at Bloody April, in the dawn raid on the
-balloons, at Cambrai and, finally, by the young pilots of 1918. Each mission has a period briefing, a
-debriefing and its own failure page. Brenner's fate in *Formation* is told in a short camera cut-in. The
-campaign ends with a scripted closing sequence and an epilogue.
+balloons, at Cambrai and, finally, by the young pilots of 1918.
 
 - **Twelve missions** on the country and trenches maps: Hawker, First Sortie, Bloody April, Scramble,
   The Plates, Balloon Busting, The Other Side, Wounded, Dusk Raiders, Cambrai, Formation and The Last Patrol.

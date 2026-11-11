@@ -25,7 +25,7 @@ Rittmeister (after mission 3). Debug launch without progress: `godot --path reda
 | 9 | Dusk Raiders | country, dusk | red Albatros, Brenner and a wingman |
 | 10 | Cambrai | trenches | Fokker Dr.I, Brenner and a rookie |
 | 11 | Formation | trenches | Fokker Dr.I, Brenner and his second (Hartwig); a damaged Halberstadt to bring home |
-| 12 | The Last Patrol | trenches | Fokker Dr.I, four young pilots to get across the lines; the closing sequence |
+| 12 | The Last Patrol | trenches | Fokker Dr.I, four young pilots to get across the lines |
 
 Replay Missions lists the missions the pilot has reached, and all twelve once the campaign is complete
 (`campaign.ini` `replayall = 0`; set 1 to list every mission while testing). After mission 12 the epilogue

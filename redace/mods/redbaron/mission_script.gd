@@ -348,6 +348,34 @@ func warn(text: String, seconds := 5.0) -> void:
 	overlay().cue("warning")
 
 
+## Lays a long, flat ground object (a rail segment) on the terrain: both ends on the ground (half_length along its
+## stored `at`, scale included), so neighbouring segments meet at the same height; rolled to the slope across it.
+func lay_on_ground(t: Dictionary, half_length: float) -> void:
+	var node: Node3D = t.node
+	var b := node.global_transform.basis
+	var p := node.global_position
+	var along := Vector3(b.z.x, 0.0, b.z.z)
+	var reach := along.length() * half_length
+	var dir := along.normalized()
+	var a := p - dir * reach
+	var e := p + dir * reach
+	a.y = world.ground_height(a)
+	e.y = world.ground_height(e)
+	var mid := (a + e) * 0.5
+	# a hump between the ends: lift the segment over it rather than let the ground show through
+	var lift := 0.0
+	for f in [0.25, 0.5, 0.75]:
+		var q: Vector3 = a.lerp(e, f)
+		lift = maxf(lift, world.ground_height(q) - q.y)
+	mid.y += minf(lift, 1.2)  # capped: a bigger lift leaves a visible step at the joints
+	var fwd := (e - a).normalized()
+	var n := world.ground_normal(mid)
+	var right := n.cross(fwd).normalized()
+	var up := fwd.cross(right).normalized()
+	var sc := b.get_scale()
+	node.global_transform = Transform3D(Basis(right * sc.x, up * sc.y, fwd * ((e - a).length() / (2.0 * half_length))), mid)
+
+
 ## Puts a ground object on the terrain under it (scenery placed by a mission at height 0); tilt: lie along the slope.
 func snap_to_ground(t: Dictionary, lift := 0.0, tilt := false) -> void:
 	var node: Node3D = t.node

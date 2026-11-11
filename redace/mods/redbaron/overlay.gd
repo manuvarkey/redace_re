@@ -11,6 +11,10 @@ extends CanvasLayer
 ##   - cue sounds (objective change, warning, impact) and a short camera jolt.
 ## Drawn under the game's HUD layer (World's UI layer is 1), the brackets and lines above it.
 
+## Brackets, labels and edge arrows in the 3D view are switched off (user request, 11 November 2026: targets are
+## found on the minimap only). Missions still add and remove them, so setting this true brings them back.
+const SHOW_BRACKETS := false
+
 const COLOURS := {
 	"priority": Color(1.0, 0.38, 0.2),
 	"protect": Color(0.45, 1.0, 0.45),
@@ -167,6 +171,8 @@ func remove_bracket(node: Node3D, kind := "") -> void:
 
 
 func _draw_brackets() -> void:
+	if not SHOW_BRACKETS:
+		return
 	if world == null or not is_instance_valid(world.camera) or world.player == null:
 		return
 	var cam := world.camera
@@ -238,6 +244,37 @@ func _edge_arrow(cam: Camera3D, pos: Vector3, vp: Vector2, col: Color, label: St
 		var w := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var at := tip - dir * size * 3.0
 		_marks.draw_string(_font, at + Vector2(-w * 0.5, fs * 0.35), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+
+
+## Letterbox bars (top and bottom) with a caption, for a short scripted camera cut-in; off removes them.
+var _bars: Array[ColorRect] = []
+var _caption: Label
+
+
+func letterbox(on: bool, caption := "") -> void:
+	if _bars.is_empty():
+		for top in [true, false]:
+			var r := ColorRect.new()
+			r.color = Color.BLACK
+			r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			r.anchor_left = 0.0
+			r.anchor_right = 1.0
+			r.anchor_top = 0.0 if top else 0.86
+			r.anchor_bottom = 0.14 if top else 1.0
+			_top.add_child(r)
+			_bars.append(r)
+		_caption = _label(0, 22, Color(0.95, 0.92, 0.8))
+		_caption.anchor_top = 0.89
+		_caption.anchor_bottom = 0.89
+	for r in _bars:
+		r.visible = on
+	_caption.text = caption
+	_caption.visible = on
+
+
+func letterbox_caption(text: String) -> void:
+	if _caption:
+		_caption.text = text
 
 
 ## A short shake of the view (camera offsets), e.g. when a burst hits.

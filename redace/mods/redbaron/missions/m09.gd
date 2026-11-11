@@ -27,6 +27,7 @@ const SWEEP_ENGAGE := 1000.0
 const SWEEP_RELEASE := 1800.0
 const SWEEP_LEASH := 2500.0
 
+const RAIL_HALF := 15.0  # half the rail model's length (tools/redbaron_rails.py SEGMENT)
 const YARD := [3300, 3301, 3302, 3303, 3304, 3305]
 const SWEEP_WARN := 1800.0
 const SWEEP_WARN_AFTER := 6.0  # the start line ("Bombers approaching ...") stays up first
@@ -40,7 +41,7 @@ func start() -> void:
 	# the yard and its railway are placed at height 0: stand them on the terrain (rails along its slope)
 	for t in world.targets:
 		if t.name == "rail":
-			snap_to_ground(t, 0.0, true)
+			lay_on_ground(t, RAIL_HALF)
 		elif t.name in ["station", "hanger", "van"] and (t.node as Node3D).global_position.y < 1.0:
 			snap_to_ground(t, 0.25 if t.name == "van" else 0.0)
 	super.start()

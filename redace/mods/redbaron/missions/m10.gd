@@ -2,7 +2,8 @@ extends "res://mods/redbaron/missions/objective.gd"
 ## Mission 10, Cambrai: the original rules (six of eight tanks within five minutes) plus objective.gd (intro,
 ## counter with "need 6", priority marks on the tanks). The squadron's part: Brenner and the rookie (pale blue
 ## brackets) fight the Camels so the Baron can work on the tanks.
-##   - A wingman with nothing to fight goes for the nearest Camel; with none left he forms up on the Baron
+##   - Each wingman starts on his own Camel (not the nearest of the group, re-picked every step); one with nothing to
+##     fight goes for the nearest Camel; with none left he forms up on the Baron
 ##     (station keeping: no zig-zag).
 ##   - The four Camels over the tanks go for the nearest German. At SECOND_WAVE s (or when two of them are down)
 ##     a second pair comes in from the south for the wingmen: "More Camels from the south! Brenner has them."
@@ -20,6 +21,19 @@ func start() -> void:
 	super.start()
 	mark_ally(plane(3002), "Brenner")
 	mark_ally(plane(3003), "Rookie")
+	# each wingman takes his own Camel and keeps it until it falls (a group target re-picks the nearest Camel every
+	# step, so they swapped targets mid-turn)
+	var camels := _camels().filter(func(c: Aircraft) -> bool: return not c.object_id in SECOND)
+	for i in WINGMEN.size():
+		var w := plane(WINGMEN[i])
+		if w == null or camels.is_empty():
+			continue
+		var c: Aircraft = camels[mini(i, camels.size() - 1)]
+		var plan := [goal(Aircraft.G_ATTACK, c.object_id)]
+		var head := w.current_goal()
+		if int(head.get("type", 0)) == Aircraft.G_APPEAR:
+			plan.push_front(head)
+		set_goals(w, plan)
 
 
 func _camels() -> Array[Aircraft]:

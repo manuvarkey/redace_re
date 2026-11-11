@@ -489,9 +489,9 @@ func _m08_land() -> void:
 	p.state = Aircraft.State.GROUND
 	_settle()
 	check(not world.mission_over, "landing away from the aerodrome does not win")
-	p.global_position = Vector3(6250, 380, 7400)
+	p.global_position = Vector3(5995, 380, 7755)
 	_settle()
-	check(world.mission_over and world._end_result == "won", "landing at the aerodrome wins")
+	check(world.mission_over and world._end_result == "won", "landing at the far end of the strip wins (390 from the marker)")
 
 
 func _m08_crash() -> void:
@@ -745,7 +745,18 @@ func _stock_rule_mission(i: int) -> void:
 			if id == 109:
 				var rails := world.targets.filter(func(x): return x.name == "rail")
 				check(rails.size() > 60, "109: railway laid (%d segments)" % rails.size())
-				check(rails.all(func(x): return absf(x.node.global_position.y - world.ground_height(x.node.global_position)) < 0.5), "109: rails on the terrain")
+				var off := 0
+				var worst := 0.0
+				for x in rails:
+					var c: Vector3 = x.node.global_position
+					var half: Vector3 = x.node.global_transform.basis.z * 15.0
+					for q in [c - half, c + half]:
+						worst = maxf(worst, absf(q.y - world.ground_height(q)))
+						if absf(q.y - world.ground_height(q)) > 1.5:
+							off += 1
+					if c.y < world.ground_height(c) - 2.5:  # a sharp hump over 1.2 may show through (lift capped)
+						off += 1
+				check(off == 0, "109: rails lie on the terrain, ends on the ground (%d off, worst %.1f)" % [off, worst])
 				check(world.targets.filter(func(x): return x.groups & (1 << 3)).all(func(x): return x.node.global_position.y > 100.0), "109: yard buildings on the terrain")
 				check(s().overlay()._counter.text.contains("Rail yard standing 6 / 6"), "109: yard losses on the HUD")
 			if id == 110:
@@ -784,7 +795,8 @@ func _stock_rule_mission(i: int) -> void:
 			if id == 110:
 				for id2 in [3002, 3003]:
 					var wing: Aircraft = s().plane(id2)
-					check(wing and wing.allied and wing.goals.any(func(g): return g.type == Aircraft.G_ATTACK and g.targetid == -9), "110: wingman %d after the Camels" % id2)
+					var own := wing.goals.filter(func(g): return g.type == Aircraft.G_ATTACK and int(g.targetid) in [3020, 3021, 3022, 3023])
+					check(wing and wing.allied and not own.is_empty(), "110: wingman %d on his own Camel" % id2)
 			check(world.planes.filter(func(q): return q.call("is_persistent")).all(func(q): return id == 104 and q.plane_name == "re8"),
 				"%d: original AI behaviour (only Scramble's bombers persistent)" % id)
 			var groups := {}
@@ -871,37 +883,98 @@ func _m07() -> void:
 func _m11() -> void:
 	var p := world.player
 	var brenner: Aircraft = s().plane(3002)
+	var hw: Aircraft = s().plane(3003)
 	var ts: Aircraft = s().plane(3004)
-	check(brenner.current_goal().type == Aircraft.G_FORMATION and s().plane(3003).current_goal().targetid == 3002, "111: Brenner on the Baron, his second on Brenner")
-	check(brenner.call("keeps_station") and s().plane(3003).call("keeps_station") and not s().plane(3010).call("keeps_station"),
+	var at := func(dt: float) -> void:
+		world.mission_time += dt
+		_settle()
+	check(brenner.current_goal().type == Aircraft.G_FORMATION and brenner.current_goal().targetid == 3004
+		and hw.current_goal().targetid == 3004, "111: Brenner and Hartwig escort the two-seater")
+	check(brenner.call("keeps_station") and hw.call("keeps_station") and not s().plane(3010).call("keeps_station"),
 		"111: the Dr.I wingmen keep station in formation (no zig-zag); the Camels fly the original formation")
-	world.mission_time = 61.0
+	check(is_equal_approx(ts.health, ts.endurance * 0.7) and ts.get("damage_scale") == s().TWO_SEATER_SCALE, "111: the two-seater starts damaged (70 %)")
+	check(s().overlay()._counter.text.begins_with("Two-seater 70 %") and world.message_label.text.begins_with("Join the damaged two-seater"),
+		"111: opening line, two-seater condition on the HUD")
+	check(world.map_markers.any(func(m): return m.icon == MS.PROTECT_ICON) and world.map_markers.any(func(m): return m.icon == MS.AERODROME_ICON),
+		"111: two-seater and aerodrome marked")
+	check(world.planes.filter(func(q): return q.groups & (1 << 9)).size() == 10, "111: ten enemy aircraft")
+	for q in [p, brenner, hw, ts]:
+		var over: float = q.global_position.y - world.ground_height(q.global_position)
+		check(over < 400.0, "111: %d starts below the ceiling (%.0f over the ground)" % [q.object_id, over])
+	check(not s().overlay().SHOW_BRACKETS, "brackets and labels are off in the view (minimap only)")
+	at.call(26.0)
+	check(s().stage == "e1" and not s().plane(3010).hidden and brenner.current_goal().targetid == 3010
+		and hw.current_goal().type == Aircraft.G_FORMATION, "111: encounter 1, Brenner takes one, Hartwig stays on the two-seater")
+	var appear: Vector3 = s().plane(3010).current_goal().pos
+	check(MS.distance(appear, ts) > 700.0, "111: the pursuers appear well out (%.0f)" % MS.distance(appear, ts))
+	for id in s().W1:
+		s().plane(id).state = Aircraft.State.DEAD
+	at.call(7.0)
+	check(s().stage == "after_e1" and world.message_label.text == "First attack broken. Stay with the two-seater.", "111: first attack broken")
+	at.call(s().SAFEGUARD + 1.0)
+	check(s().stage == "e2" and world.message_label.text.begins_with("Scouts ahead!"), "111: encounter 2 (safeguard timer)")
+	check(brenner.current_goal().targetid == s().W2[0] and hw.current_goal().targetid == s().W2[0], "111: Brenner and Hartwig take the high scout")
+	check(s().plane(s().W2[1]).goals.any(func(g): return g.type == Aircraft.G_ATTACK and g.targetid == 3004), "111: the low pair go for the two-seater")
+	check(not s()._tracked.has(s().plane(s().W2[1])) and not s()._tracked.has(s().plane(s().W2[2])), "111: the low pair are not marked apart")
+	for id in [s().W2[1], s().W2[2]]:
+		s().plane(id).state = Aircraft.State.DEAD
+	at.call(7.0)
+	check(s().stage == "after_e2" and world.message_label.text == "The way is clear. Bring them through.", "111: the way is clear")
+	at.call(s().SAFEGUARD + 1.0)
+	check(s().stage == "e3" and world.message_label.text.begins_with("Another flight coming in!"), "111: encounter 3")
+	at.call(s().COVER_AFTER + 0.5)
+	check(s().stage == "cover" and world.message_label.text.begins_with("Brenner is covering the rear"), "111: Brenner covers the rear")
+	p.global_position = brenner.global_position + Vector3(0, 0, -150)
 	_settle()
-	check(s().stage == 1 and s().camel_a.present() and s().camel_b.present() and brenner.current_goal().targetid == 3010, "111: Camels A and B at 60 s, Brenner takes A")
-	s().camel_a.state = Aircraft.State.DEAD
+	check(alive_plane(brenner), "111: Brenner's death is not set off by the Baron coming close")
+	at.call(s().STORY_AFTER + 0.5)
+	check(s().stage == "story" and s()._cine_cam != null and s()._cine_cam.current and p.autopilot and s().overlay()._bars[0].visible,
+		"111: the story moment: camera cut-in, letterbox, the Baron on autopilot")
+	check(s().overlay()._caption.text == "" and s()._cine_target == brenner, "111: over Brenner's shoulder, no caption yet")
+	at.call(s().STORY_KILL_CAMEL + 0.5)
+	check(alive_plane(brenner) and not alive_plane(s().plane(s().W3[2])), "111: Brenner shoots down the Camel on Hartwig")
+	at.call(s().STORY_SECOND_SHOT - s().STORY_KILL_CAMEL)
+	check(s()._cine_target == s().plane(s().W3[1]) and s()._cine_quarry == brenner, "111: the shot moves to the Camel behind Brenner")
+	check(s()._cine_target.global_position.distance_to(brenner.global_position) < 400.0, "111: that Camel is close behind him")
+	at.call(s().STORY_KILL_BRENNER - s().STORY_SECOND_SHOT)
+	check(brenner.state == Aircraft.State.DEAD and s().overlay()._caption.text == "", "111: Brenner falls (scripted), still no caption")
+	at.call(s().STORY_CAPTION - s().STORY_KILL_BRENNER)
+	check(s().overlay()._caption.text == s().STORY_LINE and s()._cine_cam != null, "111: one caption, while the cut-in runs on")
+	var msg_before: String = world.message_label.text
+	at.call(s().STORY_END - s().STORY_CAPTION)
+	check(s().stage == "after_story" and s()._cine_cam == null and world.camera.current and not p.autopilot,
+		"111: back to the Baron after %.0f s" % s().STORY_END)
+	check(world.message_label.text == msg_before, "111: no second message after the cut-in")
+	check(s().overlay()._objective.text.contains("Hartwig"), "111: objective updated")
+	check(s().hartwig_protected and is_equal_approx(hw.health, hw.endurance * 0.5) and hw.get("damage_scale") == s().HARTWIG_SCALE
+		and s().overlay()._counter.text.contains("Hartwig 50 %"), "111: Hartwig smoking, protected, condition on the HUD")
+	at.call(26.0)
+	check(s().stage == "e4", "111: encounter 4 over the approach")
+	ts.global_position = Vector3(8400, 300, 7700)
 	_settle()
-	check(s().stage == 2 and brenner.current_goal().type == Aircraft.G_WAYPOINT and brenner.current_goal().pos.x > ts.global_position.x + 1000.0, "111: Brenner chases B away, 1500 off")
-	# leaving the two-seater brings Camels down on it
-	p.global_position = ts.global_position + Vector3(0, 0, 2000)
-	for i in 4:
-		s().run_step(2.0)
-	check(s()._stalked and s().stalkers.all(func(q): return q.present()), "111: leaving the two-seater brings two Camels on it")
-	brenner.global_position = Vector3(10400, 600, 9500)  # away east, as the chase took him
-	p.global_position = Vector3(8400, 350, 7650)
-	ts.global_position = Vector3(8400, 300, 7750)
+	check(s().two_seater_home and ts.hidden and world.message_label.text == "The two-seater is down safely.", "111: two-seater lands")
+	check(not world.mission_over, "111: no win before Hartwig is home")
+	hw.global_position = Vector3(8350, 300, 7800)
 	_settle()
-	check(s().safe and ts.hidden and s().stage == 3, "111: two-seater home (landed)")
-	check(s().attackers.all(func(q): return q.present() and q.get("damage_scale") == 0.0), "111: C-E on Brenner, holding until the Baron comes")
-	check(world.map_markers.any(func(m): return MS.near(m.pos, brenner, 50.0)), "111: Brenner marked on the minimap")
-	check(not world.mission_over, "111: no win while Brenner's attackers fly")
-	p.global_position = brenner.global_position + Vector3(0, 0, -300)
+	check(s().hartwig_home and hw.hidden and world.message_label.text == "Brenner's second is home.", "111: Hartwig home, announced")
+	world.mission_time += 3.5
 	_settle()
-	check(s().stage == 4 and brenner.state == Aircraft.State.DEAD and world.message_label.text == "Lt. Brenner is down.", "111: Brenner falls as the Baron closes")
-	for a in s().attackers:
-		a.state = Aircraft.State.DEAD
+	check(s().stage == "home" and s().overlay()._objective.text.begins_with("Return to the aerodrome"), "111: then return to the aerodrome")
+	p.global_position = Vector3(8400, 400, 8200)
 	_settle()
-	check(world.mission_over and world._end_result == "won", "111: C-E down wins")
-	check(FileAccess.get_file_as_string(Ini.data_path("language/english/missions/111/debrief.html")).contains("Madam"), "111: the letter")
+	check(world.mission_over and world._end_result == "won", "111: the Baron at the aerodrome wins")
+	var letter := FileAccess.get_file_as_string(Ini.data_path("language/english/missions/111/debrief.html"))
+	check(letter.contains("<i>Madam,"), "111: the letter, in italics")
+	var hv := HtmlView.new()
+	var parsed: Dictionary = hv._parse("<body>plain <i>slanted</i></body>")
+	check(parsed.objs.any(func(o): return o.get("text", "") == "slanted" and o.get("italic", false))
+		and parsed.objs.any(func(o): return o.get("text", "") == "plain" and not o.get("italic", false)), "pages: <i> sets italics")
+	hv.free()
+	check(FileAccess.file_exists(Ini.data_path("language/english/missions/111/failed_second.html")), "111: failure page for losing Hartwig")
+
+
+static func alive_plane(q: Aircraft) -> bool:
+	return q.state != Aircraft.State.DEAD
 
 
 func _m12() -> void:

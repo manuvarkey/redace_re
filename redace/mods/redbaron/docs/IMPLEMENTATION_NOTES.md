@@ -568,7 +568,7 @@ satisfying endings. Missions 11 and 12: the user will comment separately (only t
 
 Campaign-wide:
 - **Consistent markers** (mission_script.gd `mark_priority` / `mark_protect` / `mark_ally` / `highlight` /
-  `mark_destination`; overlay.gd brackets): priority targets red-orange (blinking target icon on the minimap,
+  `mark_destination`; overlay.gd brackets, switched off in the view on 11 November): priority targets red-orange (blinking target icon on the minimap,
   bracket with a label in the view), protected planes and buildings green (ring on the minimap, bracket; planes get
   distance and an edge arrow when off screen; a lost building leaves a grey cross), wingmen pale blue, short warning
   highlights yellow (blinking minimap icon and bracket with arrow), the aerodrome blinks while it is the destination.
@@ -635,10 +635,58 @@ Tests: Red Baron suite 451 checks (new: Hawker figures, opening, break and retre
 Balloon Busting assignments, withdrawal, complete line and surviving guns; rails on the terrain; Cambrai counter and
 second pair; wingmen station keeping; the new ambush sequence). Asset suite 41; audit unchanged (8 stock issues).
 
+## Playtest 20 and the mission 11 rework (11 November 2026)
+
+- Wounded: a landing at the far end of the strip failed (the field reaches about 370-400 from the marker; the
+  landing radius was 300). Now 450.
+- Dusk Raiders railway: the west main line ran along the stream bank and the east end passed under the stock
+  warehouses (at about 7620-7850, 6430-6600); segments, snapped only at their centre, floated or sank at the ends and
+  left gaps at corners. Now: rail model 30 long, segments overlap 1 at each end, `lay_on_ground` puts both ends on the
+  terrain and lifts the segment over a hump between them (at most 1.2, more leaves a step at the joints); layout
+  rerouted south of the stream and the warehouses, three stub sidings off one ladder, the platform siding by the
+  stations, 133 segments. Checked in top-down renders.
+- Cambrai "swirling" escorts (measured, wing10 probe): in a fight the original gun attack steers bang-bang (bank +-90
+  once the target is off the nose) and the Dr.I's 3 x 112 deg/s roll flipped it from side to side; the -9 group target
+  also re-picked the nearest Camel every step. Now the player's AI wingmen roll at most 110 deg/s, steer the attack in
+  proportion while the target is ahead, and in Cambrai each starts on his own Camel. Turn reversals in a fight about
+  halved (2.0-4.2 to 1.3-1.9 per 10 s); circling against a turning Camel remains, as any dogfight.
+- Mission 11 rebuilt to the user's four-encounter outline (`m11.gd`, `m11.ini`, briefing, the user's letter as the
+  debriefing, `m11_failed_second.html`). Brenner's second is named Leutnant Hartwig (`fokker_rookie`, yellow rudder:
+  the first rookie of mission 12). Facts found on the way: the trenches terrain only covers x 6200..11200 (the map box
+  goes to 12837; planes placed past the terrain fall out of the world). Route about 13 km, about 155 s at highspeed
+  84. The two-seater (endurance 360) starts at 70 % and takes a quarter of each hit: a pair of Camels on head-on passes
+  took it from 70 % to nothing in 12 s at full damage and 8 s at half. Hartwig, once protected, takes a fifth of
+  each hit (one Camel killed him in about 3 s at a third). Simulated with a pilot that goes after whichever Camel
+  attacks a protected plane: both survived in three runs of three (two-seater 18-47 %). Ten Camels hidden at the start, brought in by
+  the script. Brenner and Hartwig take no damage before the story moment; the two Camels in the cut-in take none until
+  their scripted part (Brenner's victim is shot down by him, his killer is then free and damageable). If the Baron
+  already downed one of them, a Camel from the last attack is brought in for the scene.
+
+## Playtest 21 (11 November 2026)
+
+- Mission 11 started with the Baron falling: the start was 620 high over ground at about 127, and the original
+  ceiling rule (`_altitude_limited_speed`: above 400 over the ground the target speed drops by half the excess) cut
+  the speed to 72, under the stall (state 1 in the first frame). All mission 11 starts and the two-seater's route are
+  now 450-505 (about 330-380 over the ground), and Camels brought in by the script are held at most 380 over the
+  ground. A start probe of missions 101-112 found no other stall at the start.
+- Mission 11: the low pair in encounter 2 are no longer marked red (a development distinction only); all three come
+  in with the same yellow warning highlight.
+- Brenner's death: the cut-in now runs about 17 s, with two shots. Over Brenner's shoulder as he chases the Camel on
+  Hartwig's tail (Hartwig runs straight on; the Camel goes down at 5 s if Brenner has not shot it already); at 7 s a
+  cut to over the shoulder of the second Camel, moved up close behind Brenner if it has not closed (unseen: a cut);
+  Brenner is shot down at 11 s; one caption at 12 s, "Brenner is down. Bring his second home with the two-seater.",
+  held until the cut-in ends at 17 s. No other message: afterwards only the HUD objective line changes, with its cue.
+- Mission 11 debriefing: the letter is its own block, set apart by blank lines, in the "times new roman" face in
+  italics, with the signature indented. `html_view.gd` gained `<i>` (a synthetic slant; the original pages never use
+  it). Note: `<br><br>` gives no blank line in the engine's layout; `<br>&nbsp;<br>` does.
+- Brackets, labels and edge arrows in the 3D view are switched off in every mission (`overlay.gd` `SHOW_BRACKETS =
+  false`): targets are found on the minimap only. Missions still call `add_bracket` / `remove_bracket`, so setting the
+  constant true restores them.
+
 ## Open items (for the next session)
 
 - Playtest missions 1-10 after the 10 November pass, above all 6 and 10 (ground fire works again) and 8 (ambush).
-- Missions 11 and 12: user comments to come; the ridge guns of 12 now really fire.
+- Mission 11 reworked (11 November): needs a playtest. Mission 12: user comments to come; the ridge guns now really fire.
 - No playtest feedback yet for missions 3, 7, 11, 12. The plane figures and gun rates were rationalised
   on 7 November 2026 (docs/plane_figures.md); every mission needs a playtest against them, above all 4-5
   (S.E.5a now 15.6 rounds/s), 7 and 9 (Camels 15.6, roll and pitch 25% below the Albatros) and 10-12 (Dr.I 32.7).

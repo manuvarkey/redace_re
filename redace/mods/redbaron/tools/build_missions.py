@@ -59,7 +59,8 @@ def art(name):
     return f'<img src="campaigns\\redbaron\\img\\{name}.jpg">' if (IMG / f"{name}.png").exists() else ""
 
 
-RAIL_SEGMENT = 60.0  # the rail model's length along its `at`
+RAIL_SEGMENT = 30.0  # the rail model's length along its `at`
+RAIL_OVERLAP = 1.0  # each segment reaches this far past its ends, so joints and corners show no gap
 RAIL_FIRST_ID = 3400
 
 
@@ -73,7 +74,7 @@ def track_sections(spec):
             length = math.hypot(x1 - x0, z1 - z0)
             n = max(1, math.ceil(length / RAIL_SEGMENT - 0.01))
             dx, dz = (x1 - x0) / length, (z1 - z0) / length
-            stretch = length / n / RAIL_SEGMENT
+            stretch = (length / n + 2.0 * RAIL_OVERLAP) / RAIL_SEGMENT
             for k in range(n):
                 cx, cz = x0 + dx * length * (k + 0.5) / n, z0 + dz * length * (k + 0.5) / n
                 out.append(["name = rail", f"id = {RAIL_FIRST_ID + len(out)}", "groups = 0",

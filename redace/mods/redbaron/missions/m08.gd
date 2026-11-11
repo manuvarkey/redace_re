@@ -19,7 +19,7 @@ extends "res://mods/redbaron/mission_script.gd"
 ##   4. Landing within 300 of the aerodrome wins; a crash loses (the original "plane destroyed").
 
 const AERODROME := Vector3(6200, 0, 7450)
-const HOME_RANGE := 300.0
+const HOME_RANGE := 450.0  # the field reaches about 400 from the marker: a landing at the far end of the strip counts
 const THROTTLE_CAP := 0.5
 const BRITISH_EDGE_X := 10000.0  # well east of the map box (x up to 9358): planes leave 150 past it, before the waypoint
 const PURSUIT_TIME := 20.0  # the second Nieuport attacks this long, then turns for home

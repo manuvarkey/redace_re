@@ -17,11 +17,11 @@ from pathlib import Path
 from PIL import Image
 
 OUT = Path(__file__).resolve().parents[4] / "overrides" / "redbaron" / "objects" / "ground" / "rail"
-SEGMENT = 60.0
+SEGMENT = 30.0  # short, so a straight segment follows the terrain (m09.gd fits both ends to the ground)
 WIDTH = 8.0
-LIFT = 0.25
-TEX_W, TEX_H = 64, 512
-SLEEPERS = 36  # per segment (about 0.66 m apart)
+LIFT = 0.35
+TEX_W, TEX_H = 64, 256
+SLEEPERS = 18  # per segment (about 0.66 m apart)
 
 
 def texture(path):
@@ -85,7 +85,7 @@ def gltf():
     (OUT / "rail.gltf").write_text(json.dumps(doc, indent=1))
 
 
-INI = """; Red Baron mod: railway track segment (tools/redbaron_rails.py), 60 units long along the placed `at`, 8 wide.
+INI = """; Red Baron mod: railway track segment (tools/redbaron_rails.py), 30 units long along the placed `at`, 8 wide.
 ; Scenery: missions place it with groups = 0. High endurance so stray rounds never "destroy" the line; soft so a
 ; contact with it only wears a plane down (as trees), never a hard crash.
 [details]

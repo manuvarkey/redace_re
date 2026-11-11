@@ -141,7 +141,16 @@ func _steer(aim: Vector3) -> void:
 	_ai_pitch = clampf((wanted - rad_to_deg(asin(clampf(flight_basis.z.y, -1.0, 1.0)))) * 1.5, -4.0, 4.0)
 
 
+## The player's AI wingmen roll at most WINGMAN_ROLL_RATE deg/s. The original gun attack steers bang-bang (bank +-90
+## as soon as the target is off the nose) and the Dr.I's 3 x 112 deg/s roll flipped it from side to side every few
+## tenths of a second: the "swirling" escorts of Cambrai. Station keeping (keeps_station) settles formation flight;
+## this settles the fight.
+const WINGMAN_ROLL_RATE := 110.0
+
+
 func _apply_ai_commands() -> void:
+	if keeps_station() and not station_set and state != State.GROUND and not _heavy():
+		_ai_bank = move_toward(_last_ai_bank, _ai_bank, minf(high_roll * 3.0, WINGMAN_ROLL_RATE) * get_physics_process_delta_time())
 	if _heavy():
 		var dt := get_physics_process_delta_time()
 		_ai_bank = move_toward(_last_ai_bank, clampf(_ai_bank, -HEAVY_BANK, HEAVY_BANK), HEAVY_ROLL_RATE * dt)
@@ -220,6 +229,20 @@ func _formation(goal: Dictionary) -> bool:
 	want += maxf(ahead_alt - 400.0, 0.0) * 0.5  # undo _altitude_limited_speed
 	throttle = asin(clampf(want / high_speed, 0.0, 1.0)) / 1.57
 	return true
+
+
+## The player's AI wingmen steer their gun attack in proportion while the target is ahead (bank = 110 x its sideways
+## offset, the original saturates at +-90 from half that): with the Dr.I's roll the original hunted from side to side.
+func _attack(goal: Dictionary, dt: float) -> bool:
+	var done := super._attack(goal, dt)
+	if done or station_set or not keeps_station() or is_zero_approx(_ai_bank):
+		return done  # (bank 0: the pull-up from the ground is in charge)
+	var o = _goal_object(goal)
+	if o != null:
+		var l := _local_dir(_obj_pos(o) - global_position)
+		if l.z >= 0.0 and flight_basis.y.y >= 0.0:
+			_ai_bank = clampf(l.x * 110.0, -90.0, 90.0)
+	return done
 
 
 func is_persistent() -> bool:

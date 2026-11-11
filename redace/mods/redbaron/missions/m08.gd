@@ -103,7 +103,7 @@ func step(_dt: float) -> void:
 			formation(brenner, p, Vector3(-30.0, 0.0, -30.0))
 			mark_ally(brenner, "Brenner")
 			home_marker.pulse = true
-			_event("The F.E.2d flight is destroyed. Well done! Return to base.")
+			_event("The F.E.2d flight is destroyed. Return to the aerodrome.")
 			overlay().cue("objective")
 			overlay().set_objective("Return to the aerodrome (blinking)")
 		return

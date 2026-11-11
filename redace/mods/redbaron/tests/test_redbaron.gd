@@ -358,7 +358,7 @@ func _m02_rejoin() -> void:
 	_settle()
 	check(s().rejoined and b.current_goal().type == Aircraft.G_FORMATION and b.current_goal().targetid == 3001,
 		"Brenner rejoins in formation within 200")
-	check(world.message_label.text == "Brenner joins. Return to base.", "HUD says Brenner joins, return to base")
+	check(world.message_label.text == "Brenner joins. Return to the aerodrome.", "HUD says Brenner joins, return to the aerodrome")
 	# halfway home the interceptors come in
 	var inter: Array = [s().plane(3006), s().plane(3007)]
 	check(inter[0].hidden and inter[1].hidden, "interceptors hidden until halfway home")
@@ -436,7 +436,7 @@ func _m08_wound() -> void:
 		f.state = Aircraft.State.DEAD
 	world.mission_time = 40.0
 	_settle()
-	check(s().returning and world.message_label.text == "The F.E.2d flight is destroyed. Well done! Return to base.",
+	check(s().returning and world.message_label.text == "The F.E.2d flight is destroyed. Return to the aerodrome.",
 		"success line and return to base when all are down")
 	check(not s().overlay()._counter.visible, "counter hidden on the way home")
 	check(s().plane(3002).current_goal().type == Aircraft.G_FORMATION, "Brenner on the Baron's wing on the way home")
@@ -1034,7 +1034,7 @@ func _m12() -> void:
 		s().plane(id).state = Aircraft.State.DEAD
 	at.call(2.0)
 	check(s().stage == "straggle" and s().straggling and albers.health <= albers.endurance * s().STRAGGLER_HEALTH + 0.01
-		and albers.get("damage_scale") == s().STRAGGLER_SCALE and world.message_label.text == "One pilot is falling behind!",
+		and albers.get("damage_scale") == s().STRAGGLER_SCALE and world.message_label.text == "Albers is falling behind!",
 		"112: route open; Albers hit and falling behind")
 	_settle()
 	check(s().overlay()._counter.text.contains("Albers") and s().overlay()._counter.text.contains("km from the lines"), "112: his distance on the HUD")

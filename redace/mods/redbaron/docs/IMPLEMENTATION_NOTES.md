@@ -751,6 +751,16 @@ Built to the user's brief (docs/m12_brief.md): `m12.gd` and `m12.ini` rewritten,
 - Recovery note: a failed scripted edit truncated m12.gd mid-session; restored from Claude Code's file history and
   the later edits replayed (all checks pass). Edits now write to a temporary file and rename.
 
+## Campaign text review (11 November 2026)
+
+At the user's request, every briefing, debriefing, failure page, HUD line and campaign page was reviewed for content
+and tone; dates and history checked. Applied: no repeated date at the start of each briefing body (the heading has
+it); Mission 2's "If Brenner is lost, the mission fails."; Mission 12's briefing names Hartwig and the three new
+pilots; Mission 11's debriefing names Hartwig; "Return to the aerodrome" everywhere ("Land at the aerodrome" only in
+Mission 8, where landing is required); Mission 8 without "Well done!"; Mission 6's bombing-run line reworded (no
+dash the game font may lack); Mission 9's objective line a full sentence; warmer failure pages for Missions 11 and 12;
+the completion page's line; "Albers is falling behind!".
+
 ## Open items (for the next session)
 
 - Playtest missions 1-10 after the 10 November pass, above all 6 and 10 (ground fire works again) and 8 (ambush).

@@ -5,7 +5,7 @@ extends "res://mods/redbaron/mission_script.gd"
 ##      and flies at it flat out (a waypoint on the Scout, not a gun attack, which matches its speed).
 ##   2. Brenner closes within 300 of the Scout, or the Scout goes down: "Brenner is over the British
 ##      guns! Get him out of there." Only from here does catching him count.
-##   3. The Baron within 200 of Brenner: he forms up ("Brenner joins. Return to base.").
+##   3. The Baron within 200 of Brenner: he forms up ("Brenner joins. Return to the aerodrome.").
 ##   4. Halfway home (flat distance to the aerodrome down to half of what it was at the rejoin), two
 ##      hidden Nieuports are revealed ahead and to the side and attack the Baron and Brenner.
 ##   Win: both within 300 of the aerodrome (marked on the minimap). Brenner lost fails it (Group2 = 100).
@@ -63,7 +63,7 @@ func step(_dt: float) -> void:
 			rejoined = true
 			rejoin_distance = distance(p, AERODROME, true)
 			formation(brenner, p, Vector3(-30.0, 0.0, -30.0))
-			_event("Brenner joins. Return to base.")
+			_event("Brenner joins. Return to the aerodrome.")
 	else:
 		if not intercepted and ready and distance(p, AERODROME, true) <= rejoin_distance * 0.5:
 			intercepted = true

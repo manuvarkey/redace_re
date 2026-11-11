@@ -528,7 +528,7 @@ func _straggle() -> void:
 	_evade_until[s] = now() + 7.0
 	fly_to(s, away, [], 80.0)
 	after(7.0, _resume.bind(s))
-	warn("One pilot is falling behind!", 5.0)
+	warn("Albers is falling behind!", 5.0)
 
 
 func _encounter_3() -> void:

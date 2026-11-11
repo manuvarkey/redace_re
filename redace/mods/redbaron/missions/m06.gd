@@ -22,7 +22,7 @@ const PATROLS := [[3020, 3021], [3022, 3023]]
 const TARGET_TIME := 35.0
 const HOME_Z := 6400.0  # north of the map (z from 7109): off the map, safely home
 const COMPLETE_DELAY := 3.0  # after the last Halberstadt's own line
-const COMPLETE_TEXT := "Bombing run complete. Remaining guns still active—attack the balloons!"
+const COMPLETE_TEXT := "The Halberstadts are turning for home. Some guns are still firing: go for the balloons!"
 
 var _state := {}  # bomber id -> {index, since, done}
 var _announced := false

@@ -795,4 +795,5 @@ him on the edge for a minute and a half before he counted as gone). Autopilot Ba
 
 - Mission 1 duel lengthened (see above): needs the user's playtest.
 - Android build never tried.
-- Merge `redbaron-mod` into `main`, tag and publish the builds.
+- Released as v1.7 (11 November 2026): `redbaron-mod` merged into `main`, tag v1.7; release notes in
+  docs/release-notes/v1.7.md (the release workflow builds and publishes from the tag).

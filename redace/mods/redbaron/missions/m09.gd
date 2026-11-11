@@ -27,7 +27,7 @@ const SWEEP_ENGAGE := 1000.0
 const SWEEP_RELEASE := 1800.0
 const SWEEP_LEASH := 2500.0
 
-const RAIL_HALF := 15.0  # half the rail model's length (tools/redbaron_rails.py SEGMENT)
+const RAIL_HALF := 7.5  # half the rail model's length (tools/redbaron_rails.py SEGMENT)
 const YARD := [3300, 3301, 3302, 3303, 3304, 3305]
 const SWEEP_WARN := 1800.0
 const SWEEP_WARN_AFTER := 6.0  # the start line ("Bombers approaching ...") stays up first

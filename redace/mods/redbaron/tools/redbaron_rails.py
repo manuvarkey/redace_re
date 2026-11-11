@@ -17,11 +17,11 @@ from pathlib import Path
 from PIL import Image
 
 OUT = Path(__file__).resolve().parents[4] / "overrides" / "redbaron" / "objects" / "ground" / "rail"
-SEGMENT = 30.0  # short, so a straight segment follows the terrain (m09.gd fits both ends to the ground)
+SEGMENT = 15.0  # short, so a straight segment follows the terrain (m09.gd fits both ends to the ground)
 WIDTH = 8.0
-LIFT = 0.35
+LIFT = 0.9  # above the ground under the ends: the rendered terrain bulges between height samples
 TEX_W, TEX_H = 64, 256
-SLEEPERS = 18  # per segment (about 0.66 m apart)
+SLEEPERS = 9  # per segment (about 0.66 m apart)
 
 
 def texture(path):

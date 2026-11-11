@@ -683,10 +683,25 @@ second pair; wingmen station keeping; the new ambush sequence). Asset suite 41; 
   false`): targets are found on the minimap only. Missions still call `add_bracket` / `remove_bracket`, so setting the
   constant true restores them.
 
+## Playtest 22: Dusk Raiders railway clear of scenery (11 November 2026)
+
+- The rails crossed stock template scenery (trees, two villas, two AA guns). `build_missions.py` now keeps template
+  scenery off the `[build] track`: trees and houses closer than 22 (villas 32) to the line are left out, AA guns
+  (and their ruins) are moved out sideways to 30; big buildings (factory, warehouse) are kept. The west end of the
+  main line now starts at x 6560, short of the village, so both villas stay.
+- Gaps in the yard sidings: the rendered terrain bulges between height samples and buried the middle of 30-long
+  segments. The rail model is now 15 long (9 sleepers), sits 0.9 above the ground under its ends, and the track is
+  249 segments. Checked in top-down renders (west, yard, east). Test: no tree, house or gun within 20 of a rail.
+
 ## Open items (for the next session)
 
 - Playtest missions 1-10 after the 10 November pass, above all 6 and 10 (ground fire works again) and 8 (ambush).
-- Mission 11 reworked (11 November): needs a playtest. Mission 12: user comments to come; the ridge guns now really fire.
+- Mission 11 reworked (11 November): needs a playtest.
+- Mission 12 rework to the user's brief (docs/m12_brief.md, 11 November): not started in code. Notes: m12.ini
+  starts the Baron 560 high (about 430 over the ground, above the 400 ceiling: it will stall as mission 11 did); the
+  ridge guns (groups 64, range 300) sit along the river at z 9450/9700, x 7400-9200, where the rookies would cross:
+  move them or keep them silent until the ending. The map allows about 7 km of route to the lines (Dr.I rookies
+  highspeed 120, Camels 112): the 6-8 min target needs a long winding route or slower rookies.
 - No playtest feedback yet for missions 3, 7, 11, 12. The plane figures and gun rates were rationalised
   on 7 November 2026 (docs/plane_figures.md); every mission needs a playtest against them, above all 4-5
   (S.E.5a now 15.6 rounds/s), 7 and 9 (Camels 15.6, roll and pitch 25% below the Albatros) and 10-12 (Dr.I 32.7).

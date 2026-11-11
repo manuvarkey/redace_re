@@ -59,9 +59,33 @@ def art(name):
     return f'<img src="campaigns\\redbaron\\img\\{name}.jpg">' if (IMG / f"{name}.png").exists() else ""
 
 
-RAIL_SEGMENT = 30.0  # the rail model's length along its `at`
+RAIL_SEGMENT = 15.0  # the rail model's length along its `at`
 RAIL_OVERLAP = 1.0  # each segment reaches this far past its ends, so joints and corners show no gap
 RAIL_FIRST_ID = 3400
+# template scenery kept off the track (centre distance from the line, by name; default TRACK_CLEAR): trees and
+# houses this close are left out, guns are moved out sideways (they may fire: keep them, just not on the rails)
+TRACK_CLEAR = 22.0
+TRACK_CLEAR_BY_NAME = {"lshapedvilla": 32.0, "aagun": 30.0, "aagunruin": 30.0}
+TRACK_MOVE = ("aagun", "aagunruin")
+TRACK_KEEP = ("factory", "warehouse")  # big buildings the route is laid around (checked in renders)
+
+
+def track_polylines(spec):
+    return [list(zip(v[0::2], v[1::2])) for v in ([float(x) for x in line.split()] for line in spec.split("|"))]
+
+
+def track_nearest(polylines, x, z):
+    """(distance, (nx, nz) unit direction from the nearest point on the track toward (x, z))."""
+    best = (math.inf, (1.0, 0.0))
+    for pts in polylines:
+        for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
+            dx, dz = x1 - x0, z1 - z0
+            t = max(0.0, min(1.0, ((x - x0) * dx + (z - z0) * dz) / (dx * dx + dz * dz)))
+            px, pz = x0 + dx * t, z0 + dz * t
+            d = math.hypot(x - px, z - pz)
+            if d < best[0]:
+                best = (d, ((x - px) / d, (z - pz) / d) if d > 1e-6 else (-dz / math.hypot(dx, dz), dx / math.hypot(dx, dz)))
+    return best
 
 
 def track_sections(spec):
@@ -110,9 +134,28 @@ def build(num):
     regrouped = 0
     n = 0
     restored = 0
+    polylines = track_polylines(conf["track"]) if conf.get("track") else []
+    cleared = moved = 0
     for name, lines in tpl:
         if name.lower().startswith("ground"):
             kv = [l for l in lines if not l.lower().startswith("groups")]
+            if polylines:
+                obj = keyvals(kv)
+                oname = obj["name"].lower()
+                x, y, z = (float(c) for c in obj["pos"].split())
+                clear = TRACK_CLEAR_BY_NAME.get(oname, TRACK_CLEAR)
+                d, (nx, nz) = track_nearest(polylines, x, z)
+                if d < clear and oname not in TRACK_KEEP:
+                    if oname not in TRACK_MOVE:
+                        cleared += 1
+                        continue
+                    for _ in range(6):  # (near a junction a move off one line may bring it onto another)
+                        x, z = x + nx * (clear - d + 1.0), z + nz * (clear - d + 1.0)
+                        d, (nx, nz) = track_nearest(polylines, x, z)
+                        if d >= clear:
+                            break
+                    kv = [f"pos = {x:.1f} {y:g} {z:.1f}" if l.lower().startswith("pos") else l for l in kv]
+                    moved += 1
             if len(intact) == 3:
                 obj = keyvals(kv)
                 x, _, z = (float(c) for c in obj["pos"].split())
@@ -163,7 +206,7 @@ def build(num):
         (bdir / "debrief.html").write_text(DEBRIEF.replace("{TITLE}", conf.get("title", f"Mission {num}"))
                                            .replace("{BODY}", debrief.read_text().strip()).replace("{BACKGROUND}", bg))
     print(f"mission {mission_id}: {n} ground sections, template {template}, {restored} restored to standing" +
-          (f", {regrouped} regrouped" if regroup_points else "") + (f", {len(rails)} rail segments" if rails else ""))
+          (f", {regrouped} regrouped" if regroup_points else "") + (f", {len(rails)} rail segments ({cleared} scenery objects left off the track, {moved} guns moved)" if rails else ""))
 
 
 # The game's briefing page layout (as missions/26/mission.html): text panel, then Fly Mission / Go Back.

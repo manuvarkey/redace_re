@@ -749,7 +749,7 @@ func _stock_rule_mission(i: int) -> void:
 				var worst := 0.0
 				for x in rails:
 					var c: Vector3 = x.node.global_position
-					var half: Vector3 = x.node.global_transform.basis.z * 15.0
+					var half: Vector3 = x.node.global_transform.basis.z * s().RAIL_HALF
 					for q in [c - half, c + half]:
 						worst = maxf(worst, absf(q.y - world.ground_height(q)))
 						if absf(q.y - world.ground_height(q)) > 1.5:
@@ -758,6 +758,19 @@ func _stock_rule_mission(i: int) -> void:
 						off += 1
 				check(off == 0, "109: rails lie on the terrain, ends on the ground (%d off, worst %.1f)" % [off, worst])
 				check(world.targets.filter(func(x): return x.groups & (1 << 3)).all(func(x): return x.node.global_position.y > 100.0), "109: yard buildings on the terrain")
+				var clash := 0
+				for o in world.targets:
+					if o.name in ["rail", "van", "station", "factory", "warehouse"] or o.dead:
+						continue
+					var op: Vector3 = o.node.global_position
+					for x in rails:
+						var c2: Vector3 = x.node.global_position
+						var h2: Vector3 = x.node.global_transform.basis.z * s().RAIL_HALF
+						var cp := Geometry2D.get_closest_point_to_segment(Vector2(op.x, op.z), Vector2(c2.x - h2.x, c2.z - h2.z), Vector2(c2.x + h2.x, c2.z + h2.z))
+						if cp.distance_to(Vector2(op.x, op.z)) < 20.0:
+							clash += 1
+							break
+				check(clash == 0, "109: no trees, houses or guns on the railway (%d)" % clash)
 				check(s().overlay()._counter.text.contains("Rail yard standing 6 / 6"), "109: yard losses on the HUD")
 			if id == 110:
 				check(world.message_label.text.begins_with("Destroy six of the eight tanks"), "110: objective stated directly")

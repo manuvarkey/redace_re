@@ -165,6 +165,54 @@ They in turn thanked the RenderWare team and BMB Compuscience for *Sopwith*. The
 characters, art and music in this remake are theirs; this project only rebuilds the engine around them.
 Thank you for the game, and for many happy hours in the air.
 
+## Mods
+
+New content built on the remake's engine, beside the original game. The original 28 missions and their
+rules are untouched. Both mods are in every build: open **Goodies → Bonus Missions**.
+
+### Der Rote Kampfflieger — the Red Baron campaign
+
+<div align="center">
+<img src="docs/screenshots/rb-lastpatrol.jpg" alt="The Last Patrol: the Red Baron turns back into the enemy formation" width="88%">
+</div>
+
+A twelve-mission story campaign flown as Manfred von Richthofen, from his duel with Major Lanoe Hawker in
+November 1916 to the last patrol of April 1918. You take command of Jasta 11 and teach its pilots to fly as
+a squadron and bring each other home. That lesson is tested at Bloody April, in the dawn raid on the
+balloons, at Cambrai and, finally, by the young pilots of 1918. Each mission has a period briefing, a
+debriefing and its own failure page. Brenner's fate in *Formation* is told in a short camera cut-in. The
+campaign ends with a scripted closing sequence and an epilogue.
+
+- **Twelve missions** on the country and trenches maps: Hawker, First Sortie, Bloody April, Scramble,
+  The Plates, Balloon Busting, The Other Side, Wounded, Dusk Raiders, Cambrai, Formation and The Last Patrol.
+- **New aircraft and objects:** Albatros and Fokker Dr.I in squadron colours, the R.E.8, F.E.2d, Sopwith Camel,
+  S.E.5a, Halberstadt, Handley Page O/100 with three gunners, observation balloons, tanks and a rail yard.
+  Dawn and dusk skies.
+- **Clear objectives:** HUD lines show the objective and progress. The minimap marks targets, what you must
+  protect and the aerodrome.
+- **Campaign progress per pilot,** with promotions from Leutnant to Rittmeister and a Replay Missions list.
+
+| | |
+| :---: | :---: |
+| <img src="docs/screenshots/rb-intro.jpg" alt="Campaign page"> The campaign page | <img src="docs/screenshots/rb-briefing.jpg" alt="Briefing"> Balloon Busting: briefing |
+| <img src="docs/screenshots/rb-formation.jpg" alt="Leading the young pilots"> The Last Patrol: leading the young pilots | <img src="docs/screenshots/rb-bombers.jpg" alt="Handley Page bomber"> Dusk Raiders: a Handley Page O/100 over the rail yard |
+| <img src="docs/screenshots/rb-cambrai.jpg" alt="Diving on a tank"> Cambrai: the Dr.I against the tanks | <img src="docs/screenshots/rb-balloon.jpg" alt="Balloon Busting"> Balloon Busting at dawn |
+| <img src="docs/screenshots/rb-letter.jpg" alt="The letter"> Formation: the letter to Brenner's mother | <img src="docs/screenshots/rb-epilogue.jpg" alt="Epilogue"> The epilogue |
+
+Missions, how to play, rebuild and test: [`redace/mods/redbaron/README.md`](redace/mods/redbaron/README.md).
+
+### Battle of Britain bonus mission
+
+A Spitfire mission over a new Dover-inspired coastal map: three raids of Bf 109s and He 111s against an
+aircraft factory, with three squadron mates beside you (**Goodies → Bonus Missions → Battle of Britain**, or
+`--mission=26`).
+
+| | |
+| :---: | :---: |
+| <img src="docs/screenshots/britain-aircraft.png" alt="Spitfire over the coast"> A Spitfire over the Dover-inspired coast | <img src="docs/screenshots/britain-port.png" alt="The harbour"> The harbour, its freighters and fishing boats |
+
+How to play, what it contains, rebuild and test: [`redace/mods/britain/README.md`](redace/mods/britain/README.md).
+
 ## Technical notes
 
 How each part maps to the original executable (`FUN_...` and `RedAce.c:line` refer to the Ghidra decompilation).
@@ -454,12 +502,3 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 
 </details>
 
-### Battle of Britain bonus mission
-
-A Spitfire mission over a new Dover-inspired coastal map (**Goodies → Bonus Missions**, or `--mission=26`).
-How to play, what it contains, rebuild and test: [`redace/mods/britain/README.md`](redace/mods/britain/README.md).
-
-### Der Rote Kampfflieger (Red Baron campaign mod)
-
-A 12-mission campaign flown as Manfred von Richthofen, 1916-1918 (**Goodies → Bonus Missions → Der Rote
-Kampfflieger**). How to play, rebuild and test: [`redace/mods/redbaron/README.md`](redace/mods/redbaron/README.md).

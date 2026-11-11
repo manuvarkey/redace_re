@@ -195,9 +195,9 @@ campaign ends with a scripted closing sequence and an epilogue.
 | | |
 | :---: | :---: |
 | <img src="docs/screenshots/rb-intro.jpg" alt="Campaign page"> The campaign page | <img src="docs/screenshots/rb-briefing.jpg" alt="Briefing"> Balloon Busting: briefing |
-| <img src="docs/screenshots/rb-formation.jpg" alt="Leading the young pilots"> The Last Patrol: leading the young pilots | <img src="docs/screenshots/rb-bombers.jpg" alt="Handley Page bomber"> Dusk Raiders: a Handley Page O/100 over the rail yard |
+| <img src="docs/screenshots/rb-railyard.jpg" alt="Dogfight over the rail yard"> Dusk Raiders: a dogfight over the rail yard | <img src="docs/screenshots/rb-scramble.jpg" alt="R.E.8 bombers over the hangars"> Scramble: R.E.8 bombers and their escort over the hangars |
+| <img src="docs/screenshots/rb-formation.jpg" alt="Leading the young pilots"> The Last Patrol: leading the young pilots | <img src="docs/screenshots/rb-bombers.jpg" alt="Handley Page bomber"> Dusk Raiders: a Handley Page O/100 |
 | <img src="docs/screenshots/rb-cambrai.jpg" alt="Diving on a tank"> Cambrai: the Dr.I against the tanks | <img src="docs/screenshots/rb-balloon.jpg" alt="Balloon Busting"> Balloon Busting at dawn |
-| <img src="docs/screenshots/rb-letter.jpg" alt="The letter"> Formation: the letter to Brenner's mother | <img src="docs/screenshots/rb-epilogue.jpg" alt="Epilogue"> The epilogue |
 
 Missions, how to play, rebuild and test: [`redace/mods/redbaron/README.md`](redace/mods/redbaron/README.md).
 

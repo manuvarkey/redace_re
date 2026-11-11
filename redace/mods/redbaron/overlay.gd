@@ -34,6 +34,8 @@ var _time := 0.0
 var _font: Font
 var _brackets: Array[Dictionary] = []  # {node, kind, label, arrow, until, range}
 var _jolt := 0.0
+var _box: VBoxContainer  # the counter and objective lines
+var _message_top := -1.0  # World's message line, as World placed it
 var _jolt_amount := 0.0
 var _player: AudioStreamPlayer
 var _cues := {}
@@ -107,6 +109,20 @@ func _process(dt: float) -> void:
 			world.camera.h_offset = 0.0
 			world.camera.v_offset = 0.0
 	_marks.queue_redraw()
+	_keep_message_clear()
+
+
+## World's status messages sit at a fixed height; with several HUD lines (mission 12: four pilots, a distance and
+## the objective) the box reaches below it. Moves the message line down under the box while it would overlap.
+func _keep_message_clear() -> void:
+	if world == null or not is_instance_valid(world.message_label):
+		return
+	if _message_top < 0.0:
+		_message_top = world.message_label.offset_top
+	var top := _message_top
+	if _box and _box.visible and (_counter.visible or _objective.visible):
+		top = maxf(top, _box.get_global_rect().end.y + 10.0)
+	world.message_label.offset_top = top
 
 
 func _label(offset_top: float, size: int, colour: Color) -> Label:
@@ -143,6 +159,7 @@ func _lines() -> void:
 	if _counter != null:
 		return
 	var box := VBoxContainer.new()
+	_box = box
 	box.anchor_left = 0.0
 	box.anchor_right = 1.0
 	box.offset_top = 48
@@ -324,3 +341,139 @@ static func _tones(notes: Array) -> AudioStreamWAV:
 	w.stereo = false
 	w.data = data
 	return w
+
+
+# ---------------------------------------------------------------- the campaign's closing sequence (mission 12)
+
+var _fade_layer: CanvasLayer
+var _fade_rect: ColorRect
+var _title: Label
+var _muffle_fx: AudioEffectLowPassFilter
+var _muffle_bus := -1
+
+
+## A black screen over everything (the HUD included): 0 clear .. 1 black.
+func fade(alpha: float) -> void:
+	_fade_nodes()
+	_fade_rect.color.a = clampf(alpha, 0.0, 1.0)
+	_fade_rect.visible = alpha > 0.0
+
+
+## A line of text centred on the screen, over the fade; "" hides it. alpha fades it in and out.
+func title(text: String, alpha := 1.0) -> void:
+	_fade_nodes()
+	_title.text = text
+	_title.modulate.a = clampf(alpha, 0.0, 1.0)
+	_title.visible = text != ""
+
+
+func _fade_nodes() -> void:
+	if _fade_layer:
+		return
+	_fade_layer = CanvasLayer.new()
+	_fade_layer.layer = 10
+	add_child(_fade_layer)
+	_fade_rect = ColorRect.new()
+	_fade_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade_rect.color = Color(0, 0, 0, 0)
+	_fade_rect.visible = false
+	_fade_layer.add_child(_fade_rect)
+	_title = Label.new()
+	_title.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_title.add_theme_font_override("font", _font)
+	_title.add_theme_font_size_override("font_size", 34)
+	_title.add_theme_color_override("font_color", Color(0.93, 0.9, 0.82))
+	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_title.visible = false
+	_fade_layer.add_child(_title)
+
+
+## Muffles every sound (a low-pass on the Master bus) and turns it down: 0 normal .. 1 dull and quiet. Removed
+## again with 0, and always when the overlay goes (the bus outlives the flight).
+func muffle(amount: float) -> void:
+	var bus := AudioServer.get_bus_index("Master")
+	if amount <= 0.0:
+		_unmuffle()
+		return
+	if _muffle_fx == null:
+		_muffle_fx = AudioEffectLowPassFilter.new()
+		AudioServer.add_bus_effect(bus, _muffle_fx)
+		_muffle_bus = bus
+		set_meta("volume_db", AudioServer.get_bus_volume_db(bus))
+	amount = clampf(amount, 0.0, 1.0)
+	_muffle_fx.cutoff_hz = lerpf(8000.0, 350.0, amount)
+	AudioServer.set_bus_volume_db(bus, float(get_meta("volume_db")) - 18.0 * amount)
+
+
+func _unmuffle() -> void:
+	if _muffle_fx == null:
+		return
+	for i in AudioServer.get_bus_effect_count(_muffle_bus):
+		if AudioServer.get_bus_effect(_muffle_bus, i) == _muffle_fx:
+			AudioServer.remove_bus_effect(_muffle_bus, i)
+			break
+	AudioServer.set_bus_volume_db(_muffle_bus, float(get_meta("volume_db")))
+	_muffle_fx = null
+
+
+func _exit_tree() -> void:
+	_unmuffle()
+
+
+# ---------------------------------------------------------------- the frozen last frame (mission 12)
+
+var _freeze_rect: TextureRect
+var _freeze_mat: ShaderMaterial
+
+const FREEZE_SHADER := """
+shader_type canvas_item;
+uniform float amount = 0.0;  // 0 sharp .. 1 blurred and red
+void fragment() {
+	vec2 px = TEXTURE_PIXEL_SIZE * (1.0 + amount * 7.0);
+	vec3 c = vec3(0.0);
+	float w = 0.0;
+	for (int x = -3; x <= 3; x++) {
+		for (int y = -3; y <= 3; y++) {
+			float k = 1.0 / (1.0 + float(x * x + y * y));
+			c += texture(TEXTURE, UV + vec2(float(x), float(y)) * px).rgb * k;
+			w += k;
+		}
+	}
+	c /= w;
+	float lum = dot(c, vec3(0.3, 0.59, 0.11));
+	vec3 red = vec3(lum * 1.25 + 0.06, lum * 0.32, lum * 0.24);
+	c = mix(c, red, amount * 0.7);
+	vec2 d = UV - 0.5;
+	c *= 1.0 - amount * 0.6 * dot(d, d) * 2.5;
+	COLOR = vec4(c, 1.0);
+}
+"""
+
+
+## Holds img (the last rendered frame) over everything, under the title; null: nothing to hold (headless).
+func freeze(img: Image) -> void:
+	_fade_nodes()
+	if _freeze_rect == null:
+		_freeze_rect = TextureRect.new()
+		_freeze_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_freeze_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_freeze_rect.stretch_mode = TextureRect.STRETCH_SCALE
+		_freeze_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_freeze_mat = ShaderMaterial.new()
+		var sh := Shader.new()
+		sh.code = FREEZE_SHADER
+		_freeze_mat.shader = sh
+		_freeze_rect.material = _freeze_mat
+		_fade_layer.add_child(_freeze_rect)
+		_fade_layer.move_child(_freeze_rect, 0)  # under the fade and the title
+	if img != null and not img.is_empty():
+		_freeze_rect.texture = ImageTexture.create_from_image(img)
+	_freeze_rect.visible = true
+
+
+func freeze_amount(k: float) -> void:
+	if _freeze_mat:
+		_freeze_mat.set_shader_parameter("amount", clampf(k, 0.0, 1.0))

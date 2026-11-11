@@ -105,7 +105,7 @@ ground fire on aircraft where full strength was too much once it worked:
 | --- | --- | --- |
 | 6 Balloon Busting | 0.6 (guns back to the stock 10 rounds/s, were 14) | A straight pass through an unbombed ring cost 55-125 of the Baron's 125; risky, but three balloons must stay possible |
 | 10 Cambrai | 0.5 | An autopilot Baron loitering over the tanks took 100+ in two minutes at full strength |
-| 12 The Last Patrol | 1 (unchanged) | Awaiting the user's mission 12 comments; the ridge guns now really fire |
+| 12 The Last Patrol | 1 (unchanged) | The guns are silent (range 0) in play; they open only in the closing sequence, when nothing can be hurt |
 
 ## Run-time changes in mission scripts
 
@@ -117,4 +117,7 @@ ground fire on aircraft where full strength was too much once it worked:
 | 11 Formation | Brenner, Hartwig | no damage until the story moment; then Brenner is killed by script, Hartwig set to 50 % and protected | Brenner's death is staged, never set off by the Baron's position; Hartwig must live to be the last objective |
 | 11 Formation | two Camels of the cut-in | no damage until their scripted part | The scene needs both |
 | 1-12 | the player's AI wingmen | roll at most 110 deg/s; proportional gun-attack steering while the target is ahead | The Dr.I's roll made the original bang-bang steering swirl (Cambrai playtest) |
-| 12 The Last Patrol | Baron | shot down by the ridge fire at the end | The story's ending |
+| 12 The Last Patrol | the four young pilots | highspeed 92 (mission file); 0.3 of each hit; none once across the lines | The Baron (120) can lead, catch up and turn back; a missed interception is survivable |
+| 12 The Last Patrol | Albers (the straggler) | from encounter 2: at most 55 %, highspeed 88, 0.2 of each hit | Hurt and alone; the last two attacks go for him (a pair took him from 42 to nothing in 4 s at 0.3) |
+| 12 The Last Patrol | Camels | hit by the Baron while on a pilot: break off 6 s, then back on the Baron every other time | Defensive passes buy time; not every scout goes straight back for the pilots |
+| 12 The Last Patrol | Baron, the force, the guns | no damage from the fourth crossing on; in the sequence the force and the Baron fire continuously (force_fire), the guns aim at a stand-in just above him | The ending is scripted; nothing in it can fail the mission |

@@ -76,4 +76,7 @@ dark reddish-brown wood grain; soft lighting, late-1990s game menu art, no text.
 | `complete` | Completion page after the campaign | Painted close-up, late-1990s game menu art: a gloved hand holding a Pour le Mérite (blue enamel Maltese cross with gold eagles) on its black and white ribbon, soft window light, warm sepia background of a wooden table with a folded flying helmet; the middle of the picture dark and calm so white text can sit on it; no text |
 | `letter` | Mission 11 debriefing (the letter to Brenner's mother) | An aged sheet of writing paper on a dark wooden desk lit by an oil lamp, a fountain pen and an Iron Cross ribbon beside it; the paper blank (the game writes the letter on it in white type, so keep the paper fairly dark, sepia brown rather than white); late-1990s game menu art, no text |
 
-The epilogue stays a plain black page with text only, as decided.
+| `epilogue` | Campaign epilogue (after mission 12) | Painted, softly lit late-1990s game menu art, warm sepia and dusk rose: a First World War military cemetery at sunset, rows of plain pale wooden and stone crosses running away into evening mist, tall poplars beyond, a gravel path; in the near left foreground a laurel wreath leaning on a cross with a Pour le Merite (blue enamel Maltese cross with gold eagles between the arms) on its black and white ribbon resting on it; the middle and upper middle of the picture dark and calm so light text can sit on it; no text |
+
+The epilogue picture now in place is a Blender render (tools/redbaron_epilogue_art.py); replace it with a painted
+one from the prompt above when one is generated (same name and size), then run `godot --headless --path redace --import`.

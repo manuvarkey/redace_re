@@ -1,6 +1,6 @@
 # Mission 12 design brief (user, 11 November 2026)
 
-Verbatim from the user. Not yet implemented.
+Verbatim from the user. Implemented 11 November 2026 (IMPLEMENTATION_NOTES, "Mission 12 rework").
 
 ### Briefing
 

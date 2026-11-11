@@ -146,6 +146,7 @@ func _steer(aim: Vector3) -> void:
 ## tenths of a second: the "swirling" escorts of Cambrai. Station keeping (keeps_station) settles formation flight;
 ## this settles the fight.
 const WINGMAN_ROLL_RATE := 110.0
+var force_fire := false  # a mission script holds the guns open whatever the aim (mission 12's closing shot)
 
 
 func _apply_ai_commands() -> void:
@@ -158,6 +159,8 @@ func _apply_ai_commands() -> void:
 		if not is_nan(_ai_pitch):
 			_ai_pitch = clampf(_ai_pitch, -4.0, 4.0)
 	super._apply_ai_commands()
+	if force_fire:
+		fire_input = true
 
 
 func _fly(dt: float) -> void:

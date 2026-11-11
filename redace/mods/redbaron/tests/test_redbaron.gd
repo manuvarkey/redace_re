@@ -992,37 +992,119 @@ static func alive_plane(q: Aircraft) -> bool:
 
 func _m12() -> void:
 	var p := world.player
-	check(world.rules.size() == 1 and world.rules[0].group == 3 and world.rules[0].total == 4, "112: four rookies protected")
-	for i in 4:
-		s().rookies[i].left_map = true
-		s().rookies[i]._set_hidden(true)
+	var at := func(dt: float) -> void:
+		world.mission_time += dt
 		_settle()
-		if i < 3:
-			check(s().phase == 1 and world.message_label.text == "%d of 4 are home." % (i + 1), "112: rookie %d home" % (i + 1))
-	check(not world.mission_over and world.rules[0].lost == 0, "112: rookies off the map are saved, not lost")
-	check(s().phase == 2 and world.progress_was_secured, "112: campaign completion saved on the fourth crossing")
-	check(s().pursuers.all(func(c): return c.current_goal().type == Aircraft.G_ATTACK and c.current_goal().targetid == 3001), "112: pursuers turn on the Baron")
-	for c in s().pursuers:
-		c.state = Aircraft.State.DEAD
+	at.call(0.3)
+	var rk: Array = s().rookies
+	var albers: Aircraft = s().plane(s().STRAGGLER)
+	var hw: Aircraft = s().plane(s().HARTWIG)
+	check(world.rules.is_empty() and rk.size() == 4 and rk.all(func(r): return r.get("damage_scale") == s().ROOKIE_SCALE),
+		"112: four young pilots, protected by the script")
+	check(hw.plane_name == "fokker_rookie" and s().NAMES[hw.object_id] == "Hartwig", "112: Brenner's second (mission 11's Hartwig, same markings)")
+	check(rk.all(func(r): return s()._tracked.has(r)), "112: the four on the minimap")
+	for q in [p] + rk:
+		check(q.global_position.y - world.ground_height(q.global_position) < 400.0, "112: %d starts below the ceiling" % q.object_id)
+	check(world.planes.filter(func(q): return q.groups & (1 << 9) and q.hidden and not (q.object_id in s().FAR)).size() == 12,
+		"112: twelve playable enemies, hidden until their encounter")
+	check(world.targets.filter(func(t): return t.turret).all(func(t): return t.aa_range == 0.0), "112: ground guns silent during play")
+	check(s().plane(s().LEAD).current_goal().type == Aircraft.G_WAYPOINT and hw.current_goal().type == Aircraft.G_FORMATION,
+		"112: Lenz flies the route, the others in formation (Hartwig at the rear)")
+	check(world.message_label.text.begins_with("Lead the patrol") and s().overlay()._counter.text.contains("Hartwig 100 %"),
+		"112: opening line; the four pilots' condition on the HUD")
+	at.call(23.0)
+	check(s().stage == "e1" and s().E1.all(func(id): return not s().plane(id).hidden)
+		and world.message_label.text.begins_with("They are coming through"), "112: encounter 1, three scouts")
+	check(s().plane(s().E1[1]).goals.any(func(g): return g.type == Aircraft.G_ATTACK and g.targetid in [3002, 3003, 3004, 3005]),
+		"112: two dive on the young pilots")
+	for id in s().E1:
+		s().plane(id).state = Aircraft.State.DEAD
+	at.call(11.0)
+	check(s().stage == "after_e1" and world.message_label.text == "Too many coming. Take the patrol home."
+		and s().overlay()._objective.text == "Cover the withdrawal to friendly lines" and not s().crossing_marker.is_empty(),
+		"112: first attack broken: withdraw, the crossing marked")
+	at.call(s().SAFEGUARD + 1.0)
+	check(s().stage == "e2" and world.message_label.text.begins_with("Two scouts across their path"), "112: encounter 2")
+	check(hw.current_goal().type == Aircraft.G_ATTACK and hw.current_goal().targetid == s().E2[2], "112: Hartwig holds the rear")
+	var a0: Vector3 = s().plane(s().E2[0]).global_position
+	check(a0.distance_to(s().plane(s().LEAD).global_position) > 1000.0, "112: the crossing pair start well out (%.0f)" % a0.distance_to(s().plane(s().LEAD).global_position))
+	at.call(7.0)
+	check(world.message_label.text.begins_with("Brenner's second is holding the rear"), "112: his situation announced")
+	for id in [s().E2[0], s().E2[1]]:
+		s().plane(id).state = Aircraft.State.DEAD
+	at.call(2.0)
+	check(s().stage == "straggle" and s().straggling and albers.health <= albers.endurance * s().STRAGGLER_HEALTH + 0.01
+		and albers.get("damage_scale") == s().STRAGGLER_SCALE and world.message_label.text == "One pilot is falling behind!",
+		"112: route open; Albers hit and falling behind")
 	_settle()
-	check(s().phase == 3, "112: pursuit destroyed: the ridge")
-	s().run_step(0.0)
-	check(s().waves.filter(func(c): return c.present()).size() == 3, "112: a wave of three")
-	world.mission_time += 41.0
-	s().run_step(0.0)
-	check(s().waves.filter(func(c): return c.present()).size() == 6, "112: another every 40 s")
-	world.mission_time = s().phase3_at + 241.0
+	check(s().overlay()._counter.text.contains("Albers") and s().overlay()._counter.text.contains("km from the lines"), "112: his distance on the HUD")
+	at.call(6.5)
+	check(s().stage == "e3" and not s().plane(s().E3[0]).hidden and s().plane(s().E3[1]).hidden, "112: encounter 3, the first scout on him")
+	at.call(8.5)
+	check(not s().plane(s().E3[1]).hidden, "112: the second, staggered")
+	for id in s().E3:
+		s().plane(id).state = Aircraft.State.DEAD
+	at.call(10.5)
+	check(s().stage == "after_e3", "112: encounter 3 broken")
+	at.call(5.0)
+	for id in [3003, 3004, 3002]:
+		s().plane(id).global_position.z = s().SAFE_Z - 50.0
 	_settle()
-	check(p.state == Aircraft.State.DEAD, "112: ground fire after four minutes")
+	var heard := []
+	for i in 9:  # (each held long enough to read: the last comes about 12 s after the first)
+		at.call(2.0)
+		if world.message_label.text != "" and not (world.message_label.text in heard):
+			heard.append(world.message_label.text)
+	var f0 := heard.find("First pilot across.")
+	check(f0 >= 0 and heard.slice(f0, f0 + 3) == ["First pilot across.", "Second pilot across.",
+		"Brenner's second is safe. One still to bring home."], "112: crossings announced one by one (%s; across %s announced %s)" % [heard, s().across.keys().map(func(r): return r.object_id), s()._announced.map(func(r): return r.object_id)])
+	check([3002, 3003, 3004].all(func(id): return s().plane(id).get("damage_scale") == 0.0), "112: across: out of the fight")
+	at.call(26.0)
+	check(s().stage == "e4" and not s().plane(s().E4[0]).hidden and s().plane(s().E4[2]).hidden, "112: encounter 4, the first pair")
+	at.call(17.0)
+	check(not s().plane(s().E4[2]).hidden and s().plane(s().E4[2]).goals.any(func(g): return g.type == Aircraft.G_ATTACK and g.targetid == 3001), "112: the second pair, on the Baron")
+	albers.global_position = Vector3(s().CROSSING.x, 430.0, s().SAFE_Z + 300.0)
 	_settle()
-	check(world.mission_over and world._end_result == "epilogue" and world._end_label.text == "", "112: no Plane Destroyed: fade to the epilogue")
+	check(world.message_label.text == "Almost across. Hold them a little longer!", "112: final warning")
+	albers.global_position.z = s().SAFE_Z - 20.0
+	_settle()
+	check(s().stage == "all_clear" and world.progress_was_secured and world.message_label.text == "All four are clear.", "112: all four clear: campaign completion saved at once")
+	at.call(5.0)
+	check(world.message_label.text == s().WARNING_LINE and s().stage == "all_clear", "112: warning: a large patrol, they will never outrun it")
+	at.call(6.0)
+	check(s().stage == "ending" and not world.hud.visible and s()._cam.current and p.get("damage_scale") == 0.0 and s().overlay()._bars[0].visible,
+		"112: the closing sequence: HUD gone, camera, no damage")
+	check(MS.distance(p, s().ENDING_AT, true) < 50.0 and p.flight_basis.z.z < -0.9 and p.current_goal().type == Aircraft.G_WAYPOINT
+		and p.current_goal().pos.z > p.global_position.z + 3000.0, "112: over the middle of the ground, heading home, turning back (U-turn)")
+	check(rk.all(func(r): return r.hidden), "112: the young pilots out of the picture")
+	var lined := func(c): return not c.hidden and c.current_goal().targetid == 3001 and c.global_position.z > p.global_position.z + 1500.0
+	check(s()._force.size() == 11 and s()._force.all(lined), "112: the force far back toward the battle, all lining up on him")
+	check(world.targets.filter(func(t): return t.turret).all(func(t): return t.aa_range > 0.0 and t.node.global_position.z > p.global_position.z),
+		"112: the ground guns open up ahead of him")
+	world.cheat_invulnerable = false
+	p.health = 1.0
+	p.take_damage(50.0, s().plane(3030))
+	check(p.health == 1.0 and not world.mission_over, "112: nothing in the closing sequence can fail it")
+	at.call(18.5)
+	check(s()._shot == "freeze" and s().overlay()._freeze_rect.visible, "112: the frame freezes")
+	at.call(3.5)
+	check(s().overlay()._title.text == "He turned back." and s().overlay()._freeze_mat.get_shader_parameter("amount") > 0.5
+		and s().overlay()._muffle_fx != null, "112: blurring and reddening, muffled: He turned back.")
+	at.call(5.0)
+	check(s().overlay()._title.text == "They made it home.", "112: They made it home.")
+	at.call(6.5)
+	check(world.mission_over and world._end_result == "epilogue" and world._end_label.text == "", "112: no failure line: on to the epilogue")
 	check(world.result_page("epilogue", true) == "campaigns\\redbaron\\epilogue.html", "112: epilogue page")
 	var epi := FileAccess.get_file_as_string(Ini.data_path("language/english/campaigns/redbaron/epilogue.html"))
-	check(epi.contains("bgcolor=#000000") and epi.contains("To our gallant and worthy foe") and epi.contains("His young pilots reached home"), "112: epilogue text on a black page")
+	check(epi.contains("Their commander did not return") and epi.contains("Historical note") and epi.contains("To our gallant and worthy foe")
+		and epi.find("Their commander") < epi.find("Historical note") and epi.contains("img\\epilogue.jpg"), "112: epilogue: the story, then the history apart, on the cemetery picture")
+	s().overlay().muffle(0.0)
 
 
 func _m12_rookie_lost() -> void:
+	world.mission_time += 0.3
+	_settle()
 	s().rookies[1].state = Aircraft.State.DEAD
 	_settle()
-	check(world.mission_over and world._end_result == "defence", "112: a rookie lost fails")
+	check(world.mission_over and world._end_result == "defence", "112: a young pilot lost fails")
 	check(FileAccess.file_exists(Ini.data_path("language/english/missions/112/failed_defence.html")), "112: own failure page")

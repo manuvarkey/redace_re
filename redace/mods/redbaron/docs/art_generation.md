@@ -11,7 +11,7 @@ The page backgrounds are upscaled, rather than native 2560 x 1920 generations.
 
 The R.E.8 was regenerated to correct the crew count, the O/100 to place one engine on each side of
 the fuselage, and the letter to keep the ribbon black and white. Artwork is stylized game illustration,
-not a technical aircraft reference. The epilogue remains text only.
+not a technical aircraft reference. The epilogue picture (added 11 November 2026) is not generated: it is a Blender/Cycles render, tools/redbaron_epilogue_art.py.
 
 ## albatros_d2_photo
 

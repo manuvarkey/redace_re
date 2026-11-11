@@ -693,15 +693,69 @@ second pair; wingmen station keeping; the new ambush sequence). Asset suite 41; 
   segments. The rail model is now 15 long (9 sleepers), sits 0.9 above the ground under its ends, and the track is
   249 segments. Checked in top-down renders (west, yard, east). Test: no tree, house or gun within 20 of a rail.
 
+## Mission 12 rework (11 November 2026)
+
+Built to the user's brief (docs/m12_brief.md): `m12.gd` and `m12.ini` rewritten, briefing, failure page, epilogue.
+- Pilots: Hartwig (mission 11's `fokker_rookie`, yellow rudder) at the rear, Lenz (blue) flies the route, Vogel
+  (green), Albers (black, the straggler). The route: west along the British side, south-west round the battlefield,
+  east, then north across the river (SAFE_Z 9300: across = out of the fight, on to the aerodrome, hidden on landing);
+  about 12 km to the lines.
+- Twelve playable Camels hidden at the start, 3 + 3 + 2 + 4, each group announced; encounters start on route progress
+  and the state of the last fight, timers only as safeguards; encounter 4 waits while more than one scout is still on
+  Albers. Twelve more Camels are scenery only: distant formations in the opening and after encounter 1 (shown, then
+  hidden; no damage) and the force of the closing sequence.
+- Every plane starts parked (state 4) until its 0x100 goal runs: m12.gd gives the pilots their route and formation
+  0.2 s after the start, or they sit on the ground.
+- HUD: the four pilots' condition, "(under attack)" by the one a scout is on (his minimap ring blinks); Albers'
+  distance to the lines once he straggles, and the main group's while he is behind. Messages queue, each held long
+  enough to read (the crossings: "First pilot across.", "Second pilot across.", "Brenner's second is safe. One still to
+  bring home.").
+- The young pilots defend themselves: a scout within 260 behind one makes him turn hard away for 2.5 s, then rejoin.
+- Closing sequence (about 40 s, mission time): HUD off, letterbox; behind Albers with the others ahead ("All four are
+  clear. Come home."); ahead of the Baron looking back at the force coming up from the battlefield (placed 350-700
+  behind him: inside the default view distance of 600); he turns back south (behind and above); the guns, moved
+  under his path, open fire (range 750) and the nearest scouts make passes; a jolt at 27 s, blur, muffled sound (a
+  low-pass on the Master bus, removed when the overlay goes) and a fade to black; "He turned back.", "They made it
+  home."; then the epilogue page with no failure line. Campaign completion is saved the moment the fourth crosses.
+- Epilogue: the story's ending (the four came home; Brenner's second waited; their commander did not return) in
+  italics, then a separate "Historical note" (Richthofen's death and burial, the wreath).
+- Simulated (autopilot Baron going after whichever scout is on a pilot): invulnerable, 4 runs of 4 reached the ending,
+  all four pilots alive; all clear at about 150 s, the ending about 43 s more. With damage on, the autopilot Baron was
+  shot down in both runs (at 62 and 128 s): scouts on the Baron are dangerous to a pilot that does not evade.
+- Duration: about 2.5 minutes of play, well short of the brief's 6-8. The ground on this map is only about 5 km
+  wide; the rookies already fly at 92 (stall 82). Longer would need a longer, more winding route or a larger map.
+
+## Playtest 23: mission 12 ending, epilogue picture (11 November 2026)
+
+- Status messages overlapped the HUD lines when there are several (mission 12: four pilots, a distance, the
+  objective). `overlay.gd` now moves World's message line down below the counter/objective box while it would overlap
+  (back to its own place when the box is short or empty).
+- The closing sequence redone to the user's notes:
+  - In play, after "All four are clear.": "A large enemy patrol is coming up behind us. The young pilots will never
+    outrun it." (6 s; the force shows on the minimap far behind). The Baron takes no damage from here.
+  - Then (letterbox, HUD off) the sequence is staged over the middle of the ground (ENDING_AT 8700, 10300: the
+    ground's edges at least 2500 away, the view opened to 2200, so the scene is vast all round, not by the map's
+    edge). He starts heading home (north) and makes a U-turn back toward the battle; the camera, behind and above,
+    follows his heading slowly so the turn shows.
+  - The force (eleven Camels in three rows, level with him and above, against the sky) starts 2000 back and lines up
+    on him, every one firing (force_fire, mod aircraft.gd) once within 900; he holds straight and level at them,
+    firing too (the autopilot would break away from a head-on pass). The ground guns are moved under his path and
+    aim at an unseen stand-in 45 above and 70 ahead of him, so their fire bursts close round him without hitting.
+  - The frame freezes when the front row is 240 ahead (the shot: the Baron firing into the force, the scouts in
+    full view firing, the guns firing): the last frame held over everything, blurring and turning red over 6 s,
+    sound muffled; "He turned back.", "They made it home." over it; black; the epilogue.
+- Epilogue page: on a commemorative picture (`img/epilogue.png`, rendered by tools/redbaron_epilogue_art.py in
+  Blender/Cycles, then graded: rows of pale crosses down a cemetery at dusk, poplars, a laurel wreath with a Pour le
+  Merite at the foot of the near cross; a darker calm field behind the text). A placeholder until a painted version
+  is generated (prompt in images_required.md).
+- Recovery note: a failed scripted edit truncated m12.gd mid-session; restored from Claude Code's file history and
+  the later edits replayed (all checks pass). Edits now write to a temporary file and rename.
+
 ## Open items (for the next session)
 
 - Playtest missions 1-10 after the 10 November pass, above all 6 and 10 (ground fire works again) and 8 (ambush).
 - Mission 11 reworked (11 November): needs a playtest.
-- Mission 12 rework to the user's brief (docs/m12_brief.md, 11 November): not started in code. Notes: m12.ini
-  starts the Baron 560 high (about 430 over the ground, above the 400 ceiling: it will stall as mission 11 did); the
-  ridge guns (groups 64, range 300) sit along the river at z 9450/9700, x 7400-9200, where the rookies would cross:
-  move them or keep them silent until the ending. The map allows about 7 km of route to the lines (Dr.I rookies
-  highspeed 120, Camels 112): the 6-8 min target needs a long winding route or slower rookies.
+- Mission 12 reworked (11 November): needs a playtest; play time about 2.5 min against the brief's 6-8 (see above).
 - No playtest feedback yet for missions 3, 7, 11, 12. The plane figures and gun rates were rationalised
   on 7 November 2026 (docs/plane_figures.md); every mission needs a playtest against them, above all 4-5
   (S.E.5a now 15.6 rounds/s), 7 and 9 (Camels 15.6, roll and pitch 25% below the Albatros) and 10-12 (Dr.I 32.7).

@@ -481,8 +481,8 @@ func key_pitch(axis: float, s: float, dt: float) -> void:
 		_rate_set = true
 
 
-## Direct is the executable's axis behaviour. Optional gradual response suits D-pads
-## and buttons that some controllers report as a full-scale axis in one frame.
+## The stick sets the bank itself, so a D-pad or button that reports a full-scale axis in one frame tilts the plane at
+## once. Direct is the executable's behaviour; the optional gradual response moves the bank there in response_seconds.
 func joy_roll(v: float, s: float, response_seconds := 0.0) -> void:
 	var up_sign := 1.0 if flight_basis.y.y > 0.0 else -1.0
 	if state == State.STALL:
@@ -493,11 +493,11 @@ func joy_roll(v: float, s: float, response_seconds := 0.0) -> void:
 		if response_seconds > 0.0 else target
 
 
-func joy_pitch(v: float, s: float, dt: float, response_seconds := 0.0) -> void:
+## The stick sets the pitch rate directly (the exe's): the nose moves at that rate, so it never jumps, and the flight
+## step's 5-per-frame decay would eat a rate-limited ramp. The gradual stick response is for roll only.
+func joy_pitch(v: float, s: float, _dt: float) -> void:
 	var multiplier := 20.0 if state == State.STALL else 300.0
-	var target := v * s * multiplier / ref_fps * high_pitch * _pitch_sign()
-	pitch_rate = move_toward(pitch_rate, target, maxf(absf(target), high_pitch) / response_seconds * dt) \
-		if response_seconds > 0.0 else target
+	pitch_rate = v * s * multiplier / ref_fps * high_pitch * _pitch_sign()
 	_rate_set = true
 
 

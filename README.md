@@ -37,6 +37,8 @@ the original WWI flight game's missions, menus and game logic, playable in the b
   (Real-ESRGAN), the card trees and palms remodelled in Blender.
 - **Plays anywhere:** web (WebGL 2), Windows, Linux and Android, with touch controls and tilt
   steering on phones.
+- **Bonus content:** *Der Rote Kampfflieger*, a twelve-mission Red Baron story campaign, and a Battle of
+  Britain Spitfire mission (**Goodies → Bonus Missions**).
 
 ## Download and play
 
@@ -125,7 +127,8 @@ To embed in a web page (e.g. a Blogger post), upload `build/web` to any https st
 - `.github/workflows/pages.yml` builds the web export on every push to `main` and deploys it to GitHub Pages
   (one-time setup: Settings > Pages > Source = GitHub Actions).
 - `.github/workflows/release.yml` builds all four presets when a `v*` tag is pushed and attaches them to
-  the release: `git tag -a v1.1 -m "..." && git push origin v1.1`.
+  the release: `git tag -a v1.1 -m "..." && git push origin v1.1`. The release text is `docs/release-notes/<tag>.md`
+  (when present) followed by the download instructions.
 
 ## Repository layout
 
@@ -440,8 +443,9 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 - Controller tilt steering (not in the original): on controllers with motion sensors, the "Gyroscope?" box on the Controls page
   steers by tilting, like the phones' tilt mode. The stick takes over whenever it is deflected, and `\` in flight recentres.
 - Mouse roll and the default joystick response apply directly, as in the exe. The Controls page's **Stick** choice
-  offers Quick (0.2 s) and Gentle (0.4 s) roll/pitch response for D-pads, gamepad buttons, or axes that jump to full
-  deflection. It affects joystick bindings only; Direct is the original behaviour.
+  offers Quick (0.2 s) and Gentle (0.4 s) roll response for D-pads, gamepad buttons, or axes that jump to full
+  deflection: the stick sets the bank itself, so Direct tilts the plane at once. Pitch is always direct, since the
+  stick sets a pitch rate and the nose never jumps. It affects joystick bindings only; Direct is the original behaviour.
 - Mouse and joystick pitch feel: the exe's formulas depend on its update rate. `Aircraft.ref_fps` (default 100; `;` and `'`
   in flight, saved) picks the rate used; the exe's update tick is a fixed 10 ms timer (`0x301` messages, RedAce.c:14177), so 100 is its value on any machine and in every mission. It touches nothing else: no damage,
   AI, camera or flight speed code reads it.
@@ -452,20 +456,10 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 
 ### Battle of Britain bonus mission
 
-Open **Game menu → Goodies → Bonus Missions → Battle of Britain**, or launch with
-`--mission=26`. Fly a Spitfire alongside three squadron mates over a new coastal
-map. Destroy three raids of Bf 109 fighters and He 111 bombers while keeping the
-aircraft factory intact. The raids arrive at 12, 97 and 182 seconds; future raids
-remain part of the victory objective while hidden. Factory destruction loses the
-mission, including when the final enemy is destroyed at the same time.
+A Spitfire mission over a new Dover-inspired coastal map (**Goodies → Bonus Missions**, or `--mission=26`).
+How to play, what it contains, rebuild and test: [`redace/mods/britain/README.md`](redace/mods/britain/README.md).
 
-The detailed aircraft and port buildings were authored through Blender MCP, with
-camouflage, panel seams, brick and slate textures. The Dover-inspired landscape
-has coastal hills, an irregular shoreline, and 49.5% water. Britain-only runtime
-scripts add translucent waves, clouds, sea-crash debris, bomber circuits, escort
-formations, defensive gunners, and staged damage. AA batteries defend the port,
-with five freighters and sixteen fishing boats offshore. Aircraft match the
-original game's screen scale; bombers use a distinct radar icon. See
-`overrides/britain/README.md` for references and tuning. Rebuild with
-`python3 tools/build_britain.py` (Pillow, NumPy, and a running Blender MCP addon). Validate the mission with Godot:
-`godot --headless --path redace -s tools/test_britain.gd`.
+### Der Rote Kampfflieger (Red Baron campaign mod)
+
+A 12-mission campaign flown as Manfred von Richthofen, 1916-1918 (**Goodies → Bonus Missions → Der Rote
+Kampfflieger**). How to play, rebuild and test: [`redace/mods/redbaron/README.md`](redace/mods/redbaron/README.md).

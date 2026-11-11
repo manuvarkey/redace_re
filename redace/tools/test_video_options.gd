@@ -43,7 +43,19 @@ func links_fit(view: HtmlView) -> void:
 			rects.append(rect)
 
 func _initialize() -> void:
+	# scratch save files: never the player's own pilots, options or bindings
+	Game.save_path = "user://test_pilots.cfg"
+	Game.settings_path = "user://test_settings.cfg"
+	_remove_scratch_files()
 	run.call_deferred()
+
+func _finalize() -> void:
+	_remove_scratch_files()
+
+func _remove_scratch_files() -> void:
+	for path in [Game.save_path, Game.settings_path]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func run() -> void:
 	var game := TestGame.new()
@@ -104,10 +116,10 @@ func run() -> void:
 	game._command("renderresolution:123")
 	check(game.settings.render_height == 0, "invalid resolution ignored")
 	var cfg := ConfigFile.new()
-	cfg.load(Game.SETTINGS_PATH)
+	cfg.load(Game.settings_path)
 	cfg.set_value("video", "render_height", 123)
 	cfg.set_value("video", "window_height", -20)
-	cfg.save(Game.SETTINGS_PATH)
+	cfg.save(Game.settings_path)
 	var invalid := Game.new()
 	invalid._load()
 	check(invalid.settings.render_height == 0 and invalid.settings.window_height == 0, "unsupported saved settings fall back")

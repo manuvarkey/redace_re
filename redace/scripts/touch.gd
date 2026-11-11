@@ -52,7 +52,7 @@ func _ready() -> void:
 	if OS.has_feature("web"):
 		_js_window = JavaScriptBridge.get_interface("window")
 	var s := ConfigFile.new()
-	if s.load(SETTINGS_PATH) == OK:
+	if s.load(Game.settings_path) == OK:
 		tilt_wanted = bool(s.get_value("touch", "tilt", true))
 
 
@@ -263,9 +263,9 @@ func _tap(name: String) -> void:
 			pitch = 0.0
 			calibrate()
 			var s := ConfigFile.new()
-			s.load(SETTINGS_PATH)
+			s.load(Game.settings_path)
 			s.set_value("touch", "tilt", tilt_wanted)
-			s.save(SETTINGS_PATH)
+			s.save(Game.settings_path)
 		"CAL":
 			calibrate()
 

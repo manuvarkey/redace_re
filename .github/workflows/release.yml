@@ -140,18 +140,29 @@ jobs:
           cp build/android/redace.apk dist/redace-$v-android.apk
           ls -l dist
 
+      # Release text: docs/release-notes/<tag>.md (what is new) when it exists, then how to install
+      - name: Release notes
+        run: |
+          notes=docs/release-notes/${RELEASE_TAG}.md
+          {
+            if [ -f "$notes" ]; then cat "$notes"; echo; fi
+            echo "## Download and play"
+            echo
+            echo "Builds of the Godot 4 remake at ${RELEASE_TAG}."
+            echo
+            echo '- **Windows** / **Linux** (x86_64): unzip and run `redace.exe` / `redace.x86_64` (keep `redace.pck` next to it).'
+            echo '- **Web**: unzip onto any static web server, or play at https://manuvarkey.github.io/redace_re/.'
+            echo '- **Android**: install the APK (release-signed, arm64 and x86_64; allow installs from unknown sources).'
+            echo '  Future APKs use the same signing key so updates preserve pilots and settings.'
+            echo '  Tilt to steer, or tap STICK for a drag stick.'
+          } > release-body.md
+          cat release-body.md
+
       - uses: softprops/action-gh-release@v2
         with:
           name: Red Ace remake ${{ env.RELEASE_TAG }}
           tag_name: ${{ env.RELEASE_TAG }}
-          body: |
-            Builds of the Godot 4 remake at ${{ env.RELEASE_TAG }}.
-
-            - **Windows** / **Linux** (x86_64): unzip and run `redace.exe` / `redace.x86_64` (keep `redace.pck` next to it).
-            - **Web**: unzip onto any static web server, or play at https://manuvarkey.github.io/redace_re/.
-            - **Android**: install the APK (release-signed, arm64 and x86_64; allow installs from unknown sources).
-              Future APKs use the same signing key so updates preserve pilots and settings.
-              Tilt to steer, or tap STICK for a drag stick.
+          body_path: release-body.md
           files: dist/*
 
       - name: Remove temporary signing key

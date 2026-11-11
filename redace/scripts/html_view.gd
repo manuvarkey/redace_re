@@ -84,6 +84,7 @@ class Parser:
 	var body := {"objs": [], "attrs": {}}
 	var fonts: Array = []  # font stack: {face, size, color}
 	var bold := false
+	var italic := false  # <i> (not in the original's pages; added for mod pages)
 	var pad := true
 	var link := -1
 	var links: Array = []
@@ -188,6 +189,10 @@ func _tag(p: Parser, tag: String, attrs: Dictionary) -> void:
 			p.bold = true
 		"/b":
 			p.bold = false
+		"i":
+			p.italic = true
+		"/i":
+			p.italic = false
 		"nopad":
 			p.pad = false
 		"/nopad":
@@ -223,7 +228,7 @@ func _text(p: Parser, t: String) -> void:
 	t = t.replace("&amp;", "&")
 	var f: Dictionary = p.fonts.back()
 	p.cont.append({"type": "text", "text": t, "face": f.face, "size": f.size, "color": f.color,
-		"bold": p.bold, "pad": p.pad, "link": p.link})
+		"bold": p.bold, "italic": p.italic, "pad": p.pad, "link": p.link})
 
 
 # ---------------------------------------------------------------- style helpers
@@ -287,14 +292,16 @@ func _font(face: String, bold: bool) -> Font:
 ## Font for drawing at page size px. The engine copies GDI glyphs as on/off pixels where every touched
 ## pixel is set (FUN_00429758), which thickens strokes by about a pixel at any size; fonts without a bold
 ## face are emboldened for <b> as GDI does for lfWeight 700. Measuring uses the plain font.
-func _draw_font(f: Font, px: int, fake_bold: bool, game_font: bool) -> Font:
-	var key := [f.get_instance_id(), px, fake_bold, game_font]
+func _draw_font(f: Font, px: int, fake_bold: bool, game_font: bool, italic := false) -> Font:
+	var key := [f.get_instance_id(), px, fake_bold, game_font, italic]
 	if not _font_cache.has(key):
 		var v := FontVariation.new()
 		v.base_font = f
 		v.variation_embolden = (GLYPH_EMBOLDEN_PX if game_font else CORE_EMBOLDEN_PX) / maxf(px, 1.0)
 		if fake_bold:
 			v.variation_embolden += BOLD_EMBOLDEN
+		if italic:  # synthetic slant (no italic faces are bundled)
+			v.variation_transform = Transform2D(Vector2(1.0, 0.0), Vector2(0.22, 1.0), Vector2.ZERO)
 		_font_cache[key] = v
 	return _font_cache[key]
 
@@ -416,7 +423,7 @@ func _flow_text(l: Lines, o: Dictionary) -> void:
 	var col: Color = o.color
 	var face := String(o.face).to_lower()
 	var game_font := face.contains("morpheus") or face.contains("anni")
-	var df := _draw_font(f, px, o.bold and game_font, game_font)
+	var df := _draw_font(f, px, o.bold and game_font, game_font, o.get("italic", false))
 	var fx := l.x
 	var fy := l.y
 	var frag := ""

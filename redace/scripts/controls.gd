@@ -15,6 +15,10 @@ const AXES := ["roll", "pitch", "throttle"]
 const BUTTONS := ["fire", "secondary", "special", "camabove", "camleft", "camright", "cambehind"]
 const SETTINGS_PATH := "user://settings.cfg"
 const TRIGGER_BASE := 1000
+## A stick nearer centre than this is at rest: the controller tilt steers that axis. Sticks rarely come back to exactly
+## 0 once moved (get_joy_axis has no dead zone), and an exact-zero test let the first stick movement hand the axis to
+## the stick for good.
+const STICK_REST := 0.15
 
 ## key names used in the control files (strings.ini) -> Godot keys
 const KEY_NAMES := {
@@ -66,7 +70,7 @@ static func from_file(ini_name: String) -> Controls:
 static func load_saved() -> Controls:
 	var c := from_file("redace.ini")
 	var s := ConfigFile.new()
-	if s.load(SETTINGS_PATH) == OK and s.has_section("bindings"):
+	if s.load(Game.settings_path) == OK and s.has_section("bindings"):
 		for a in c.bind:
 			var saved = s.get_value("bindings", a, null)
 			if saved is Dictionary:
@@ -79,13 +83,13 @@ static func load_saved() -> Controls:
 
 func save() -> void:
 	var s := ConfigFile.new()
-	s.load(SETTINGS_PATH)
+	s.load(Game.settings_path)
 	for a in bind:
 		s.set_value("bindings", a, bind[a])
 	s.set_value("controls", "mouse_response", Aircraft.ref_fps)
 	s.set_value("controls", "joy_gyro", gyro_enabled)
 	s.set_value("controls", "joystick_response_ms", joystick_response_ms)
-	s.save(SETTINGS_PATH)
+	s.save(Game.settings_path)
 
 
 static func key_of(name: String) -> Key:
@@ -213,7 +217,7 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 					p.key_roll(-_joy_buttons(r) * rs, r.sensitivity, dt)
 		"joystick":
 			var v := _joy_axis(r.axis)
-			p.joy_roll((v if v != 0.0 else tilt.x) * rs, r.sensitivity, response)
+			p.joy_roll((tilt.x if absf(v) < STICK_REST and tilt.x != 0.0 else v) * rs, r.sensitivity, response)
 		_:
 			# upkey = roll left, downkey = roll right (keyboard.ini: upkey = leftarrow)
 			p.key_roll((_pressed_key(r.downkey) - _pressed_key(r.upkey)) * rs, r.sensitivity, dt)
@@ -224,15 +228,15 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 		"joystick" when int(q.axis) == 0:
 			# upbutton = nose down, like upkey
 			if _joy_buttons(q) == 0.0 and tilt.y != 0.0:
-				p.joy_pitch(tilt.y * ps, q.sensitivity, dt, response)
+				p.joy_pitch(tilt.y * ps, q.sensitivity, dt)
 			else:
 				if response > 0.0:
-					p.joy_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt, response)
+					p.joy_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
 				else:
 					p.key_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
 		"joystick":
 			var v := _joy_axis(q.axis)
-			p.joy_pitch((v if v != 0.0 else tilt.y) * ps, q.sensitivity, dt, response)
+			p.joy_pitch((tilt.y if absf(v) < STICK_REST and tilt.y != 0.0 else v) * ps, q.sensitivity, dt)
 		_:
 			# upkey = nose down (keyboard.ini: upkey = uparrow)
 			p.key_pitch((_pressed_key(q.downkey) - _pressed_key(q.upkey)) * ps, q.sensitivity, dt)

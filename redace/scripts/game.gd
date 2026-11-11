@@ -15,6 +15,10 @@ const LAST_MISSION := 25
 const SLOTS := 6
 const SAVE_PATH := "user://pilots.cfg"
 const SETTINGS_PATH := "user://settings.cfg"
+# Files actually used; the defaults above for the game. Tests point them at scratch files so they never
+# overwrite the player's pilots, options or control bindings (Controls, TouchControls and World read these too).
+static var save_path := SAVE_PATH
+static var settings_path := SETTINGS_PATH
 const RENDER_HEIGHTS := [360, 480, 540, 720, 1080, 0]
 const RENDER_NAMES := ["Very Low (360p)", "Low (480p)", "Medium (540p)", "Standard (720p)", "High (1080p)", "Native"]
 const DETAIL_LABELS := ["Low", "Standard"]
@@ -39,6 +43,9 @@ var _page := ""
 var _mission := 0  # mission being briefed / flown
 var _flown := 0  # mission of the last flight (Re-Fly)
 var _campaign := false  # flying the current pilot's campaign mission
+var _campaign_id := ""  # "" = the original campaign; else a mod campaign's id (ModLauncher.campaigns)
+var _mod_campaigns: Array[Dictionary] = []
+var _mod_campaigns_read := false
 var _typing_slot := -1
 var _typed := ""
 var _delete_slot := -1
@@ -148,13 +155,13 @@ func _upgrade_pilot(p: Dictionary) -> Dictionary:
 
 func _load() -> void:
 	var cfg := ConfigFile.new()
-	cfg.load(SAVE_PATH)
+	cfg.load(save_path)
 	pilots.clear()
 	for i in SLOTS:
 		pilots.append(_upgrade_pilot(cfg.get_value("pilots", str(i), {})))
 	current = cfg.get_value("roster", "current", -1)
 	var s := ConfigFile.new()
-	s.load(SETTINGS_PATH)
+	s.load(settings_path)
 	var cfg_ini := Ini.load_file(Ini.data_path("redace.ini"))
 	controls = Controls.load_saved()
 	settings.music_volume = s.get_value("sound", "music_volume", 8)
@@ -186,9 +193,9 @@ func _save() -> void:
 	for i in SLOTS:
 		cfg.set_value("pilots", str(i), pilots[i])
 	cfg.set_value("roster", "current", current)
-	cfg.save(SAVE_PATH)
+	cfg.save(save_path)
 	var s := ConfigFile.new()
-	s.load(SETTINGS_PATH)
+	s.load(settings_path)
 	s.set_value("sound", "music_volume", settings.music_volume)
 	s.set_value("sound", "effects_volume", settings.effects_volume)
 	s.set_value("graphics", "draw_distance", settings.clip_plane)
@@ -207,7 +214,7 @@ func _save() -> void:
 	s.set_value("cheats", "game_speed", settings.game_speed)
 	s.set_value("cheats", "enemy_endurance", settings.enemy_endurance)
 	s.set_value("extra", "collision_damage", settings.get("collision_damage", 0))
-	s.save(SETTINGS_PATH)
+	s.save(settings_path)
 	controls.save()
 
 
@@ -370,18 +377,26 @@ func _fill(html: String) -> String:
 		"version2": "",
 		"continue": _continue_link(p),
 		"fullname": str(p.get("name", "")),
-		"rank": RANKS[int(p.get("rank", 0))] if not p.is_empty() else ("Pilot" if _page.to_lower().begins_with("missions") else ""),
+		"rank": _rank_name(p) if not p.is_empty() else ("Pilot" if _page.to_lower().begins_with("missions") else ""),
 		"sirname": names[names.size() - 1] if names.size() > 0 else "",
 		"forenames": " ".join(names.slice(0, maxi(names.size() - 1, 1))) if names.size() > 0 else "",
 		"mission": str(mini(int(p.get("mission", 1)), LAST_MISSION)) if not p.is_empty() else "",
 		"score": str(int(p.get("score", 0))) if not p.is_empty() else "",
+		"bonuscampaigns": _bonus_campaign_links(),
+		"campaigntitle": str(_active_campaign().get("title", "")),
+		"campaigncontinue": _campaign_continue_link(p),
+		"campaignstatus": _campaign_status(p),
+		"campaignreplay": _campaign_replay_list(p),
+		"campaignreplaylink": _campaign_replay_link(p),
 		"rosterinstructions": _s("typeinyourname") if _typing_slot >= 0 else _s("pilotinstructions"),
 		"rosterback": _link("Menus\\play.html", _s("back")),
 		"levelselector": _level_selector(),
 		"collisiondamage": _collision_damage_options(),
 		"cheat": _link("Menus\\cheatoptions.html", _s("cheatoptions")) if _any_completed() else "",
-		"victoryurl": "Menus\\victorybrief.html",
-		"defeaturl": {"death": "Menus\\faileddeath.html", "defence": "Menus\\faileddefence.html",
+		"victoryurl": _debrief_page(_flown) if _debrief_page(_flown) != "" else "Menus\\victorybrief.html",
+		"promotionnote": "<br><br>You have been promoted to the rank of %s." % _rank_name(p) if _last_promoted and not p.is_empty() else "",
+		"defeaturl": _failure_page(_flown, _result) if _failure_page(_flown, _result) != "" else {
+			"death": "Menus\\faileddeath.html", "defence": "Menus\\faileddefence.html",
 			"time": "Menus\\failedtime.html"}.get(_result, "Menus\\faileddeath.html"),
 		"loadbar": "<img src=\"Menus\\loadbar.jpg\" width=298 height=20>",
 		"rollbar": _sens_bar(1, controls.bind.roll.sensitivity),
@@ -430,6 +445,10 @@ func _fill(html: String) -> String:
 		if _typing_slot < 0:
 			opt = _s("deletepilot") if not q.is_empty() else _s("create")
 		vars["charopt%d" % (i + 1)] = opt
+	if _campaign_id != "" and not p.is_empty():
+		var prog := _campaign_progress(p, _campaign_id)
+		vars.mission = str(mini(prog.won.size() + 1, _active_campaign().missions.size()))
+		vars.score = str(int(prog.score))
 	vars.merge(_control_vars())
 	var re := RegEx.create_from_string("\\^([a-z0-9]+)\\^")
 	var out := ""
@@ -694,7 +713,19 @@ func _on_link(href: String) -> void:
 	if low.begins_with("menus\\"):
 		if low.ends_with("roster.html"):
 			_stop_typing()
+		if low.get_file() in ["main.html", "play.html", "roster.html", "goodies.html", "bonus.html", "intro.html"]:
+			_campaign_id = ""  # back in the original campaign's menus
 		open_page(h)
+		return
+	if low.begins_with("campaigns\\"):
+		open_page(h)  # a mod campaign's own pages (game_data/language/english/campaigns/...)
+		return
+	if low.begins_with("campaign:"):
+		var c := _find_campaign(h.get_slice(":", 1).strip_edges())
+		if not c.is_empty():
+			_campaign_id = c.id
+			_campaign = false
+			open_page(c.intro)
 		return
 	if low.begins_with("play:"):
 		_fly(int(low.get_slice(":", 1)), _campaign)
@@ -922,6 +953,20 @@ func _continue() -> void:
 	if _page.to_lower().contains("failed"):
 		open_page("missions\\%d\\mission.html" % _mission)
 		return
+	if _campaign_id != "":
+		# a mod campaign: the pilot's first mission of its list not yet won, then its completion page
+		var c := _active_campaign()
+		if p.is_empty() or c.is_empty():
+			open_page("Menus\\roster.html")
+			return
+		_campaign = true
+		var next := _next_campaign_mission(p, c)
+		if next == 0:
+			open_page(c.complete)
+		else:
+			_mission = next
+			open_page("missions\\%d\\mission.html" % next)
+		return
 	if not p.is_empty() and (_campaign or _page.to_lower().contains("intro") or _page.to_lower().contains("play")):
 		_mission = int(p.mission)
 		_campaign = true
@@ -1095,6 +1140,7 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	controls.recentre_gyro()
 	world.finished.connect(_on_finished)
 	world.pause_requested.connect(_pause)
+	world.progress_secured.connect(_on_progress_secured)
 	add_child(world)
 	_apply_graphics_settings()
 	world.view_distance = float(settings.clip_plane)
@@ -1178,6 +1224,10 @@ func _resume() -> void:
 ## promote when the score reaches the next rank's threshold; finishing mission 25 shows congrats.
 func _on_finished(result: String, score: int) -> void:
 	_result = result
+	_last_promoted = false
+	# mod hook (World.result_page): a mission script may name its own page for this result
+	var custom := world.result_page(result, _campaign) if is_instance_valid(world) else ""
+	var secured := is_instance_valid(world) and world.progress_was_secured
 	_end_flight()
 	# games counts every finished flight; kills and deaths are saved but the exe never adds to them (0x45d796)
 	if not _pilot().is_empty():
@@ -1185,14 +1235,24 @@ func _on_finished(result: String, score: int) -> void:
 		_save()
 	_play_menu_music()
 	if result != "won":
-		open_page("Menus\\defeat.html")
+		open_page(custom if custom != "" else "Menus\\defeat.html")
 		return
 	var p := _pilot()
 	if not p.is_empty():
 		p.lastnum = 0
 		_save()
 	if not _campaign or p.is_empty() or _mission < 1:
-		open_page("Menus\\victory.html")
+		open_page(custom if custom != "" else "Menus\\victory.html")
+		return
+	if _campaign_id != "":
+		var promoted := _credit_campaign_win(score) or (secured and _promoted_by_secure)
+		_last_promoted = promoted
+		# a mission with its own debriefing names the promotion there (^promotionnote^)
+		var mod_page := "Menus\\promotion.html" if promoted and _debrief_page(_flown) == "" else "Menus\\victory.html"
+		if _next_campaign_mission(p, _active_campaign()) == 0 and _debrief_page(_flown) == "":
+			mod_page = str(_active_campaign().complete)  # else the debriefing's Next Mission leads there
+		_save()
+		open_page(custom if custom != "" else mod_page)
 		return
 	var was_last := _mission == LAST_MISSION
 	if int(p.mission) == _mission:
@@ -1205,6 +1265,181 @@ func _on_finished(result: String, score: int) -> void:
 		page = "Menus\\promotion.html"
 	if was_last:
 		page = "Menus\\congrats.html"
+	if secured and page == "Menus\\victory.html" and _promoted_by_secure:
+		page = "Menus\\promotion.html"
+	if custom != "":
+		page = custom
 	_save()
 	_mission = int(pilots[current].mission)
 	open_page(page)
+
+
+var _promoted_by_secure := false
+var _last_promoted := false  # the last flight earned a promotion (^promotionnote^ on a mission's debriefing)
+
+
+## A mission's own failure message for a result (language/english/missions/<id>/failed_<result>.html, e.g. a
+## mission script's own result name), shown from the defeat page; "" when it has none (all original missions).
+func _failure_page(id: int, result: String) -> String:
+	if result.is_empty() or not result.is_valid_identifier():
+		return ""
+	var rel := "missions\\%d\\failed_%s.html" % [id, result]
+	return rel if FileAccess.file_exists(Ini.data_path("language/english/" + rel.replace("\\", "/"))) else ""
+
+
+## A mission's own debriefing page (language/english/missions/<id>/debrief.html), shown after a win in
+## place of the generic victory message; "" when the mission has none (all original missions).
+func _debrief_page(id: int) -> String:
+	var rel := "missions\\%d\\debrief.html" % id
+	return rel if FileAccess.file_exists(Ini.data_path("language/english/" + rel.replace("\\", "/"))) else ""
+
+
+## World.secure_progress (mod mission scripts): the campaign bookkeeping of a win, applied mid-flight so
+## that it stands however the flight ends. _on_finished then finds the mission already advanced.
+func _on_progress_secured() -> void:
+	_promoted_by_secure = false
+	var p := _pilot()
+	if _campaign_id != "":
+		if _campaign and not p.is_empty() and world != null:
+			_promoted_by_secure = _credit_campaign_win(world.mission_score(true))
+			_save()
+		return
+	if not _campaign or p.is_empty() or _mission < 1 or int(p.mission) != _mission or world == null:
+		return
+	pilots[current].mission = _mission + 1
+	pilots[current].score = int(p.score) + world.mission_score(true)
+	var rank := int(pilots[current].rank)
+	if rank < RANKS.size() - 1 and pilots[current].score >= PROMOTION_SCORE[rank]:
+		pilots[current].rank = rank + 1
+		_promoted_by_secure = true
+	_save()
+
+
+# ---------------------------------------------------------------- mod campaigns
+
+func _campaign_list() -> Array[Dictionary]:
+	if not _mod_campaigns_read:
+		_mod_campaigns_read = true
+		_mod_campaigns = World.ModLauncher.campaigns()
+	return _mod_campaigns
+
+
+func _find_campaign(id: String) -> Dictionary:
+	for c in _campaign_list():
+		if c.id == id:
+			return c
+	return {}
+
+
+func _active_campaign() -> Dictionary:
+	return _find_campaign(_campaign_id) if _campaign_id != "" else {}
+
+
+## A pilot's progress in a mod campaign, kept apart from the original campaign's fields:
+## pilot.campaigns[id] = {won: [mission ids], score, rank}. Missions are by id, so a campaign may add
+## missions to its list later without moving anyone's progress.
+func _campaign_progress(p: Dictionary, id: String) -> Dictionary:
+	if not p.has("campaigns") or not (p.campaigns is Dictionary):
+		p.campaigns = {}
+	if not p.campaigns.has(id):
+		p.campaigns[id] = {"won": [], "score": 0, "rank": 0}
+	return p.campaigns[id]
+
+
+## The first mission of the campaign's list the pilot has not won; 0 when all are won.
+func _next_campaign_mission(p: Dictionary, c: Dictionary) -> int:
+	var won: Array = _campaign_progress(p, c.id).won
+	for m in c.missions:
+		if not won.has(m):
+			return m
+	return 0
+
+
+## Campaign bookkeeping of a win in the active mod campaign (once per mission); true when promoted.
+func _credit_campaign_win(score: int) -> bool:
+	var c := _active_campaign()
+	var p := _pilot()
+	if c.is_empty() or p.is_empty():
+		return false
+	var prog := _campaign_progress(p, c.id)
+	if prog.won.has(_mission):
+		return false
+	prog.won.append(_mission)
+	prog.score = int(prog.score) + score
+	var rank := int(prog.rank)
+	if rank < c.ranks.size() - 1 and rank < c.promotion.size() and prog.score >= c.promotion[rank]:
+		prog.rank = rank + 1
+		return true
+	return false
+
+
+func _rank_name(p: Dictionary) -> String:
+	if _campaign_id != "":
+		var c := _active_campaign()
+		if not c.is_empty():
+			return c.ranks[clampi(int(_campaign_progress(p, c.id).rank), 0, c.ranks.size() - 1)]
+	return RANKS[int(p.get("rank", 0))]
+
+
+func _bonus_campaign_links() -> String:
+	var links := PackedStringArray()
+	for c in _campaign_list():
+		links.append(_link("campaign:%s" % c.id, c.title))
+	return "<br>".join(links)
+
+
+func _campaign_continue_link(p: Dictionary) -> String:
+	var c := _active_campaign()
+	if c.is_empty():
+		return ""
+	if p.is_empty():
+		return _link("Menus\\roster.html", "Choose a Pilot")
+	var prog := _campaign_progress(p, c.id)
+	if _next_campaign_mission(p, c) == 0:
+		return _link("command:continue", "Campaign Complete")
+	return _link("command:continue", "Start Campaign" if prog.won.is_empty() else "Continue Campaign")
+
+
+func _campaign_status(p: Dictionary) -> String:
+	var c := _active_campaign()
+	if c.is_empty() or p.is_empty():
+		return ""
+	var prog := _campaign_progress(p, c.id)
+	return "%s %s<br>Missions flown: %d of %d<br>Score: %d" % [_rank_name(p), str(p.get("name", "")),
+		prog.won.size(), c.missions.size(), int(prog.score)]
+
+
+## Missions of the active mod campaign the pilot may fly again: won ones and the next, every one once
+## the campaign is complete or when the manifest says replayall = 1 (as the original's level selector).
+func _campaign_replayable(p: Dictionary) -> Array:
+	var c := _active_campaign()
+	if c.is_empty() or p.is_empty():
+		return []
+	var next := _next_campaign_mission(p, c)
+	if c.replayall or next == 0:
+		return c.missions
+	var won: Array = _campaign_progress(p, c.id).won
+	return c.missions.filter(func(m): return won.has(m) or m == next)
+
+
+func _campaign_replay_link(p: Dictionary) -> String:
+	var c := _active_campaign()
+	if c.is_empty() or str(c.replay) == "" or _campaign_replayable(p).is_empty():
+		return ""
+	return _link(c.replay, "Replay Missions")
+
+
+## One mission per row, named by its briefing's <title>.
+func _campaign_replay_list(p: Dictionary) -> String:
+	var missions := _campaign_replayable(p)
+	if missions.is_empty():
+		return ""
+	var out := "<table width=200>"
+	var title_re := RegEx.create_from_string("(?is)<title>\\s*(.*?)\\s*</title>")
+	for m in missions:
+		var html := FileAccess.get_file_as_string(Ini.data_path("language/english/missions/%d/mission.html" % m))
+		var found := title_re.search(html)
+		var name: String = found.get_string(1) if found else "%s %d" % [_s("mission"), m]
+		out += "<tr><td width=200 height=16 align=center>%s</td></tr>" % _link("missions\\%d\\mission.html" % m, name)
+	return out + "</table>"
+

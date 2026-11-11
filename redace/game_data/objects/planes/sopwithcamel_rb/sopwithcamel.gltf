@@ -1,0 +1,293 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "rw2gltf (Red Ace)"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "sopwithcamel_frame0",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    0.0,
+    0,
+    0.0,
+    0.0,
+    1.0,
+    0,
+    0.0,
+    0.0,
+    0.0,
+    1
+   ],
+   "children": [
+    1,
+    3
+   ]
+  },
+  {
+   "name": "sopwithcamel_frame1",
+   "matrix": [
+    1.0,
+    0.0,
+    0.0,
+    0,
+    0.0,
+    1.0,
+    7.105427357601002e-15,
+    0,
+    0.0,
+    -7.105427357601002e-15,
+    1.0,
+    0,
+    0.0025920867919921875,
+    -0.06222140043973923,
+    4.034400463104248,
+    1
+   ],
+   "children": [
+    2
+   ]
+  },
+  {
+   "name": "sopwithcamel_atomic0",
+   "mesh": 0
+  },
+  {
+   "name": "sopwithcamel_atomic1",
+   "mesh": 1
+  }
+ ],
+ "meshes": [
+  {
+   "name": "sopwithcamel_atomic0",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1,
+      "TEXCOORD_0": 2
+     },
+     "indices": 3,
+     "material": 0
+    }
+   ]
+  },
+  {
+   "name": "sopwithcamel_atomic1",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 4,
+      "NORMAL": 5,
+      "TEXCOORD_0": 6
+     },
+     "indices": 7,
+     "material": 1
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "soppropeller",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.10588235294117647,
+     0.6705882352941176,
+     0.6509803921568628,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 0
+    }
+   },
+   "alphaMode": "MASK",
+   "alphaCutoff": 0.5,
+   "doubleSided": true
+  },
+  {
+   "name": "Sopwithtemplate1",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 1.0,
+    "baseColorTexture": {
+     "index": 1
+    }
+   },
+   "alphaMode": "MASK",
+   "alphaCutoff": 0.5,
+   "doubleSided": true
+  }
+ ],
+ "textures": [
+  {
+   "source": 0,
+   "sampler": 0
+  },
+  {
+   "source": 1,
+   "sampler": 0
+  }
+ ],
+ "images": [
+  {
+   "uri": "../textures/soppropeller_a.png"
+  },
+  {
+   "uri": "../textures/sopwithtemplate1_a.png"
+  }
+ ],
+ "samplers": [
+  {
+   "wrapS": 10497,
+   "wrapT": 10497
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 8,
+   "type": "VEC3",
+   "min": [
+    -3.2621326446533203,
+    -2.8531627655029297,
+    -0.0015583389904350042
+   ],
+   "max": [
+    2.7276158332824707,
+    3.1365811824798584,
+    0.0015622001374140382
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 8,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5126,
+   "count": 8,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 3,
+   "componentType": 5125,
+   "count": 12,
+   "type": "SCALAR"
+  },
+  {
+   "bufferView": 4,
+   "componentType": 5126,
+   "count": 235,
+   "type": "VEC3",
+   "min": [
+    -10.663443565368652,
+    -3.853912591934204,
+    -12.885641098022461
+   ],
+   "max": [
+    10.663443565368652,
+    3.333124876022339,
+    4.018293380737305
+   ]
+  },
+  {
+   "bufferView": 5,
+   "componentType": 5126,
+   "count": 235,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 6,
+   "componentType": 5126,
+   "count": 235,
+   "type": "VEC2"
+  },
+  {
+   "bufferView": 7,
+   "componentType": 5125,
+   "count": 534,
+   "type": "SCALAR"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 96,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 96,
+   "byteLength": 96,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 192,
+   "byteLength": 64,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 256,
+   "byteLength": 48,
+   "target": 34963
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 304,
+   "byteLength": 2820,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 3124,
+   "byteLength": 2820,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 5944,
+   "byteLength": 1880,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 7824,
+   "byteLength": 2136,
+   "target": 34963
+  }
+ ],
+ "buffers": [
+  {
+   "uri": "sopwithcamel.bin",
+   "byteLength": 9960
+  }
+ ]
+}

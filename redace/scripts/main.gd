@@ -18,6 +18,7 @@ enum CollisionDamage { DEFAULT, MILD, FULL }
 
 signal finished(result: String, score: int)  # result: won, death, defence, time
 signal pause_requested
+signal progress_secured  # a mod's mission script credited this flight to the campaign before it ended (secure_progress)
 
 var standalone := true  # false when started by the menus (Game); true for --mission debug runs
 # cheat options (Menus/cheatoptions.html)
@@ -51,6 +52,8 @@ var objective_labels := {}
 var time_limit := 0.0
 var mission_time := 0.0
 var mission_over := false
+var progress_was_secured := false
+var map_markers: Array[Dictionary] = []  # extra minimap icons from mission scripts: {pos: Vector3, icon: String}
 var map_bounds := Rect2()
 var map_height := Vector2.ZERO  # lowest and highest point of the terrain
 
@@ -145,7 +148,7 @@ func _ready() -> void:
 	_build_ui()
 	if standalone:
 		var settings := ConfigFile.new()
-		settings.load(SETTINGS_PATH)
+		settings.load(Game.settings_path)
 		for key in ["water_detail", "cloud_detail", "scenery_detail"]:
 			var detail := int(settings.get_value("graphics", key, 1))
 			set(key, detail if detail in [0, 1] else 1)
@@ -222,6 +225,7 @@ uniform float scissor = 0.5;
 uniform vec3 light_dir;
 global uniform vec3 ra_fog_colour;
 global uniform float ra_fog_far;
+global uniform vec3 ra_light_tint;  // (1, 1, 1) as the exe; mission scripts may dim or tint the scene (dusk)
 uniform bool flash = false;
 varying vec3 lit;
 varying float fogged;
@@ -239,7 +243,7 @@ void vertex() {
 void fragment() {
 	vec4 c = texture(tex, UV) * base;
 	// the Compatibility renderer shows ALBEDO as is (measured), so this is display space, as in D3D
-	vec3 shade = c.rgb * lit;
+	vec3 shade = c.rgb * lit * ra_light_tint;
 	ALBEDO = flash ? mix(shade, vec3(1.0, 0.0, 0.0), 0.5) : mix(shade, ra_fog_colour, fogged);
 	%s
 }
@@ -288,6 +292,7 @@ static func _add_fog_globals() -> void:
 	_fog_globals_added = true
 	RenderingServer.global_shader_parameter_add("ra_fog_colour", RenderingServer.GLOBAL_VAR_TYPE_VEC3, Vector3.ONE)
 	RenderingServer.global_shader_parameter_add("ra_fog_far", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 600.0)
+	RenderingServer.global_shader_parameter_add("ra_light_tint", RenderingServer.GLOBAL_VAR_TYPE_VEC3, Vector3.ONE)
 
 
 static var _white: Texture2D
@@ -319,6 +324,8 @@ func load_mission(id: int) -> void:
 	player = null
 	mission_time = 0.0
 	mission_over = false
+	progress_was_secured = false
+	map_markers.clear()
 	_fade_in = 0.0
 	_end_time = -1.0
 	_flashes.clear()
@@ -490,6 +497,7 @@ func _load_map(map_name: String) -> void:
 	_add_fog_globals()
 	RenderingServer.global_shader_parameter_set("ra_fog_colour", Vector3(fog.r, fog.g, fog.b))
 	RenderingServer.global_shader_parameter_set("ra_fog_far", _effective_view_distance)
+	RenderingServer.global_shader_parameter_set("ra_light_tint", Vector3.ONE)  # a mod's setup_map may change it
 	var we := WorldEnvironment.new()
 	we.environment = env
 	_level.add_child(we)
@@ -965,6 +973,9 @@ func _physics_process(dt: float) -> void:
 		_player_input(dt)
 	if not mission_over:
 		mission_time += dt
+	# mod hook: per-step mission script, after the player's input so it may override the controls
+	if is_instance_valid(_mod) and _mod.has_method("mission_step"):
+		_mod.mission_step(self, dt)
 	_update_turrets(dt)
 	var space := get_world_3d().direct_space_state
 	var started := Time.get_ticks_usec() if _perf else 0
@@ -1602,13 +1613,22 @@ func _count_rule_members() -> void:
 func _check_rules() -> void:
 	if mission_over or player == null:
 		return
+	var result := _rules_result()
+	# mod hook: the mission script may replace the original rules' decision ("" = keep flying, "won" = win,
+	# any other name a loss)
+	if is_instance_valid(_mod) and _mod.has_method("mission_outcome"):
+		result = str(_mod.mission_outcome(self, result))
+	if result != "":
+		_end_mission(result == "won", result)
+
+
+## The original rules' decision this step: "", "death", "time", "defence" or "won".
+func _rules_result() -> String:
 	# plane destroyed as soon as it is shot down or crashed (states 2 and 3, FUN_00434b50)
 	if player.state == Aircraft.State.DEAD:
-		_end_mission(false, "death")
-		return
+		return "death"
 	if time_limit > 0.0 and mission_time > time_limit:
-		_end_mission(false, "time")
-		return
+		return "time"
 	var won := true
 	var has_goal := false
 	for r in rules:
@@ -1619,12 +1639,10 @@ func _check_rules() -> void:
 			has_goal = true
 			won = won and pct_lost >= -r.percent - 0.01
 		elif pct_lost > 100.0 - r.percent + 0.01:
-			_end_mission(false, "defence")
-			return
+			return "defence"
 	if not has_goal:
 		won = _enemies_left() == 0
-	if won:
-		_end_mission(true, "won")
+	return "won" if won else ""
 
 
 ## Mission score as the original (decomp FUN_00446aa1): 500 for a win, plus for each rule group
@@ -1644,6 +1662,9 @@ func _end_mission(won: bool, result: String) -> void:
 	var text: String = strings.get("missionaccomplished", "Mission Accomplished") if won else \
 		strings.get("missionfailed", "Mission Failed") + "\n" + strings.get(
 			{"death": "planedestroyed", "defence": "missioncritical", "time": "outoftime"}.get(result, ""), "")
+	var custom = _mod_end_message(result)
+	if custom is String:
+		text = custom
 	print("mission %d end after %.1f s: %s" % [mission_id, mission_time, text.replace("\n", " - ")])
 	if standalone:
 		message_label.text = text + "\n" + ("Press N for the next mission" if won else "Press R to retry")
@@ -1684,9 +1705,45 @@ func _start_end_fade(result: String, score: int) -> void:
 		"missioncritical": "Mission Critical Object Destroyed", "outoftime": "Out of Time",
 		"missionaborted": "Mission Aborted", "missionfailed": "Mission Failed"}[key]
 	_end_label.text = strings.get(key, fallback)
+	var custom = _mod_end_message(result)
+	if custom is String:
+		_end_label.text = custom
 	_fade.visible = true
 	_fade.color = Color(0, 0, 0, 0)
 	_end_label.visible = true
+
+
+## Mod hook end_message(world, result): a String replaces the end-of-flight line ("" = none), null keeps it.
+func _mod_end_message(result: String) -> Variant:
+	if is_instance_valid(_mod) and _mod.has_method("end_message"):
+		return _mod.end_message(self, result)
+	return null
+
+
+## Mod hook result_page(world, result, campaign): the menu page to show after this flight instead of the
+## original victory / promotion / defeat page; "" keeps the original page.
+func result_page(result: String, campaign: bool) -> String:
+	if is_instance_valid(_mod) and _mod.has_method("result_page"):
+		return str(_mod.result_page(self, result, campaign))
+	return ""
+
+
+## For mission scripts: credit this flight to the campaign now, as a win, even if it later ends otherwise.
+## The menus (Game) apply it once; later calls do nothing.
+func secure_progress() -> void:
+	if progress_was_secured:
+		return
+	progress_was_secured = true
+	progress_secured.emit()
+
+
+## For mission scripts: a line in the HUD message area for some seconds (as the in-flight shortcuts show).
+func show_message(text: String, seconds := 3.0) -> void:
+	message_label.text = text
+	if seconds > 0.0:
+		get_tree().create_timer(seconds, false).timeout.connect(func() -> void:
+			if message_label.text == text:
+				_clear_message())
 
 
 func _update_end_fade(dt: float) -> void:

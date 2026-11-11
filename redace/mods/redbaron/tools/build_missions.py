@@ -1,0 +1,338 @@
+#!/usr/bin/env python3
+"""Build the Red Baron missions (game_data/missions/1NN/mission.ini and their briefings).
+
+Each mission is a spec in tools/missions/mNN.ini plus a briefing body in tools/missions/mNN.html.
+The spec's [build] section names the stock mission whose scenery (every [groundN] section, as
+groups = 0 scenery) is copied, so ground objects already sit on the terrain. [build] intact = x z r
+puts the undamaged model in place of each burnt / wrecked one within r of (x, z), e.g. at a home
+aerodrome the stock missions show bombed. [build] regroup = groups x z [x z ...] gives the template
+objects within 25 of each point that groups value (e.g. the hangars a mission protects). [build] track =
+x z x z ... | x z x z ... lays railway (ground object `rail`, tools/redbaron_rails.py) along each polyline, in
+segments of at most RAIL_SEGMENT, as groups = 0 scenery at height 0 (the mission script puts them on the terrain).
+Every other spec section is copied as written after the scenery. Usage: python3 build_missions.py [NN ...]
+"""
+import math
+import re
+import sys
+from pathlib import Path
+
+MOD = Path(__file__).resolve().parents[1]
+REDACE = MOD.parents[1]
+DATA = REDACE / "game_data"
+SPECS = MOD / "tools" / "missions"
+
+
+def sections(text):
+    """[(name, [lines])] in file order; comment and blank lines dropped."""
+    out = []
+    for line in text.splitlines():
+        s = line.split(";", 1)[0].rstrip()
+        if not s.strip():
+            continue
+        m = re.match(r"\s*\[(.+)\]\s*$", s)
+        if m:
+            out.append((m.group(1), []))
+        elif out:
+            out[-1][1].append(s.strip())
+    return out
+
+
+def keyvals(lines):
+    return {l.split("=", 1)[0].strip().lower(): l.split("=", 1)[1].strip() for l in lines if "=" in l}
+
+
+# burnt or wrecked scenery -> the standing original (same footprint in the stock missions)
+INTACT = {"bighangerburn": "bighanger", "hangerburned": "hanger", "factory_burned": "factory",
+          "tree1_burned": "tree1", "housestumps": "house1", "bridgewreck": "bridge", "aagunruin": "aagun"}
+
+
+IMG = DATA / "language" / "english" / "campaigns" / "redbaron" / "img"
+
+
+def art(name):
+    """A briefing picture (docs/images_required.md): the original pages' <img> when the image exists, else
+    nothing (the slot stays empty, as now). Names without a / are the mod's images, else a page path."""
+    if not name:
+        return ""
+    if "\\" in name:  # an original menu picture, e.g. Menus\\aircodh2bck.jpg
+        return f'<img src="{name}">'
+    return f'<img src="campaigns\\redbaron\\img\\{name}.jpg">' if (IMG / f"{name}.png").exists() else ""
+
+
+RAIL_SEGMENT = 15.0  # the rail model's length along its `at`
+RAIL_OVERLAP = 1.0  # each segment reaches this far past its ends, so joints and corners show no gap
+RAIL_FIRST_ID = 3400
+# template scenery kept off the track (centre distance from the line, by name; default TRACK_CLEAR): trees and
+# houses this close are left out, guns are moved out sideways (they may fire: keep them, just not on the rails)
+TRACK_CLEAR = 22.0
+TRACK_CLEAR_BY_NAME = {"lshapedvilla": 32.0, "aagun": 30.0, "aagunruin": 30.0}
+TRACK_MOVE = ("aagun", "aagunruin")
+TRACK_KEEP = ("factory", "warehouse")  # big buildings the route is laid around (checked in renders)
+
+
+def track_polylines(spec):
+    return [list(zip(v[0::2], v[1::2])) for v in ([float(x) for x in line.split()] for line in spec.split("|"))]
+
+
+def track_nearest(polylines, x, z):
+    """(distance, (nx, nz) unit direction from the nearest point on the track toward (x, z))."""
+    best = (math.inf, (1.0, 0.0))
+    for pts in polylines:
+        for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
+            dx, dz = x1 - x0, z1 - z0
+            t = max(0.0, min(1.0, ((x - x0) * dx + (z - z0) * dz) / (dx * dx + dz * dz)))
+            px, pz = x0 + dx * t, z0 + dz * t
+            d = math.hypot(x - px, z - pz)
+            if d < best[0]:
+                best = (d, ((x - px) / d, (z - pz) / d) if d > 1e-6 else (-dz / math.hypot(dx, dz), dx / math.hypot(dx, dz)))
+    return best
+
+
+def track_sections(spec):
+    """[build] track polylines -> [(name, lines)] of rail segments (each stretched along `at` to fit its leg)."""
+    out = []
+    for line in spec.split("|"):
+        v = [float(x) for x in line.split()]
+        pts = list(zip(v[0::2], v[1::2]))
+        for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
+            length = math.hypot(x1 - x0, z1 - z0)
+            n = max(1, math.ceil(length / RAIL_SEGMENT - 0.01))
+            dx, dz = (x1 - x0) / length, (z1 - z0) / length
+            stretch = (length / n + 2.0 * RAIL_OVERLAP) / RAIL_SEGMENT
+            for k in range(n):
+                cx, cz = x0 + dx * length * (k + 0.5) / n, z0 + dz * length * (k + 0.5) / n
+                out.append(["name = rail", f"id = {RAIL_FIRST_ID + len(out)}", "groups = 0",
+                            f"pos = {cx:.1f} 0 {cz:.1f}", "up = 0 1 0",
+                            f"at = {dx * stretch:.4f} 0 {dz * stretch:.4f}", f"right = {dz:.4f} 0 {-dx:.4f}"])
+    return out
+
+
+def build(num):
+    spec = sections((SPECS / f"m{num:02d}.ini").read_text())
+    conf = keyvals(dict(spec).get("build", []))
+    template = int(conf["template"])
+    mission_id = 100 + num
+    tpl = sections((DATA / "missions" / str(template) / "mission.ini").read_text(errors="replace"))
+    out = [f"; Red Baron mission {num}: generated by mods/redbaron/tools/build_missions.py from",
+           f"; tools/missions/m{num:02d}.ini and the scenery of stock mission {template}. Do not edit by hand.", ""]
+
+    def emit(name, lines):
+        out.append(f"[{name}]")
+        out.extend(lines)
+        out.append("")
+
+    for name, lines in spec:
+        if name.lower() in ("mod", "map", "mission", "objectives", "environment", "music"):
+            emit(name, lines)
+    archetypes = dict(tpl).get("archetypes")
+    if archetypes:
+        emit("archetypes", archetypes)
+    intact = [float(v) for v in conf.get("intact", "").split()]
+    regroup = conf.get("regroup", "").split()
+    regroup_value = regroup[0] if regroup else "0"
+    regroup_points = [(float(regroup[i]), float(regroup[i + 1])) for i in range(1, len(regroup) - 1, 2)]
+    regrouped = 0
+    n = 0
+    restored = 0
+    polylines = track_polylines(conf["track"]) if conf.get("track") else []
+    cleared = moved = 0
+    for name, lines in tpl:
+        if name.lower().startswith("ground"):
+            kv = [l for l in lines if not l.lower().startswith("groups")]
+            if polylines:
+                obj = keyvals(kv)
+                oname = obj["name"].lower()
+                x, y, z = (float(c) for c in obj["pos"].split())
+                clear = TRACK_CLEAR_BY_NAME.get(oname, TRACK_CLEAR)
+                d, (nx, nz) = track_nearest(polylines, x, z)
+                if d < clear and oname not in TRACK_KEEP:
+                    if oname not in TRACK_MOVE:
+                        cleared += 1
+                        continue
+                    for _ in range(6):  # (near a junction a move off one line may bring it onto another)
+                        x, z = x + nx * (clear - d + 1.0), z + nz * (clear - d + 1.0)
+                        d, (nx, nz) = track_nearest(polylines, x, z)
+                        if d >= clear:
+                            break
+                    kv = [f"pos = {x:.1f} {y:g} {z:.1f}" if l.lower().startswith("pos") else l for l in kv]
+                    moved += 1
+            if len(intact) == 3:
+                obj = keyvals(kv)
+                x, _, z = (float(c) for c in obj["pos"].split())
+                standing = INTACT.get(obj["name"].lower())
+                if standing and (x - intact[0]) ** 2 + (z - intact[1]) ** 2 <= intact[2] ** 2:
+                    kv = [f"name = {standing}" if l.lower().startswith("name") else l for l in kv]
+                    restored += 1
+            groups = "0"
+            if regroup_points:
+                x, _, z = (float(c) for c in keyvals(kv)["pos"].split())
+                if any((x - px) ** 2 + (z - pz) ** 2 <= 25.0 ** 2 for px, pz in regroup_points):
+                    groups = regroup_value
+                    regrouped += 1
+            emit(f"ground{n}", kv[:2] + [f"groups = {groups}"] + kv[2:])
+            n += 1
+    rails = track_sections(conf["track"]) if conf.get("track") else []
+    for lines in rails:
+        emit(f"ground{n}", lines)
+        n += 1
+    for name, lines in spec:
+        low = name.lower()
+        if low in ("build", "mod", "map", "mission", "objectives", "environment", "music"):
+            continue
+        if low.startswith("ground"):
+            emit(f"ground{n}", lines)
+            n += 1
+        else:
+            emit(name, lines)
+    dest = DATA / "missions" / str(mission_id)
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "mission.ini").write_text("\n".join(out))
+
+    body = (SPECS / f"m{num:02d}.html").read_text().strip()
+    page = BRIEFING.replace("{TITLE}", conf.get("title", f"Mission {num}")).replace("{BODY}", body) \
+        .replace("{PLAY}", f"play:{mission_id}").replace("{BACK}", conf.get("back", "campaign:redbaron")) \
+        .replace("{PHOTO}", art(conf.get("photo", ""))).replace("{TARGET}", art(conf.get("target", "")))
+    bdir = DATA / "language" / "english" / "missions" / str(mission_id)
+    bdir.mkdir(parents=True, exist_ok=True)
+    (bdir / "mission.html").write_text(page)
+    for failed in SPECS.glob(f"m{num:02d}_failed_*.html"):
+        result = failed.stem.split("_failed_", 1)[1]
+        (bdir / f"failed_{result}.html").write_text(FAILED.replace("{TITLE}", conf.get("title", f"Mission {num}"))
+                                                     .replace("{BODY}", failed.read_text().strip()))
+    debrief = SPECS / f"m{num:02d}_debrief.html"
+    if debrief.exists():
+        bg = conf.get("debrief_background", "")  # e.g. the letter's paper for mission 11, when the image exists
+        bg = f"campaigns\\redbaron\\img\\{bg}.jpg" if bg and (IMG / f"{bg}.png").exists() else "Menus\\blackboard.jpg"
+        (bdir / "debrief.html").write_text(DEBRIEF.replace("{TITLE}", conf.get("title", f"Mission {num}"))
+                                           .replace("{BODY}", debrief.read_text().strip()).replace("{BACKGROUND}", bg))
+    print(f"mission {mission_id}: {n} ground sections, template {template}, {restored} restored to standing" +
+          (f", {regrouped} regrouped" if regroup_points else "") + (f", {len(rails)} rail segments ({cleared} scenery objects left off the track, {moved} guns moved)" if rails else ""))
+
+
+# The game's briefing page layout (as missions/26/mission.html): text panel, then Fly Mission / Go Back.
+BRIEFING = """<html>
+	<head>
+		<title>
+			{TITLE}
+		</title>
+	</head>
+	<body background = "Menus\\briefing.jpg" bgcolor=#000000 link=#b1b1b1 alink=#ffffff vlink=#cccccc>
+		<font face = "courier new" size=2, color=#f0e68c>
+			<table width = 640 height = 300>
+				<tr><td width=32 height=64></td><td width=576 height=64></td><td width=32 height=64></td></tr>
+				<tr>
+				<td width=32 height=236></td>
+				<td width=576 height=236>
+{BODY}
+					</td>
+				<td width=32 height=236></td>
+				</tr>
+			</table>
+			<table width = 640 height = 180>
+				<tr> <td width=11 height=39></td><td width=128 height=39></td><td width=365 height=39></td><td width=128 height=39></td><td width=8 height=39></td> </tr>
+				<tr> <td width=11 height=128></td>
+				<td width=128 height=128>
+					{PHOTO}
+				</td><td width=365 height=128>
+					<table  width=365 height=128>
+						<tr> <td width=50 height=128></td>
+						<td width=155 height=128>
+							<table width=155 height=128>
+								<tr><td height=8></td></tr><tr> <td width=155 height=27>
+									<center>
+										<font size=4>
+											<b><a href="{PLAY}">Fly Mission</a></b>
+										</font>
+									</center>
+								</td> </tr>
+								<tr> <td  width=155 height=75></td> </tr>
+								<tr> <td width=155 height=19>
+									<center>
+										<font size=4>
+											<b><a href="{BACK}">GO BACK</a></b>
+										</font>
+
+									</center>
+								</td> </tr>
+							</table>
+						</td>
+						<td width=160 height=128></td></tr>
+					</table>
+				</td><td width=128 height=128>
+					{TARGET}
+				</td><td width=8 height=128></td> </tr>
+				<tr> <td width=11 height=13></td><td width=128 height=13></td><td width=365 height=13></td><td width=128 height=13></td><td width=8 height=13></td> </tr>
+			</table>
+		</font>
+	</body>
+</html>
+"""
+
+# Debriefing after a win (Game shows missions/<id>/debrief.html in place of the generic victory message):
+# the original victory message's blackboard page, the story text, and the original's three links.
+DEBRIEF = """<html>
+	<head>
+		<title>
+			{TITLE} - Debriefing
+		</title>
+	</head>
+	<body background = "{BACKGROUND}" bgcolor=#000000 link=#ff8800 alink=#ffffff vlink=#ffffff>
+		<font face = "courier new" size=3, color=#ffffff>
+		<table width=640 height=424>
+		<tr><td width=70 height=120></td><td width=500></td><td width=70></td></tr>
+		<tr><td></td><td width=500 height=290 valign=top>
+{BODY}^promotionnote^
+		</td><td></td></tr>
+		</table>
+		</font>
+		<font face = "courier new" size=2, color=#ffffffff>
+		<table>
+			<tr>
+				<td width = 214><center><a href="command:redo">Re-Fly Mission</a></center></td>
+				<td width = 216><center><a href="command:continue">Next Mission</a></center></td>
+				<td width = 210><center><a href="campaign:redbaron">Campaign</a></center></td>
+			</tr>
+		</table>
+		</font>
+	</body>
+</html>
+"""
+
+# Failure message for a script's own result (Game shows missions/<id>/failed_<result>.html from the defeat
+# page): the original failure messages' blackboard page and links.
+FAILED = """<html>
+	<head>
+		<title>
+			{TITLE} - Failure Message
+		</title>
+	</head>
+	<body background = "Menus\\blackboard.jpg" bgcolor=#000000 link=#ff8800 alink=#ffffff vlink=#ffffff>
+		<font face = "courier new" size=4, color=#ffffff>
+		<table width=640 height=424>
+		<tr>
+			<td>
+				<center>
+					<img width=200 HEIGHT=200><br>
+					{BODY}
+				</center>
+			</td>
+		</tr>
+		</table>
+		</font>
+		<font face = "courier new" size=2, color=#ffffffff>
+		<table>
+			<tr>
+				<td width = 214><center><a href="command:continue">View Briefing</a></center></td>
+				<td width = 216><center><a href="command:replay">Re-Fly Mission</a></center></td>
+				<td width = 210><center><a href="campaign:redbaron">Campaign</a></center></td>
+			</tr>
+		</table>
+		</font>
+	</body>
+</html>
+"""
+
+if __name__ == "__main__":
+    nums = [int(a) for a in sys.argv[1:]] or sorted(int(p.stem[1:]) for p in SPECS.glob("m*.ini"))
+    for num in nums:
+        build(num)

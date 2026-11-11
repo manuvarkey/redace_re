@@ -40,15 +40,27 @@ func links_fit(view: HtmlView) -> void:
 			rects.append(rect)
 
 func _initialize() -> void:
+	# scratch save files: never the player's own pilots, options or bindings
+	Game.save_path = "user://test_pilots.cfg"
+	Game.settings_path = "user://test_settings.cfg"
+	_remove_scratch_files()
 	run.call_deferred()
+
+func _finalize() -> void:
+	_remove_scratch_files()
+
+func _remove_scratch_files() -> void:
+	for path in [Game.save_path, Game.settings_path]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func run() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--write-startup="):
 			var cfg := ConfigFile.new()
-			cfg.load(Game.SETTINGS_PATH)
+			cfg.load(Game.settings_path)
 			cfg.set_value("rendering", Game.ANISOTROPY_SETTING, int(arg.get_slice("=", 1)))
-			cfg.save(Game.SETTINGS_PATH)
+			cfg.save(Game.settings_path)
 			quit()
 			return
 		if arg.begins_with("--expect-startup="):
@@ -60,7 +72,7 @@ func run() -> void:
 	var game := TestGame.new()
 	root.add_child(game)
 	var saved := ConfigFile.new()
-	saved.load(Game.SETTINGS_PATH)
+	saved.load(Game.settings_path)
 	if not saved.has_section_key("graphics", "msaa"):
 		check(game.settings.msaa == 0, "old saves default MSAA Off")
 	if not saved.has_section_key("rendering", Game.ANISOTROPY_SETTING):
@@ -121,12 +133,12 @@ func run() -> void:
 		check(game.settings[key] == before, "invalid menu choice ignored")
 	game._on_link("Menus\\Options.html")
 	check(game._page.to_lower().ends_with("options.html"), "Back returns to Options")
-	saved.load(Game.SETTINGS_PATH)
+	saved.load(Game.settings_path)
 	for key in ["water_detail", "cloud_detail", "scenery_detail"]:
 		saved.set_value("graphics", key, 99)
 	saved.set_value("graphics", "msaa", 99)
 	saved.set_value("rendering", Game.ANISOTROPY_SETTING, -1)
-	saved.save(Game.SETTINGS_PATH)
+	saved.save(Game.settings_path)
 	var invalid := Game.new()
 	invalid._load()
 	check(invalid.settings.msaa == 0 and invalid.settings.anisotropy == 0, "invalid saved choices fall back to Off")

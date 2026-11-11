@@ -37,6 +37,8 @@ the original WWI flight game's missions, menus and game logic, playable in the b
   (Real-ESRGAN), the card trees and palms remodelled in Blender.
 - **Plays anywhere:** web (WebGL 2), Windows, Linux and Android, with touch controls and tilt
   steering on phones.
+- **Bonus content:** *Der Rote Kampfflieger*, a twelve-mission Red Baron story campaign, and a Battle of
+  Britain Spitfire mission (**Goodies → Bonus Missions**).
 
 ## Download and play
 
@@ -125,7 +127,8 @@ To embed in a web page (e.g. a Blogger post), upload `build/web` to any https st
 - `.github/workflows/pages.yml` builds the web export on every push to `main` and deploys it to GitHub Pages
   (one-time setup: Settings > Pages > Source = GitHub Actions).
 - `.github/workflows/release.yml` builds all four presets when a `v*` tag is pushed and attaches them to
-  the release: `git tag -a v1.1 -m "..." && git push origin v1.1`.
+  the release: `git tag -a v1.1 -m "..." && git push origin v1.1`. The release text is `docs/release-notes/<tag>.md`
+  (when present) followed by the download instructions.
 
 ## Repository layout
 

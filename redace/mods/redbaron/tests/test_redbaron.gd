@@ -717,6 +717,8 @@ func _stock_rule_mission(i: int) -> void:
 				world.mission_time = 0.0
 			if id == 101:
 				var hk: Aircraft = s().plane(3002)
+				for q in [world.player, hk]:
+					check(q.global_position.y - world.ground_height(q.global_position) < 400.0, "101: %d starts below the ceiling" % q.object_id)
 				check(hk.high_speed < world.player.high_speed and hk.high_roll > world.player.high_roll, "101: Hawker out-turns the Albatros but is slower")
 				var flat := hk.global_position - world.player.global_position
 				flat.y = 0.0

@@ -780,8 +780,19 @@ the completion page's line; "Albers is falling behind!".
   straight waypoint and ignores the Baron, who closes head-on; (3) the head-on pass at 160-80 cost him 65 of his 120
   in one second, and he died a second later (with a near collision at 14).
 
+## Mission 1 duel lengthened (11 November 2026)
+
+User: the Hawker duel ends too early. Changes (m01.gd, m01.ini): Hawker starts 485 (about 360 over the ground) and
+his opening climbs 20, held under 370 over the ground, so the ceiling no longer bleeds his speed (he flies at 100
+instead of 63); if the Baron points at him inside 700 during the opening he breaks into a climbing turn and fights at
+once, instead of flying on straight; he also breaks out of a head-on pass (the Baron nose-on in front of him inside
+450, every 3 s at most), so a head-on burst is no free kill; for the first 45 s he takes 0.6 of each hit. In his
+retreat he is away within 300 of the south edge (the ground ends there; the ceiling, reading the void, had stalled
+him on the edge for a minute and a half before he counted as gone). Autopilot Baron, six seeds: Hawker down at
+31-65 s (was 10-11 s); a human pilot shoots less well than the autopilot.
+
 ## Open items (for the next session)
 
-- Mission 1 (Hawker) ends too early (user, 11 November): see the options under "Release check"; to be decided.
+- Mission 1 duel lengthened (see above): needs the user's playtest.
 - Android build never tried.
 - Merge `redbaron-mod` into `main`, tag and publish the builds.

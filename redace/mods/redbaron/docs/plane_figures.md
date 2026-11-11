@@ -113,7 +113,7 @@ ground fire on aircraft where full strength was too much once it worked:
 | --- | --- | --- | --- |
 | 8 Wounded | Baron | after the ambush burst: health at least half, then 1/4 of every hit | The story wounds him; Brenner must have time to deal with the ambushers |
 | 8 Wounded | Nieuports (ambush) | until the wound: highspeed 130, no damage, no dodging; they chase the Baron at full throttle and open fire inside 280 | They must close and fire visibly (a gun attack matches the target's speed and never caught a Baron flying home); afterwards stock figures |
-| 1 Hawker | Hawker | evasive break when the Baron settles behind him, 7 s recovery; dive for the lines at 200 s (or badly hit after 90 s) | The duel's shape (m01.gd) |
+| 1 Hawker | Hawker | evasive break when the Baron settles behind him, 7 s recovery; breaks out of head-on passes (every 3 s at most) and turns to fight when the Baron points at him in the opening; 0.6 of each hit for the first 45 s; dive for the lines at 200 s (or badly hit after 90 s) | The duel's shape (m01.gd); a head-on burst or an early lucky one no longer ends it in seconds |
 | 11 Formation | Brenner, Hartwig | no damage until the story moment; then Brenner is killed by script, Hartwig set to 50 % and protected | Brenner's death is staged, never set off by the Baron's position; Hartwig must live to be the last objective |
 | 11 Formation | two Camels of the cut-in | no damage until their scripted part | The scene needs both |
 | 1-12 | the player's AI wingmen | roll at most 110 deg/s; proportional gun-attack steering while the target is ahead | The Dr.I's roll made the original bang-bang steering swirl (Cambrai playtest) |

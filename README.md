@@ -142,6 +142,9 @@ To embed in a web page (e.g. a Blogger post), upload `build/web` to any https st
 | `tools/blender_tree.py` | Low-poly tree generator for the `overrides/` models (run inside Blender) |
 | `tools/redace-wine.sh` | Runs the original game or the Windows export under Wine for comparison |
 | `tools/ghidra_scripts/` | Ghidra headless scripts (`ExportAll`, `ImproveAnalysis`, `ApplyGuids`) for the `RedAce.exe` decompilation |
+| [`decomp/`](decomp/README.md) | Decompiled C/header, function and GUID indexes, original analysis log, and research notes with reproduction commands |
+| `ghidra_proj/` | Saved Ghidra project with the analysed `RedAce.exe`; open `ghidra_proj/RedAce.gpr` in Ghidra |
+| `decomp_source_paths.txt` | Original engine header paths recovered from assertion strings |
 
 ## Thanks to the original team
 

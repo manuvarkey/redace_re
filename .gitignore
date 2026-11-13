@@ -25,3 +25,7 @@ redace/fonts/Verdana_Bold.ttf
 
 # Python bytecode
 __pycache__/
+
+# Ghidra project locks (the saved analysis database is versioned)
+/ghidra_proj/*.lock
+/ghidra_proj/*.lock~

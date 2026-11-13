@@ -7,8 +7,10 @@ assembly, rather than through the port's previous implementation.
 
 ## Source evidence
 
-The original decompiled source lives outside this repository at `../decomp/RedAce.c`; the
-executable used for disassembly is `../extract/game/RedAce.exe`.
+The original decompiled source is included at [`decomp/RedAce.c`](../decomp/RedAce.c),
+with the analysed program in [`ghidra_proj/RedAce.gpr`](../ghidra_proj/RedAce.gpr).
+The executable used for disassembly is a local input at `../extract/game/RedAce.exe`
+(relative to the repository root). See the [research notes](../decomp/README.md) for reproduction commands.
 
 | Rule | Original evidence | Shared implementation |
 |---|---|---|

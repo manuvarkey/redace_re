@@ -145,7 +145,7 @@ func _draw_map(p: Aircraft, s: float) -> void:
 	var scale := Vector2(256.0 / bounds.size.x, 256.0 / bounds.size.y)
 	var right := p.flight_basis.x  # RenderWare "right" = model +x (appears on the left)
 	var at := p.flight_basis.z
-	for t in world.targets:
+	for t in world.targets_in_groups((1 << GROUP_AA) | (1 << GROUP_TARGET)):
 		if t.dead:
 			continue
 		var g: int = t.groups

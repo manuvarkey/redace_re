@@ -319,6 +319,7 @@ func load_mission(id: int) -> void:
 	_bullet_plane_grid.clear()
 	_bullet_target_cells.clear()
 	_bullet_collision_prepared = false
+	targets_moved()
 	shells.clear()
 	rules.clear()
 	player = null
@@ -832,8 +833,8 @@ func object_for_goal(id: int, me: Aircraft) -> Variant:
 			if d > 0.1 and d < best_d:
 				best_d = d
 				best = p
-	for t in targets:
-		if not t.dead and (int(t.groups) & bit):
+	for t in targets_in_groups(bit):
+		if not t.dead:
 			var d: float = t.node.global_position.distance_squared_to(me.global_position)
 			if d > 0.1 and d < best_d:
 				best_d = d
@@ -1297,12 +1298,129 @@ func _collision_candidates(p: Aircraft, a: Vector3, b: Vector3, margin := 0.0) -
 			if not segment_near_node(q._model, q._collision_reach, a, b, margin):
 				continue
 		candidates.append({"node": q, "plane": q})
-	for t in targets:
+	for i in _collision_target_indices(a, b, margin):
+		var t: Dictionary = targets[i]
 		_prepare_target_collision(t)
 		if segment_near_node(t.node, float(t.collision_reach), a, b, margin):
 			candidates.append({"node": t.node, "target": t})
 	candidates.sort_custom(func(x, y): return x.node.get_index() < y.node.get_index())
 	return candidates
+
+
+# Broad phase for the object probes. The exe never scans every object: RpWorldForAllAtomicIntersections
+# (0x482f10, called at 0x431827) visits only the atomics of the BSP sectors a probe line crosses. Here each
+# ground object sits in every 100-unit map cell its bounding sphere (the reach segment_near_node tests)
+# overlaps, and a query returns the objects of the cells the segment's box, grown by the margin, touches.
+# Only objects whose sphere cannot reach the segment are skipped, and the indices come back in target order,
+# so the exact test above sees the same candidates in the same order as a scan of every object.
+# Turrets are tested every time: mission scripts move them (Red Baron mission 12). A damage model change
+# reinserts its object. Anything else that moves or rescales a ground object calls targets_moved().
+const COLLISION_CELL := 100.0
+var _collision_cells := {}  # Vector2i cell -> Array of target indices
+var _collision_cell_keys: Array = []  # per target index: the cells it was put in
+var _collision_loose: Array[int] = []  # turrets, always candidates for the exact test
+var _collision_index_of := {}  # target node instance id -> target index
+var _collision_pending: Array[int] = []  # node instance ids whose damage model changed
+var _collision_stamp := PackedInt32Array()
+var _collision_query := 0
+var _collision_grid_size := -1  # targets.size() the grid was built for; -1 = rebuild
+
+
+## Ground objects moved, rescaled, added or removed outside load_mission: rebuild the lookups on next use.
+func targets_moved() -> void:
+	_collision_grid_size = -1
+	_group_targets_size = -1
+
+
+func _build_collision_grid() -> void:
+	_collision_cells.clear()
+	_collision_loose.clear()
+	_collision_index_of.clear()
+	_collision_pending.clear()
+	_collision_cell_keys.resize(targets.size())
+	_collision_stamp.resize(targets.size())
+	_collision_stamp.fill(0)
+	_collision_query = 0
+	for i in targets.size():
+		_collision_index_of[(targets[i].node as Node).get_instance_id()] = i
+		_collision_cell_keys[i] = []
+		_insert_collision_target(i)
+	_collision_grid_size = targets.size()
+
+
+func _insert_collision_target(i: int) -> void:
+	var t: Dictionary = targets[i]
+	if t.get("turret", false):
+		if not _collision_loose.has(i):
+			_collision_loose.append(i)
+		return
+	_prepare_target_collision(t)
+	var node: Node3D = t.node
+	var scale := node.global_basis.get_scale().abs()
+	var r := float(t.collision_reach) * scale[scale.max_axis_index()] + 0.01  # small roundoff margin
+	var c := node.global_position
+	var keys: Array = _collision_cell_keys[i]
+	for x in range(floori((c.x - r) / COLLISION_CELL), floori((c.x + r) / COLLISION_CELL) + 1):
+		for z in range(floori((c.z - r) / COLLISION_CELL), floori((c.z + r) / COLLISION_CELL) + 1):
+			var key := Vector2i(x, z)
+			if not _collision_cells.has(key):
+				_collision_cells[key] = []
+			_collision_cells[key].append(i)
+			keys.append(key)
+
+
+func _reinsert_collision_target(i: int) -> void:
+	var keys: Array = _collision_cell_keys[i]
+	for key in keys:
+		(_collision_cells[key] as Array).erase(i)
+	keys.clear()
+	_insert_collision_target(i)
+
+
+## Indices (ascending) of the ground objects whose cells the segment a..b, grown by margin, touches.
+func _collision_target_indices(a: Vector3, b: Vector3, margin: float) -> Array:
+	if _collision_grid_size != targets.size():
+		_build_collision_grid()
+	elif not _collision_pending.is_empty():
+		for id in _collision_pending:
+			var i: int = _collision_index_of.get(id, -1)
+			if i >= 0:
+				_reinsert_collision_target(i)
+		_collision_pending.clear()
+	_collision_query += 1
+	if _collision_query >= 0x7fffffff:
+		_collision_stamp.fill(0)
+		_collision_query = 1
+	var stamp := _collision_query
+	var out: Array = []
+	for x in range(floori((minf(a.x, b.x) - margin) / COLLISION_CELL), floori((maxf(a.x, b.x) + margin) / COLLISION_CELL) + 1):
+		for z in range(floori((minf(a.z, b.z) - margin) / COLLISION_CELL), floori((maxf(a.z, b.z) + margin) / COLLISION_CELL) + 1):
+			var cell = _collision_cells.get(Vector2i(x, z))
+			if cell == null:
+				continue
+			for i in cell:
+				if _collision_stamp[i] != stamp:
+					_collision_stamp[i] = stamp
+					out.append(i)
+	out.append_array(_collision_loose)
+	out.sort()
+	return out
+
+
+# Ground objects by group, as the exe keeps them (lists at manager + 0x5e54 + group * 0x1770, counts at
+# + 0x148b4, walked by FUN_0044a881): a scan of the members visits them in the same order as a scan of all
+# objects filtered by group. Ground objects never change groups; additions are caught by the size check.
+var _group_targets := {}  # groups mask -> targets with any of those bits, in target order
+var _group_targets_size := -1
+
+
+func targets_in_groups(mask: int) -> Array:
+	if _group_targets_size != targets.size():
+		_group_targets.clear()
+		_group_targets_size = targets.size()
+	if not _group_targets.has(mask):
+		_group_targets[mask] = targets.filter(func(t): return (int(t.groups) & mask) != 0)
+	return _group_targets[mask]
 
 
 func _prepare_target_collision(t: Dictionary) -> void:
@@ -1485,6 +1603,7 @@ func _damage_target(t: Dictionary, amount: float) -> void:
 	if idx != t.model_index:
 		# next damage model, with the breakage sound (FUN_0042c323)
 		t.model_index = idx
+		_collision_pending.append((t.node as Node).get_instance_id())  # its reach may change
 		var node: Node3D = t.node
 		var m := load_model(models[idx])
 		if m:
@@ -1576,8 +1695,8 @@ func _nearest_in_group(group: int, pos: Vector3) -> Variant:
 			if d < best_d:
 				best_d = d
 				best = p
-	for t in targets:
-		if not t.dead and int(t.groups) & bit:
+	for t in targets_in_groups(bit):
+		if not t.dead:
 			var d: float = (t.node as Node3D).global_position.distance_squared_to(pos)
 			if d > 0.1 and d < best_d:
 				best_d = d

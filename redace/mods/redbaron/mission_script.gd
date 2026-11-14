@@ -374,6 +374,7 @@ func lay_on_ground(t: Dictionary, half_length: float) -> void:
 	var up := fwd.cross(right).normalized()
 	var sc := b.get_scale()
 	node.global_transform = Transform3D(Basis(right * sc.x, up * sc.y, fwd * ((e - a).length() / (2.0 * half_length))), mid)
+	world.targets_moved()
 
 
 ## Puts a ground object on the terrain under it (scenery placed by a mission at height 0); tilt: lie along the slope.
@@ -389,6 +390,7 @@ func snap_to_ground(t: Dictionary, lift := 0.0, tilt := false) -> void:
 		var right := n.cross(at).normalized()
 		b = Basis(right * sc.x, n * sc.y, at * sc.z)
 	node.global_transform = Transform3D(b, Vector3(p.x, h + lift, p.z))
+	world.targets_moved()
 
 
 func set_fog(colour: Color) -> void:

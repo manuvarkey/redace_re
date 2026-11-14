@@ -85,6 +85,36 @@ preclude claiming bit-identical replays. Arbitrary runtime mesh deformation or t
 child parts beyond their cached pivot bounds would require refreshing the collision geometry;
 the shipped rotating propellers/turrets are enclosed by those bounds.
 
+## Object lookup performance
+
+Every probe envelope used to test all ground objects (about 700 per map) for every plane on
+every tick, and group searches (AA gun targets, the AI's group 8 avoidance check, the minimap)
+scanned every object too. On a phone that put the demo mission (15 planes, 16 AA guns) over
+the 60 Hz frame budget. The exe does neither: `RpWorldForAllAtomicIntersections` (0x482f10, called
+at 0x431827) walks only the BSP sectors a probe crosses, and `FUN_0044a881` walks per-group lists
+(manager + 0x5e54 + group * 0x1770, counts at + 0x148b4).
+
+`World._collision_target_indices` puts each ground object in every 100-unit map cell its bounding
+sphere overlaps, and returns the objects of the cells the probe's box (grown by the margin) touches,
+in target order. Only objects whose sphere cannot reach the segment are skipped, so the exact test
+sees the same candidates in the same order. Turrets are always tested, because mission scripts move
+them (Red Baron mission 12). A damage-model change reinserts its object, and objects added at run time
+trigger a rebuild. Scripts that move or rescale other ground objects call `World.targets_moved()`.
+`World.targets_in_groups` keeps the member lists in target order, so nearest-member ties resolve
+as before.
+
+Mean CPU time per 60 Hz physics tick on a Ryzen 5 8600G (editor binary, 90 s autopilot flight):
+
+| Mission | Before | After |
+|---|---:|---:|
+| Demo (-3) | 6.56 ms | 1.13 ms |
+| Training 1 (-1) | 2.66 ms | 0.48 ms |
+| Mission 1 | 4.76 ms | 0.71 ms |
+
+`tools/test_target_lookup.gd` compares both lookups with the full scans: every tick of live
+flights in seven missions, random segments across the map, a damage-model change, a turret moved
+without notice, rescaled scenery, an object added at run time and a mission reload.
+
 ## Preserved mod behavior
 
 No Britain mod files are changed. Its bomber/escort steering, pitch caps, cliff preview, ceiling,
@@ -103,6 +133,7 @@ godot --headless --path redace --log-file /tmp/avoidance.log -s tools/test_avoid
 godot --headless --path redace --log-file /tmp/collision-management.log -s tools/test_collision_management.gd
 godot --headless --path redace --log-file /tmp/britain-aircraft.log -s tools/test_britain_aircraft.gd
 godot --headless --path redace --log-file /tmp/britain-mission.log -s tools/test_britain.gd
+godot --headless --path redace --log-file /tmp/target-lookup.log -s tools/test_target_lookup.gd
 ```
 
 The management suite checks ordered gates, underside landing/bounce/crash, slopes, taxiing,

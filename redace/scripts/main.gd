@@ -177,13 +177,25 @@ func _ground_model(dir: String, file: String) -> String:
 
 
 static func load_model(rel: String) -> Node3D:
+	var ps := preload_model(rel)
+	return ps.instantiate() as Node3D if ps else null
+
+
+## Reads a model into the cache without making a copy. Models first shown mid-flight (damage stages, wrecks,
+## bombs and rockets) are read during loading: from disk each took about 45 ms on a desktop and stalled the fight.
+static func preload_model(rel: String) -> PackedScene:
 	var path := Ini.data_path(rel)
 	if not _scene_cache.has(path):
 		_scene_cache[path] = load(path) if ResourceLoader.exists(path) else null
 		if _scene_cache[path] == null:
 			push_warning("model missing: " + path)
-	var ps: PackedScene = _scene_cache[path]
-	return ps.instantiate() as Node3D if ps else null
+	return _scene_cache[path]
+
+
+## Optional models (an aircraft's damage stages): cached when the file exists, without a warning when it does not.
+static func preload_optional_model(rel: String) -> void:
+	if not rel.is_empty() and ResourceLoader.exists(Ini.data_path(rel)):
+		preload_model(rel)
 
 
 static func load_sound(file_name: String) -> AudioStream:
@@ -442,6 +454,7 @@ func _load_mission(id: int, progress: Callable) -> void:
 		if p.groups & (1 << 8):
 			p.endurance *= player_side_endurance
 		p.health = p.endurance
+	_build_collision_grid()  # with every object's collision triangles, before the first probe
 	await _load_step(progress, 1.0, true)
 
 
@@ -662,6 +675,8 @@ func _spawn_ground(sec: Dictionary, vehicle := true) -> void:
 	var model := load_model(models[0])
 	if model == null:
 		return
+	for i in range(1, models.size()):
+		preload_model(models[i])  # damage stages and wreck, shown when hit
 	var surface_ambient := Ini.num(app, "ambient", 0.4)
 	var surface_diffuse := Ini.num(app, "diffuse", 1.0)
 	apply_lighting(model, surface_ambient, surface_diffuse)
@@ -737,6 +752,18 @@ func _spawn_plane(sec_name: String, m: Dictionary) -> void:
 		p.health = p.endurance
 	if sec.has("highspeed"):
 		p.high_speed = Ini.num(sec, "highspeed", p.high_speed)
+	# a mod aircraft's damage-stage models, and its bombs or rockets, shown first in the fight
+	var stages = p.get("_damage_paths")
+	if stages is Array:
+		for path in stages:
+			if not str(path).is_empty() and ResourceLoader.exists(Ini.data_path(str(path))):
+				prepare_model_triangles(str(path))
+	if p._model != null:
+		p.prepare_collision_parts()  # its triangles, before the first probe
+	if p.ordnance_type in [1, 2]:
+		var clump := str(ordnance.get(p.ordnance_type + 1, {}).get("clump", ""))
+		if not clump.is_empty():
+			preload_optional_model("objects/ordinance/%s.gltf" % clump.to_lower())
 	_level.add_child(p)
 	p.place(Transform3D(_basis_from(sec), Ini.vec3(sec, "pos")))
 	p.destroyed.connect(_on_plane_destroyed)
@@ -1541,7 +1568,8 @@ static func collision_parts(model: Node3D) -> Array:
 			while frame != model:
 				reach = reach * frame.scale.abs()[frame.scale.abs().max_axis_index()] + frame.position.length()
 				frame = frame.get_parent() as Node3D
-			parts.append({"node": mi, "box": box, "faces": mi.mesh.get_faces(), "reach": reach})
+			var tree := mesh_triangles(mi.mesh)
+			parts.append({"node": mi, "box": box, "faces": tree.faces, "tree": tree, "reach": reach})
 	return parts
 
 
@@ -1569,9 +1597,123 @@ static func parts_hit_count(parts: Array, a: Vector3, b: Vector3) -> int:
 		var la := inv * a
 		var lb := inv * b
 		var box: AABB = part.box
-		if segment_hits_box(la, lb, box.position, box.end) and faces_hit(part.faces, la, lb):
+		if segment_hits_box(la, lb, box.position, box.end) \
+				and (triangles_hit(part.tree, la, lb) if part.has("tree") else faces_hit(part.faces, la, lb)):
 			hits += 1
 	return hits
+
+
+# Triangle tests by box. The exe's per-atomic triangle callback stops at the first hit triangle, so the answer is only
+# whether the segment meets any triangle. Each mesh's triangles are put in Morton order of their centres (near ones
+# together); boxes enclose every run of TRI_LEAF triangles and every TRI_GROUP runs, and a segment tests only the
+# triangles of boxes it crosses. A triangle the segment meets lies inside its box, and the boxes are grown by a
+# little against roundoff, so the answer is the same as testing every triangle. The Battle of Britain aircraft have
+# 10,000-18,500 triangles: a probe through a He 111's box that missed it tested all of them, about 6 ms per tick.
+const TRI_LEAF := 16
+const TRI_GROUP := 16
+static var _mesh_triangles := {}  # Mesh -> triangle_tree of its faces (meshes are shared by every copy of a model)
+
+
+static func mesh_triangles(mesh: Mesh) -> Dictionary:
+	if not _mesh_triangles.has(mesh):
+		_mesh_triangles[mesh] = triangle_tree(mesh.get_faces())
+	return _mesh_triangles[mesh]
+
+
+## Builds the cached triangle data of every mesh in a model, so its first collision does not have to.
+static func prepare_model_triangles(rel: String) -> void:
+	var ps := preload_model(rel)
+	if ps == null:
+		return
+	var model := ps.instantiate()
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		if (mi as MeshInstance3D).mesh:
+			mesh_triangles((mi as MeshInstance3D).mesh)
+	model.free()
+
+
+static func _spread_bits(v: int) -> int:
+	v = (v | (v << 16)) & 0x030000FF
+	v = (v | (v << 8)) & 0x0300F00F
+	v = (v | (v << 4)) & 0x030C30C3
+	return (v | (v << 2)) & 0x09249249
+
+
+static func triangle_tree(faces: PackedVector3Array) -> Dictionary:
+	var n := faces.size() / 3
+	var tree := {"faces": faces, "count": n, "leaf_lo": PackedVector3Array(), "leaf_hi": PackedVector3Array(),
+		"group_lo": PackedVector3Array(), "group_hi": PackedVector3Array()}
+	if n <= TRI_LEAF * 2:
+		return tree  # few triangles: tested one by one
+	var box := AABB(faces[0], Vector3.ZERO)
+	for v in faces:
+		box = box.expand(v)
+	var scale := Vector3(1023.0, 1023.0, 1023.0) / box.size.max(Vector3.ONE * 1e-6)
+	var keys := PackedInt64Array()
+	keys.resize(n)
+	for i in n:
+		var c := ((faces[i * 3] + faces[i * 3 + 1] + faces[i * 3 + 2]) / 3.0 - box.position) * scale
+		var code := _spread_bits(clampi(int(c.x), 0, 1023)) | (_spread_bits(clampi(int(c.y), 0, 1023)) << 1) \
+			| (_spread_bits(clampi(int(c.z), 0, 1023)) << 2)
+		keys[i] = (code << 24) | i
+	keys.sort()
+	var sorted := PackedVector3Array()
+	sorted.resize(n * 3)
+	for k in n:
+		var i := keys[k] & 0xFFFFFF
+		sorted[k * 3] = faces[i * 3]
+		sorted[k * 3 + 1] = faces[i * 3 + 1]
+		sorted[k * 3 + 2] = faces[i * 3 + 2]
+	var grow := Vector3.ONE * (1e-4 * (1.0 + box.size[box.size.max_axis_index()]))
+	var leaf_lo := PackedVector3Array()
+	var leaf_hi := PackedVector3Array()
+	for start in range(0, n, TRI_LEAF):
+		var lo := sorted[start * 3]
+		var hi := lo
+		for j in range(start * 3, mini(start + TRI_LEAF, n) * 3):
+			lo = lo.min(sorted[j])
+			hi = hi.max(sorted[j])
+		leaf_lo.append(lo - grow)
+		leaf_hi.append(hi + grow)
+	var group_lo := PackedVector3Array()
+	var group_hi := PackedVector3Array()
+	for start in range(0, leaf_lo.size(), TRI_GROUP):
+		var lo := leaf_lo[start]
+		var hi := leaf_hi[start]
+		for j in range(start, mini(start + TRI_GROUP, leaf_lo.size())):
+			lo = lo.min(leaf_lo[j])
+			hi = hi.max(leaf_hi[j])
+		group_lo.append(lo)
+		group_hi.append(hi)
+	tree.faces = sorted
+	tree.leaf_lo = leaf_lo
+	tree.leaf_hi = leaf_hi
+	tree.group_lo = group_lo
+	tree.group_hi = group_hi
+	return tree
+
+
+## Whether segment a..b meets any triangle of a triangle_tree (the same answer as faces_hit on all its triangles).
+static func triangles_hit(tree: Dictionary, a: Vector3, b: Vector3) -> bool:
+	var faces: PackedVector3Array = tree.faces
+	var group_lo: PackedVector3Array = tree.group_lo
+	if group_lo.is_empty():
+		return faces_hit(faces, a, b)
+	var group_hi: PackedVector3Array = tree.group_hi
+	var leaf_lo: PackedVector3Array = tree.leaf_lo
+	var leaf_hi: PackedVector3Array = tree.leaf_hi
+	var n: int = tree.count
+	for g in group_lo.size():
+		if not segment_hits_box(a, b, group_lo[g], group_hi[g]):
+			continue
+		for leaf in range(g * TRI_GROUP, mini((g + 1) * TRI_GROUP, leaf_lo.size())):
+			if not segment_hits_box(a, b, leaf_lo[leaf], leaf_hi[leaf]):
+				continue
+			for t in range(leaf * TRI_LEAF, mini((leaf + 1) * TRI_LEAF, n)):
+				var i := t * 3
+				if Geometry3D.segment_intersects_triangle(a, b, faces[i], faces[i + 1], faces[i + 2]) != null:
+					return true
+	return false
 
 
 static func faces_hit(faces: PackedVector3Array, a: Vector3, b: Vector3) -> bool:
@@ -1585,11 +1727,7 @@ static func faces_hit(faces: PackedVector3Array, a: Vector3, b: Vector3) -> bool
 ## object's current model in its local space, cached per damage model.
 func _segment_hits_faces(t: Dictionary, a: Vector3, b: Vector3) -> bool:
 	_geometry(t)
-	var f: PackedVector3Array = t.faces
-	for i in range(0, f.size() - 2, 3):
-		if Geometry3D.segment_intersects_triangle(a, b, f[i], f[i + 1], f[i + 2]) != null:
-			return true
-	return false
+	return triangles_hit(t.faces_tree, a, b)
 
 
 ## Triangles and atomics (centre + radius, as RenderWare's bounding spheres) of the current model, local space.
@@ -1611,6 +1749,7 @@ func _geometry(t: Dictionary) -> void:
 		if not own.is_empty():
 			atoms.append(sphere_of(own))
 	t.faces = faces
+	t.faces_tree = triangle_tree(faces)
 	t.atoms = atoms
 	t.faces_model = t.model_index
 

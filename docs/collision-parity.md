@@ -111,6 +111,16 @@ Mean CPU time per 60 Hz physics tick on a Ryzen 5 8600G (editor binary, 90 s aut
 | Training 1 (-1) | 2.66 ms | 0.48 ms |
 | Mission 1 | 4.76 ms | 0.71 ms |
 
+Triangle tests (`World.triangles_hit`) visit only the triangles in boxes the segment crosses. Each
+mesh's triangles are sorted along a Morton curve of their centres, with boxes around every 16 and every
+256 triangles, cached per mesh. The exe's triangle callback stops at the first hit, so only "any
+triangle hit" matters, and the triangle order does not change the answer. The Battle of Britain aircraft
+have 10,000 to 18,500 triangles, so before this a probe through a He 111's box that missed it cost about
+6 ms. Damage-stage models, wrecks, ordnance and the collision data are prepared while the mission
+loads, rather than on first use mid-fight (about 45 ms per model read from disk).
+`tools/test_triangle_tree.gd` compares the box test with testing every triangle on 19 meshes, including
+segments ending on vertices and crossing edges.
+
 `tools/test_target_lookup.gd` compares both lookups with the full scans: every tick of live
 flights in seven missions, random segments across the map, a damage-model change, a turret moved
 without notice, rescaled scenery, an object added at run time and a mission reload.
@@ -134,6 +144,7 @@ godot --headless --path redace --log-file /tmp/collision-management.log -s tools
 godot --headless --path redace --log-file /tmp/britain-aircraft.log -s tools/test_britain_aircraft.gd
 godot --headless --path redace --log-file /tmp/britain-mission.log -s tools/test_britain.gd
 godot --headless --path redace --log-file /tmp/target-lookup.log -s tools/test_target_lookup.gd
+godot --headless --path redace --log-file /tmp/triangle-tree.log -s tools/test_triangle_tree.gd
 ```
 
 The management suite checks ordered gates, underside landing/bounce/crash, slopes, taxiing,

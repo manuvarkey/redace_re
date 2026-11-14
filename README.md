@@ -244,7 +244,7 @@ with the same HTML snippets the exe generated and handles their links (`command:
 - title screen (5 s), main menu, options (sensitivity, volumes, view distance, effects detail, vsync,
   window mode, control layout), credits, goodies (replay levels, demo levels, cheats after finishing).
 - pilot roster with 6 slots (type a name, Enter), Start/Continue Campaign, briefings, Fly Mission,
-  loading page, pause page (Esc: continue, restart, abort), result pages (victory, promotion,
+  loading page (its bar fills as the mission loads, one bar image per 5 %, as the exe draws it), pause page (Esc: continue, restart, abort), result pages (victory, promotion,
   debriefings, defeat with the reason: plane destroyed, mission critical object lost, out of time),
   congratulations after mission 25.
 - ranks Corporal..Colonel promoted at scores 700, 1800, 2800, 4000, 5400, 7000, 8800, 10800, 12600,
@@ -277,6 +277,9 @@ without a sensor, switches to a virtual stick dragged on the left half. Steering
 path, so the Controls page sensitivities apply. On the web the first tap goes fullscreen and locks
 landscape, and tilt comes from `devicemotion` (head script in the Web preset). The Android back button
 pauses and resumes a flight and steps back through the menus; new pilot names open the on-screen keyboard.
+With a game controller connected and its axes bound (Options > Controls, "Set to default for: Joystick"),
+the controller flies those axes instead of the touch layer; a finger on the on-screen stick or the THR slider
+still takes over while held, and the touch buttons keep working.
 Tested on the Android 14 emulator (x86_64, host GPU) and in its Chrome.
 
 </details>
@@ -491,6 +494,8 @@ mode 1/4/6/7/8), `--perf`, `--pages=Menus\a.html,...` (show pages), `--clicks=hr
 - Goals 0x110/0x150 (unused by the missions) are ignored.
 - Controller tilt steering (not in the original): on controllers with motion sensors, the "Gyroscope?" box on the Controls page
   steers by tilting, like the phones' tilt mode. The stick takes over whenever it is deflected, and `\` in flight recentres.
+  Godot reads controller motion sensors only through SDL (desktop), so on phones the box steers by the phone's own tilt,
+  for a phone clipped to its controller; CAL recentres it.
 - Mouse roll and the default joystick response apply directly, as in the exe. The Controls page's **Stick** choice
   offers Quick (0.2 s) and Gentle (0.4 s) roll response for D-pads, gamepad buttons, or axes that jump to full
   deflection: the stick sets the bank itself, so Direct tilts the plane at once. Pitch is always direct, since the

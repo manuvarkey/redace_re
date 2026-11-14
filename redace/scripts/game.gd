@@ -398,7 +398,8 @@ func _fill(html: String) -> String:
 		"defeaturl": _failure_page(_flown, _result) if _failure_page(_flown, _result) != "" else {
 			"death": "Menus\\faileddeath.html", "defence": "Menus\\faileddefence.html",
 			"time": "Menus\\failedtime.html"}.get(_result, "Menus\\faileddeath.html"),
-		"loadbar": "<img src=\"Menus\\loadbar.jpg\" width=298 height=20>",
+		# the exe writes one bar image per 5 % loaded (RedAce.c:46298: i < fraction * 20)
+		"loadbar": "<img src=\"Menus\\loadbar.jpg\">".repeat(ceili(_load_progress * 20.0 - 0.0001)),
 		"rollbar": _sens_bar(1, controls.bind.roll.sensitivity),
 		"pitchbar": _sens_bar(0, controls.bind.pitch.sensitivity),
 		"joygyro": "Gyroscope?" + _check("command:joygyro", controls.gyro_enabled, true) if controls.gyro_available() \
@@ -1119,6 +1120,7 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	_mission = id
 	_flown = id
 	_campaign = campaign
+	_load_progress = 0.0
 	open_page("Menus\\loading.html")
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -1146,10 +1148,20 @@ func _fly(id: int, campaign: bool, debug := false) -> void:
 	world.view_distance = float(settings.clip_plane)
 	world.effects_detail = settings.effects_detail / 10.0
 	if not debug:
-		world.load_mission(id)
+		await world.load_mission_async(id, _show_load_progress)
 	view.visible = false
 	_page = ""
 	_capture_mouse()
+
+
+var _load_progress := 0.0  # loading page's bar, 0..1
+
+
+func _show_load_progress(fraction: float) -> void:
+	if ceili(fraction * 20.0 - 0.0001) != ceili(_load_progress * 20.0 - 0.0001):
+		_load_progress = fraction
+		open_page("Menus\\loading.html")
+	_load_progress = fraction
 
 
 ## Counts this flight for the current pilot and returns the easing steps it earns.
@@ -1204,7 +1216,7 @@ func _notification(what: int) -> void:
 
 
 func _pause() -> void:
-	if get_tree().paused:
+	if get_tree().paused or (world and world.loading):
 		return
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

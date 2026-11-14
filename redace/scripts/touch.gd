@@ -100,17 +100,32 @@ static func _axis(a: float) -> float:
 	return clampf((a - signf(a) * TILT_DEAD) / (TILT_RANGE - TILT_DEAD), -1.0, 1.0)
 
 
+## The phone's tilt as stick values (roll, pitch), from the neutral set at the start of a flight or by CAL; zero without
+## a sensor. Also the controller's tilt option when a game controller has no motion sensors of its own (Controls).
+func tilt_axes() -> Vector2:
+	var g := gravity()
+	if g.length() <= 1.0:
+		return Vector2.ZERO
+	if _g0 == Vector3.ZERO:
+		_g0 = g
+	return Vector2(_axis(_roll_angle(g) - _roll_angle(_g0)) * TILT_ROLL_SIGN,
+		_axis(wrapf(_pitch_angle(g) - _pitch_angle(_g0), -PI, PI)) * TILT_PITCH_SIGN)
+
+
+## A finger is on the on-screen stick.
+func stick_held() -> bool:
+	return _touches.values().any(func(t: Dictionary) -> bool: return t.kind == "stick")
+
+
 func _process(_dt: float) -> void:
 	visible = active
 	if not active:
 		return
 	if tilt_mode():
-		var g := gravity()
-		if _g0 == Vector3.ZERO:
-			_g0 = g
-		roll = _axis(_roll_angle(g) - _roll_angle(_g0)) * TILT_ROLL_SIGN
-		pitch = _axis(wrapf(_pitch_angle(g) - _pitch_angle(_g0), -PI, PI)) * TILT_PITCH_SIGN
-	elif not _touches.values().any(func(t: Dictionary) -> bool: return t.kind == "stick"):
+		var axes := tilt_axes()
+		roll = axes.x
+		pitch = axes.y
+	elif not stick_held():
 		roll = 0.0
 		pitch = 0.0
 	queue_redraw()

@@ -306,7 +306,43 @@ static func _white_texture() -> Texture2D:
 
 # ---------------------------------------------------------------- mission loading
 
+## Loads a mission at once (debug runs, tests and tools).
 func load_mission(id: int) -> void:
+	_load_mission(id, Callable())  # never suspends without a progress callback, so this returns loaded
+
+
+## Loads a mission over several frames for the menus' loading page: progress(fraction) is called and a frame is
+## drawn about every LOAD_STEP_MS, as the exe redraws loading.html with ^loadbar^ = fraction x 20 bar images
+## (RedAce.c:46298). The world neither steps nor shows its HUD until the mission is complete.
+func load_mission_async(id: int, progress: Callable) -> void:
+	loading = true
+	_ui.visible = false
+	await _load_mission(id, progress)
+	loading = false
+	_ui.visible = true
+	for p in planes:
+		p.set_physics_process(true)
+		p.set_process(true)
+
+
+const LOAD_STEP_MS := 50
+var loading := false  # load_mission_async in progress
+var _load_next_step := 0
+var _ui: CanvasLayer
+
+
+## A load checkpoint: with a progress callback, report and draw a frame when LOAD_STEP_MS have passed (or always when
+## forced). Without one it returns at once, so _load_mission stays synchronous.
+func _load_step(progress: Callable, fraction: float, force := false) -> void:
+	if not progress.is_valid() or (not force and Time.get_ticks_msec() < _load_next_step):
+		return
+	progress.call(clampf(fraction, 0.0, 1.0))
+	await get_tree().process_frame
+	_load_next_step = Time.get_ticks_msec() + LOAD_STEP_MS
+
+
+func _load_mission(id: int, progress: Callable) -> void:
+	_load_next_step = Time.get_ticks_msec() + LOAD_STEP_MS
 	mission_id = id
 	_mod = null
 	_vehicles_snapped = false
@@ -351,16 +387,25 @@ func load_mission(id: int) -> void:
 	_mod = ModLauncher.for_mission(m)
 	if _mod:
 		_level.add_child(_mod)
+	await _load_step(progress, 0.0, true)
 	_load_map(map_name.to_lower())
-
-	for sec_name in m.keys():
-		if sec_name.begins_with("ground") or sec_name.begins_with("vehicle"):
-			# [groundN] makes a plain ground object, [vehicleN] a vehicle with the turret AI (exe classes
-			# at RedAce.c:37294 / 37355): the 94 placed "aagunruin" wrecks are scenery and never fire
-			_spawn_ground(m[sec_name], sec_name.begins_with("vehicle"))
-	for sec_name in m.keys():
-		if sec_name.begins_with("air") and not sec_name.contains("goal"):
-			_spawn_plane(sec_name, m)
+	# shares of the load time measured on desktop: map 0.25, ground objects 0.65, aircraft and the rest 0.1
+	await _load_step(progress, 0.25, true)
+	var sections := m.keys()
+	var grounds := sections.filter(func(n: String) -> bool: return n.begins_with("ground") or n.begins_with("vehicle"))
+	for i in grounds.size():
+		# [groundN] makes a plain ground object, [vehicleN] a vehicle with the turret AI (exe classes
+		# at RedAce.c:37294 / 37355): the 94 placed "aagunruin" wrecks are scenery and never fire
+		_spawn_ground(m[grounds[i]], grounds[i].begins_with("vehicle"))
+		await _load_step(progress, 0.25 + 0.65 * (i + 1) / grounds.size())
+	var airs := sections.filter(func(n: String) -> bool: return n.begins_with("air") and not n.contains("goal"))
+	for i in airs.size():
+		_spawn_plane(airs[i], m)
+		if progress.is_valid():
+			# nothing flies until the whole mission is in (load_mission_async turns them back on)
+			planes[-1].set_physics_process(false)
+			planes[-1].set_process(false)
+		await _load_step(progress, 0.9 + 0.08 * (i + 1) / airs.size())
 	# the exe stores a formation goal's offset as it builds the goal, from where the leader is placed (FUN_00437f92)
 	for p in planes:
 		for g in p.goals:
@@ -397,6 +442,7 @@ func load_mission(id: int) -> void:
 		if p.groups & (1 << 8):
 			p.endurance *= player_side_endurance
 		p.health = p.endurance
+	await _load_step(progress, 1.0, true)
 
 
 func apply_graphics_quality(water: int, cloud: int, scenery: int) -> void:
@@ -965,7 +1011,7 @@ var _vehicles_snapped := false
 
 
 func _physics_process(dt: float) -> void:
-	if _level == null:
+	if _level == null or loading:
 		return
 	if not _vehicles_snapped:
 		_vehicles_snapped = true
@@ -1928,6 +1974,8 @@ func _enemies_left() -> int:
 ## Touch PAUSE: as Esc; during the end fade it ends the fade like a key (other touches do not, so
 ## FIRE taps after a crash leave the fade alone).
 func _touch_pause() -> void:
+	if loading:
+		return
 	if _end_time >= 0.0:
 		_end_time = END_FADE
 	elif not standalone and not mission_over:
@@ -1935,6 +1983,8 @@ func _touch_pause() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if loading:
+		return
 	if event is InputEventMouseButton or event is InputEventMouseMotion:
 		if touch and touch.active:
 			return  # emulated from touches; the touch layer flies the plane
@@ -2102,6 +2152,8 @@ func _update_camera(dt: float) -> void:
 
 
 func _process(dt: float) -> void:
+	if loading:
+		return
 	_update_flashes(dt)
 	_update_end_fade(dt)
 	if _fade_in < 1.0 and _end_time < 0.0:
@@ -2152,6 +2204,7 @@ func _edge_of_battle() -> void:
 
 func _build_ui() -> void:
 	var ui := CanvasLayer.new()
+	_ui = ui
 	add_child(ui)
 	hud = Hud.new()
 	hud.world = self

@@ -57,8 +57,7 @@ static func from_file(ini_name: String) -> Controls:
 	# joystick.ini puts the throttle on DirectInput axis 3 (Z: a flight stick's lever). On a gamepad that
 	# axis is self-centring (right stick, or the triggers combined under DirectInput), so the absolute
 	# lever would sit at half throttle; there the triggers step it instead (right = up, left = down).
-	var pads := Input.get_connected_joypads()
-	if ini_name == "joystick.ini" and not pads.is_empty() and Input.is_joy_known(pads[0]):
+	if ini_name == "joystick.ini" and pad_device() >= 0 and Input.is_joy_known(pad_device()):
 		var t: Dictionary = c.bind.throttle
 		t.axis = 0
 		t.upbutton = TRIGGER_BASE + JOY_AXIS_TRIGGER_RIGHT + 1
@@ -113,14 +112,41 @@ func _pressed_key(name: String) -> float:
 	return 1.0 if k != KEY_NONE and Input.is_physical_key_pressed(k) else 0.0
 
 
+## The game controller the bindings read: the first connected one with a known (SDL) mapping, else the first; -1 if
+## none. Android can list other input devices as joypads, so the controller is not always device 0.
+static func pad_device() -> int:
+	var pads := Input.get_connected_joypads()
+	for d in pads:
+		if Input.is_joy_known(d):
+			return d
+	return pads[0] if not pads.is_empty() else -1
+
+
 ## Tilt steering from the controller's motion sensors, like the phones' tilt mode (not in the original). Neutral is how the
-## controller is held at the start of a flight or on recentre_gyro().
+## controller is held at the start of a flight or on recentre_gyro(). Godot reads controller sensors only through SDL
+## (desktop); on a phone, where a controller is often clipped to the phone, the phone's own tilt is used instead.
 func gyro_available() -> bool:
-	return Input.get_connected_joypads().has(0) and Input.has_joy_motion_sensors(0)
+	return _pad_has_sensors() or _mobile()
+
+
+# Device queries, separate so tools/test_controls.gd can stand in a controller and a phone.
+func _pad() -> int:
+	return pad_device()
+
+
+func _mobile() -> bool:
+	return TouchControls.is_mobile()
+
+
+func _pad_has_sensors() -> bool:
+	var pad := _pad()
+	return pad >= 0 and Input.has_joy_motion_sensors(pad)
 
 
 func recentre_gyro() -> void:
 	_gyro_g0 = Vector3.ZERO
+	if is_instance_valid(touch):
+		touch.calibrate()
 
 
 ## Roll and pitch stick values (x, y) for gravity g, with neutral g0. SDL's axes: x right, y out of the controller's face,
@@ -136,13 +162,16 @@ static func gyro_axes(g: Vector3, g0: Vector3) -> Vector2:
 
 
 func _gyro_tilt() -> Vector2:
-	if not gyro_enabled or not gyro_available():
+	if not gyro_enabled:
 		return Vector2.ZERO
-	if not Input.is_joy_motion_sensors_enabled(0):
-		Input.set_joy_motion_sensors_enabled(0, true)
-	var g := Input.get_joy_gravity(0)
+	if not _pad_has_sensors():
+		return touch.tilt_axes() if is_instance_valid(touch) and _mobile() else Vector2.ZERO
+	var pad := _pad()
+	if not Input.is_joy_motion_sensors_enabled(pad):
+		Input.set_joy_motion_sensors_enabled(pad, true)
+	var g := Input.get_joy_gravity(pad)
 	if g == Vector3.ZERO:
-		g = Input.get_joy_accelerometer(0)
+		g = Input.get_joy_accelerometer(pad)
 	if g.length() < 1.0:
 		return Vector2.ZERO
 	if _gyro_g0 == Vector3.ZERO:
@@ -151,19 +180,21 @@ func _gyro_tilt() -> Vector2:
 
 
 func _joy_axis(axis: int) -> float:
-	return Input.get_joy_axis(0, axis - 1) if Input.get_connected_joypads().size() > 0 else 0.0
+	var pad := _pad()
+	return Input.get_joy_axis(pad, axis - 1) if pad >= 0 else 0.0
 
 
 ## One joystick button (or hat direction, or gamepad trigger) held.
 func _joy_button(n: int) -> bool:
-	if n == 0 or Input.get_connected_joypads().is_empty():
+	var pad := _pad()
+	if n == 0 or pad < 0:
 		return false
 	if n < 0:
 		var hat := {-1: JOY_BUTTON_DPAD_UP, -2: JOY_BUTTON_DPAD_RIGHT, -3: JOY_BUTTON_DPAD_DOWN, -4: JOY_BUTTON_DPAD_LEFT}
-		return Input.is_joy_button_pressed(0, hat.get(n, JOY_BUTTON_DPAD_UP))
+		return Input.is_joy_button_pressed(pad, hat.get(n, JOY_BUTTON_DPAD_UP))
 	if n >= TRIGGER_BASE:
-		return Input.get_joy_axis(0, n - TRIGGER_BASE - 1) > 0.5
-	return Input.is_joy_button_pressed(0, n - 1)
+		return Input.get_joy_axis(pad, n - TRIGGER_BASE - 1) > 0.5
+	return Input.is_joy_button_pressed(pad, n - 1)
 
 
 ## Joystick up/down buttons of an axis action (type 7) as -1 / 0 / +1 (up = +1).
@@ -190,6 +221,8 @@ func pressed(action: String) -> bool:
 
 ## Apply the flight controls to the player for one physics frame (original FUN_004322de).
 ## mouse = this frame's motion in mickeys.
+## On a phone the touch layer (tilt or on-screen stick) steers, with keyboard keys taking over while held, except an axis
+## bound to a connected game controller: the controller flies it (and its tilt option), unless a finger is on the stick.
 func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 	var r: Dictionary = bind.roll
 	var q: Dictionary = bind.pitch
@@ -197,81 +230,77 @@ func drive(p: Aircraft, mouse: Vector2, dt: float) -> void:
 	var rs := -1.0 if r.reversed else 1.0
 	var ps := -1.0 if q.reversed else 1.0
 	var ts := -1.0 if t.reversed else 1.0
-	if touch != null and touch.active:
-		_drive_touch(p, r.sensitivity * rs, q.sensitivity * ps, rs, ps, ts, dt)
-		return
-	var tilt := _gyro_tilt()
+	var touching := touch != null and touch.active
+	var joy := _pad() >= 0
+	var touch_steers: bool = touching and touch.stick_held()
+	var touch_roll: bool = touching and (touch_steers or not (joy and r.type == "joystick"))
+	var touch_pitch: bool = touching and (touch_steers or not (joy and q.type == "joystick"))
+	var tilt := Vector2.ZERO if touch_roll and touch_pitch else _gyro_tilt()
 	var response := float(joystick_response_ms) / 1000.0
 	# roll
-	match r.type:
-		"mouse":
-			p.mouse_control((mouse.x if r.axis == 1 else mouse.y) * rs, 0.0, r.sensitivity, q.sensitivity)
-		"joystick" when int(r.axis) == 0:
-			# upbutton = roll left, like upkey
-			if _joy_buttons(r) == 0.0 and tilt.x != 0.0:
-				p.joy_roll(tilt.x * rs, r.sensitivity, response)
-			else:
-				if response > 0.0:
-					p.joy_roll(-_joy_buttons(r) * rs, r.sensitivity, response)
+	if touch_roll:
+		var kr := _pressed_key(r.downkey) - _pressed_key(r.upkey) if r.type == "keyboard" else 0.0
+		if kr != 0.0:
+			p.key_roll(kr * rs, r.sensitivity, dt)
+		else:
+			p.joy_roll(touch.roll, r.sensitivity * rs)
+	else:
+		match r.type:
+			"mouse":
+				p.mouse_control((mouse.x if r.axis == 1 else mouse.y) * rs, 0.0, r.sensitivity, q.sensitivity)
+			"joystick" when int(r.axis) == 0:
+				# upbutton = roll left, like upkey
+				if _joy_buttons(r) == 0.0 and tilt.x != 0.0:
+					p.joy_roll(tilt.x * rs, r.sensitivity, response)
 				else:
-					p.key_roll(-_joy_buttons(r) * rs, r.sensitivity, dt)
-		"joystick":
-			var v := _joy_axis(r.axis)
-			p.joy_roll((tilt.x if absf(v) < STICK_REST and tilt.x != 0.0 else v) * rs, r.sensitivity, response)
-		_:
-			# upkey = roll left, downkey = roll right (keyboard.ini: upkey = leftarrow)
-			p.key_roll((_pressed_key(r.downkey) - _pressed_key(r.upkey)) * rs, r.sensitivity, dt)
+					if response > 0.0:
+						p.joy_roll(-_joy_buttons(r) * rs, r.sensitivity, response)
+					else:
+						p.key_roll(-_joy_buttons(r) * rs, r.sensitivity, dt)
+			"joystick":
+				var v := _joy_axis(r.axis)
+				p.joy_roll((tilt.x if absf(v) < STICK_REST and tilt.x != 0.0 else v) * rs, r.sensitivity, response)
+			_:
+				# upkey = roll left, downkey = roll right (keyboard.ini: upkey = leftarrow)
+				p.key_roll((_pressed_key(r.downkey) - _pressed_key(r.upkey)) * rs, r.sensitivity, dt)
 	# pitch
-	match q.type:
-		"mouse":
-			p.mouse_control(0.0, (mouse.y if q.axis == 2 else mouse.x) * ps, r.sensitivity, q.sensitivity)
-		"joystick" when int(q.axis) == 0:
-			# upbutton = nose down, like upkey
-			if _joy_buttons(q) == 0.0 and tilt.y != 0.0:
-				p.joy_pitch(tilt.y * ps, q.sensitivity, dt)
-			else:
-				if response > 0.0:
-					p.joy_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
+	if touch_pitch:
+		var kp := _pressed_key(q.downkey) - _pressed_key(q.upkey) if q.type == "keyboard" else 0.0
+		if kp != 0.0:
+			p.key_pitch(kp * ps, q.sensitivity, dt)
+		else:
+			p.joy_pitch(touch.pitch, q.sensitivity * ps, dt)
+	else:
+		match q.type:
+			"mouse":
+				p.mouse_control(0.0, (mouse.y if q.axis == 2 else mouse.x) * ps, r.sensitivity, q.sensitivity)
+			"joystick" when int(q.axis) == 0:
+				# upbutton = nose down, like upkey
+				if _joy_buttons(q) == 0.0 and tilt.y != 0.0:
+					p.joy_pitch(tilt.y * ps, q.sensitivity, dt)
 				else:
-					p.key_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
-		"joystick":
-			var v := _joy_axis(q.axis)
-			p.joy_pitch((tilt.y if absf(v) < STICK_REST and tilt.y != 0.0 else v) * ps, q.sensitivity, dt)
-		_:
-			# upkey = nose down (keyboard.ini: upkey = uparrow)
-			p.key_pitch((_pressed_key(q.downkey) - _pressed_key(q.upkey)) * ps, q.sensitivity, dt)
-	# throttle
-	match t.type:
-		"joystick" when int(t.axis) == 0:
+					if response > 0.0:
+						p.joy_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
+					else:
+						p.key_pitch(-_joy_buttons(q) * ps, q.sensitivity, dt)
+			"joystick":
+				var v := _joy_axis(q.axis)
+				p.joy_pitch((tilt.y if absf(v) < STICK_REST and tilt.y != 0.0 else v) * ps, q.sensitivity, dt)
+			_:
+				# upkey = nose down (keyboard.ini: upkey = uparrow)
+				p.key_pitch((_pressed_key(q.downkey) - _pressed_key(q.upkey)) * ps, q.sensitivity, dt)
+	# throttle: the on-screen slider while held (absolute: it follows its displayed position)
+	if touching and touch.throttle >= 0.0:
+		p.throttle = touch.throttle
+	elif t.type == "joystick" and (joy or not touching):
+		if int(t.axis) == 0:
 			p.throttle = clampf(p.throttle + _joy_buttons(t) * ts * t.sensitivity * dt, 0.0, 1.0)
-		"joystick":
+		else:
 			p.throttle = clampf((-_joy_axis(t.axis) * ts * t.sensitivity + 1.0) * 0.5, 0.0, 1.0)
-		_:
-			p.throttle = clampf(p.throttle + (_pressed_key(t.upkey) - _pressed_key(t.downkey)) * ts * t.sensitivity * dt, 0.0, 1.0)
-	p.fire_input = pressed("fire")
-	p.secondary_input = pressed("secondary")
-
-
-## Touch steering (tilt or virtual stick) as a joystick; keyboard and joystick bindings still work.
-func _drive_touch(p: Aircraft, s_roll: float, s_pitch: float, rs: float, ps: float, ts: float, dt: float) -> void:
-	var r: Dictionary = bind.roll
-	var q: Dictionary = bind.pitch
-	var t: Dictionary = bind.throttle
-	var kr := _pressed_key(r.downkey) - _pressed_key(r.upkey) if r.type == "keyboard" else 0.0
-	var kp := _pressed_key(q.downkey) - _pressed_key(q.upkey) if q.type == "keyboard" else 0.0
-	if kr != 0.0:
-		p.key_roll(kr * rs, r.sensitivity, dt)
-	else:
-		p.joy_roll(touch.roll, s_roll)
-	if kp != 0.0:
-		p.key_pitch(kp * ps, q.sensitivity, dt)
-	else:
-		p.joy_pitch(touch.pitch, s_pitch, dt)
-	if touch.throttle >= 0.0:
-		p.throttle = touch.throttle  # absolute on-screen slider follows its displayed position
-	elif t.type == "keyboard":
+	elif t.type == "keyboard" or not touching:
 		p.throttle = clampf(p.throttle + (_pressed_key(t.upkey) - _pressed_key(t.downkey)) * ts * t.sensitivity * dt, 0.0, 1.0)
-	touch.player_throttle = p.throttle
+	if touching:
+		touch.player_throttle = p.throttle
 	p.fire_input = pressed("fire")
 	p.secondary_input = pressed("secondary")
 
